@@ -28,6 +28,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - **Configurable des del principi, per a la V3 multiclub:** club, platja, coordenades, estacions i orientació de la costa (càlcul del terral). A la V1 això ja és l'objecte `LOCS` d'`app.js`.
 - **Backend V2:** Firebase, pla Spark gratuït, regió `eur3`.
   - Auth: Google i enllaç per correu. Socis aprovats per administradors.
+  - Administrador inicial (UID de Firebase de l'Oriol): `aHjoROUH3aQsHh6ksS3Tt1p5soF2`.
   - Firestore: cada registre amb `userId`, `clubId` i `visibilitat` (`privat` | `club` | `public`).
 - **Tasques programades sense pla Blaze:** GitHub Actions amb `cron`. S'hi fan l'avís «no ha tornat a l'hora» i l'historial d'encerts dels models (desar la previsió a les 7 h i comparar-la a les 22 h).
 - **Android:** APK directe amb Capacitor que carrega la web publicada i hi afegeix el GPS en segon pla (foreground service). L'iPhone es queda com a PWA.
