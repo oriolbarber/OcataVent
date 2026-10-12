@@ -26,7 +26,9 @@ let pendingLink = null, syncing = false, syncAgain = false, syncErr = "", lastSy
 let flash = {t:"", err:false};
 
 const approved = () => !!(user && member && member.estat === "aprovat");
-const say = (t, err) => { flash = {t, err:!!err}; const m = $("accMsg"); if(m){ m.textContent = t; m.hidden = !t; m.classList.toggle("err", !!err); } };
+const say = (t, err) => { flash = {t, err:!!err}; const m = $("accMsg"); if(m){ m.textContent = t; m.hidden = !t; m.classList.toggle("err", !!err); if(t) m.scrollIntoView({block:"nearest", behavior:"smooth"}); } };
+// Firestore no avisa si no arriba al servidor: espera indefinidament. Amb això, al cap de 15 s hi ha un missatge.
+const T = (p, ms = 15000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({code:"timeout"}), ms))]);
 const ERR = {
   "auth/popup-closed-by-user": "Has tancat la finestra abans d'acabar.",
   "auth/cancelled-popup-request": "Has tancat la finestra abans d'acabar.",
@@ -40,7 +42,8 @@ const ERR = {
   "auth/expired-action-code": "L'enllaç ha caducat. Demana'n un de nou.",
   "auth/too-many-requests": "Massa intents seguits. Espera uns minuts.",
   "auth/requires-recent-login": "Per seguretat, torna a entrar i repeteix-ho de seguida.",
-  "permission-denied": "No tens permís per fer això.",
+  "permission-denied": "La base de dades ho ha refusat (permission-denied). Comprova que les regles de firestore.rules estan publicades a la consola de Firebase.",
+  "timeout": "La base de dades no respon. Comprova la connexió; un bloquejador d'anuncis també ho pot impedir.",
   "unavailable": "Sense connexió amb el núvol. Torna-ho a provar més tard."
 };
 const errText = e => !A ? "Sense connexió: ara no es pot entrar. Torna-ho a provar quan en tinguis." : ERR[e && e.code] || "No s'ha pogut fer" + (e && e.code ? " (" + e.code + ")." : ".");
@@ -84,14 +87,14 @@ async function onUser(u){
 async function readMember(){
   const f = await fs();
   isAdm = user.uid === OWNER_UID || await f.getDoc(f.doc(db, "admins", user.uid)).then(d => d.exists(), () => false);
-  const snap = await f.getDoc(f.doc(db, "members", user.uid));
+  const snap = await T(f.getDoc(f.doc(db, "members", user.uid)));
   member = snap.exists() ? snap.data() : null;
 }
 async function createMember(nom){
   const f = await fs(), mail = user.email || "";
   const n = String(nom || user.displayName || mail.split("@")[0] || "Soci").trim().slice(0, 80);
-  await f.setDoc(f.doc(db, "members", user.uid), {userId:user.uid, clubId:CLUB_ID, email:mail, nom:n,
-    estat: isAdm ? "aprovat" : "pendent", consentVersio:CONSENT_V, consentAt:f.serverTimestamp(), creat:f.serverTimestamp()});
+  await T(f.setDoc(f.doc(db, "members", user.uid), {userId:user.uid, clubId:CLUB_ID, email:mail, nom:n,
+    estat: isAdm ? "aprovat" : "pendent", consentVersio:CONSENT_V, consentAt:f.serverTimestamp(), creat:f.serverTimestamp()}));
   store.del("ov2_consent");
   await readMember();
 }
@@ -133,7 +136,12 @@ async function finishLink(mail, href){
   finally{ if(location.search) history.replaceState(null, "", location.pathname); }
 }
 async function logout(){ try{ await A.signOut(auth); say("Has tancat la sessió. Les sortides d'aquest mòbil es queden al mòbil."); }catch(e){ say(errText(e), true); } }
-async function requestJoin(){ if(!consentFromForm()) return; try{ await createMember(store.get("ov2_consent")?.nom); render(); }catch(e){ say(errText(e), true); } }
+async function requestJoin(){
+  if(!consentFromForm()) return;
+  say("Enviant la sol·licitud…");
+  try{ await createMember(store.get("ov2_consent")?.nom); say(member ? (member.estat === "aprovat" ? "Alta feta: ets administrador i ja estàs aprovat." : "Sol·licitud enviada.") : "No s'ha pogut comprovar l'alta.", !member); render(); if(approved()) sync(); if(isAdm) loadMembers(); }
+  catch(e){ say(errText(e), true); }
+}
 
 /* ---------- sincronització de sortides ---------- */
 const sid = id => user.uid + "_" + id;
@@ -210,7 +218,7 @@ async function loadMembers(){
   badge(); render();
 }
 async function setEstat(uid, estat){
-  try{ const f = await fs(); await f.updateDoc(f.doc(db, "members", uid), {estat, revisatPer:user.uid, revisatAt:f.serverTimestamp()}); await loadMembers(); }
+  try{ const f = await fs(); await T(f.updateDoc(f.doc(db, "members", uid), {estat, revisatPer:user.uid, revisatAt:f.serverTimestamp()})); await loadMembers(); }
   catch(e){ say(errText(e), true); }
 }
 function badge(){ const n = isAdm ? members.filter(m => m.estat === "pendent").length : 0; $("themeBtn").classList.toggle("has-dot", n > 0); }
@@ -287,7 +295,9 @@ function render(){
       <input class="field" id="accMail" type="email" autocomplete="email" placeholder="correu@exemple.cat">
       <button class="btn acc-wide" type="button" id="accLink">Envia'm l'enllaç</button>`;
   } else {
-    const who = `<div class="acc-who"><b>${esc(member?.nom || user.displayName || "")}</b><span>${esc(user.email || "")}</span></div>`;
+    const who = `<div class="vp-row"><div class="acc-who"><b>${esc(member?.nom || user.displayName || "")}</b><span>${esc(user.email || "")}${isAdm ? " · administrador" : ""}</span></div>
+        <button class="ib-i" type="button" data-info="iUid" aria-label="Identificador del compte" aria-expanded="false">i</button></div>
+      <p class="vp-info" id="iUid" hidden>ID del compte: <b style="font-family:var(--f-mono);word-break:break-all">${esc(user.uid)}</b>${user.uid === OWNER_UID ? "<br>És l'administrador inicial." : ""}</p>`;
     if(!member){
       peek.textContent = "Falta l'alta";
       h = who + `<p class="note">Has entrat, però encara no has demanat l'alta de soci.</p>${consentBlock(true)}
@@ -304,7 +314,7 @@ function render(){
     }
     h += `<button class="btn" type="button" id="accOut">Tanca la sessió</button>` + delBlock();
   }
-  body.innerHTML = h + `<div class="msg${flash.err ? " err" : ""}" id="accMsg"${flash.t ? "" : " hidden"}>${esc(flash.t)}</div>`;
+  body.innerHTML = `<div class="msg${flash.err ? " err" : ""}" id="accMsg"${flash.t ? "" : " hidden"}>${esc(flash.t)}</div>` + h;
   const d = $("accDel"); if(d) slideConfirm(d, "Llisca per esborrar el compte", deleteAccount);
   document.querySelectorAll("#accBody [data-revoke]").forEach(el => slideConfirm(el, "Llisca per treure l'accés", () => setEstat(el.dataset.revoke, "rebutjat")));
 }
@@ -335,7 +345,8 @@ async function refresh(){   // en obrir la configuració: comprova si ja t'han a
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("#accBody button"); if(!t) return;
+  const t = e.target.closest && e.target.closest("#accBody button"); if(!t || t.classList.contains("ib-i")) return;
+  if(t.disabled) return; t.disabled = true; setTimeout(() => { t.disabled = false; }, 1500);
   if(t.id === "accGoogle") google();
   else if(t.id === "accLink") sendLink();
   else if(t.id === "accFinish"){ const m = ($("accLinkMail")?.value || "").trim().toLowerCase(); if(m && pendingLink) finishLink(m, pendingLink); }
