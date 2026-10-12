@@ -941,7 +941,7 @@ function slideConfirm(el, label, onDone){
 
 /* ---------- navegació ---------- */
 function go(v){
-  ["fc","trip","map","log"].forEach(k => { $("view-"+k).hidden = k !== v; });
+  ["fc","trip","map","log","club"].forEach(k => { $("view-"+k).hidden = k !== v; });
   document.querySelectorAll(".tabs button").forEach(b => b.dataset.go === v ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
   window.scrollTo({top:0});
   window.dispatchEvent(new CustomEvent("mm-view", {detail:v}));

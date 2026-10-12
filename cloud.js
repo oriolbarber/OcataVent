@@ -71,15 +71,16 @@ function fs(){
 }
 
 /* ---------- sessió i fitxa de soci ---------- */
+const emit = () => window.dispatchEvent(new CustomEvent("ov-cloud"));   // club.js escolta els canvis de sessió i de soci
 async function onUser(u){
   user = u; member = null; isAdm = false; members = []; delStep = false;
-  if(!u){ store.del("ov2_cloud"); ready = true; render(); badge(); refreshList(); return; }
+  if(!u){ store.del("ov2_cloud"); ready = true; render(); badge(); refreshList(); emit(); return; }
   store.set("ov2_cloud", 1);
   try{
     await readMember();
     if(!member){ const c = store.get("ov2_consent"); if(c && c.v === CONSENT_V) await createMember(c.nom); }
   }catch(e){ say(errText(e), true); }
-  ready = true; render();
+  ready = true; render(); emit();
   await flushDeletes();
   if(approved()) sync(); else refreshList();
   if(isAdm) loadMembers();
@@ -139,7 +140,7 @@ async function logout(){ try{ await A.signOut(auth); say("Has tancat la sessió.
 async function requestJoin(){
   if(!consentFromForm()) return;
   say("Enviant la sol·licitud…");
-  try{ await createMember(store.get("ov2_consent")?.nom); say(member ? (member.estat === "aprovat" ? "Alta feta: ets administrador i ja estàs aprovat." : "Sol·licitud enviada.") : "No s'ha pogut comprovar l'alta.", !member); render(); if(approved()) sync(); if(isAdm) loadMembers(); }
+  try{ await createMember(store.get("ov2_consent")?.nom); say(member ? (member.estat === "aprovat" ? "Alta feta: ets administrador i ja estàs aprovat." : "Sol·licitud enviada.") : "No s'ha pogut comprovar l'alta.", !member); render(); emit(); if(approved()) sync(); if(isAdm) loadMembers(); }
   catch(e){ say(errText(e), true); }
 }
 
@@ -221,6 +222,15 @@ async function setEstat(uid, estat){
   try{ const f = await fs(); await T(f.updateDoc(f.doc(db, "members", uid), {estat, revisatPer:user.uid, revisatAt:f.serverTimestamp()})); await loadMembers(); }
   catch(e){ say(errText(e), true); }
 }
+const ROLES = {junta:"Junta", manteniment:"Manteniment", economica:"Econòmica"};
+async function setRole(uid, role){
+  const m = members.find(x => x.userId === uid); if(!m) return;
+  const patch = role === "responsable" ? {responsable: !m.responsable}
+    : {comissions: (m.comissions || []).includes(role) ? (m.comissions || []).filter(k => k !== role) : (m.comissions || []).concat([role])};
+  try{ const f = await fs(); await T(f.updateDoc(f.doc(db, "members", uid), patch)); Object.assign(m, patch); render();
+    if(uid === user.uid){ await readMember(); emit(); } }
+  catch(e){ say(errText(e), true); }
+}
 function badge(){ const n = isAdm ? members.filter(m => m.estat === "pendent").length : 0; $("themeBtn").classList.toggle("has-dot", n > 0); }
 
 /* ---------- esborrar el compte ---------- */
@@ -236,12 +246,13 @@ async function deleteAccount(){
     const f = await fs();
     const qs = await f.getDocs(f.query(f.collection(db, "sortides"), f.where("userId", "==", uid)));
     for(const d of qs.docs) await delRemote(d.data().tripId);
+    try{ await window.OV_CLUB?.purge(); }catch(e){}   // publicacions, reaccions, avisos, anuncis i presència del club
     await f.deleteDoc(f.doc(db, "members", uid));
     await A.deleteUser(user);
     for(const t of ((await DB.all()) || [])) if(t.owner === uid){ delete t.owner; delete t.synced; await DB.put(t); }
     store.set("ov2_cloud_del", (store.get("ov2_cloud_del") || []).filter(d => d.uid !== uid));
     store.del("ov2_cloud"); store.del("ov2_consent");
-    say("Compte esborrat, amb la fitxa de soci i totes les sortides del núvol. Les d'aquest mòbil es queden al mòbil.");
+    say("Compte esborrat, amb la fitxa de soci, les sortides del núvol i el que havies publicat al club. Les sortides d'aquest mòbil es queden al mòbil.");
   }catch(e){ say(errText(e), true); render(); }
 }
 async function relink(){
@@ -254,7 +265,8 @@ async function relink(){
 const CONSENT_HTML = `
   <p><b>Responsable:</b> Club Ocata Vent (El Masnou).</p>
   <p><b>Què es desa:</b> el teu nom, el correu del compte i la data d'aquesta acceptació, perquè els administradors del club et reconeguin i aprovin l'alta. I les sortides que hi pugis: ruta GPS, hores, velocitats i vent.</p>
-  <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. Els administradors veuen el nom i el correu dels socis.</p>
+  <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. Si en publiques una al mur del club, els socis veuen el resum, el comentari i, si ho tries, la ruta simplificada. Els avisos, els anuncis i les reaccions els veuen els socis. Els administradors veuen el nom i el correu dels socis.</p>
+  <p><b>Presència a la base:</b> només si l'actives. Mentre ets a la base o navegant, els responsables (o tot el club, si ho tries) veuen on ets. S'esborra en acabar o al cap de 24 h.</p>
   <p><b>On:</b> Google Firebase. El compte el gestiona Firebase Authentication; les sortides es guarden a Cloud Firestore, en servidors de la Unió Europea.</p>
   <p><b>Per a què:</b> només perquè l'app funcioni. No es ven ni es cedeix a ningú, i el correu no s'envia a cap altre servei.</p>
   <p><b>Els teus drets:</b> pots esborrar el compte i totes les dades del núvol des d'aquí mateix, quan vulguis. Per consultar-les o corregir-les, adreça't a la junta del club.</p>
@@ -267,7 +279,7 @@ const consentBlock = (withName) => `
   <div class="vp-info" id="iConsent" hidden>${CONSENT_HTML}</div>`;
 const delBlock = () => `
   <details class="acc-del"><summary>Esborra el compte</summary>
-    <p class="note">S'esborraran el compte, la fitxa de soci i totes les teves sortides del núvol. No es pot desfer. Les còpies que hi ha en aquest mòbil es queden al mòbil.</p>
+    <p class="note">S'esborraran el compte, la fitxa de soci, les teves sortides del núvol i tot el que hagis publicat o marcat al club (publicacions, reaccions, avisos, anuncis i presència). No es pot desfer. Les còpies que hi ha en aquest mòbil es queden al mòbil.</p>
     ${delStep === "relink" ? `<button class="btn" type="button" id="accRelink">Envia'm un enllaç nou</button>` : `<div id="accDel"></div>`}
   </details>`;
 
@@ -324,7 +336,11 @@ function adminBlock(){
   return `<div class="acc-adm"><span class="lbl">Altes pendents · ${pend.length}</span>
     ${pend.length ? pend.map(m => row(m, `<button class="btn sm" type="button" data-estat="aprovat" data-uid="${esc(m.userId)}">Aprova</button><button class="btn sm danger" type="button" data-estat="rebutjat" data-uid="${esc(m.userId)}">Rebutja</button>`)).join("") : `<p class="note">No n'hi ha cap.</p>`}
     <details class="acc-del"><summary>Socis aprovats · ${ok.length}</summary>
-      ${ok.map(m => row(m, m.userId === user.uid ? "" : `<button class="btn sm" type="button" data-ask-revoke="${esc(m.userId)}">Treu l'accés</button>`) + `<div data-revoke-box="${esc(m.userId)}"></div>`).join("")}</details>
+      <p class="note">Toca una comissió o «Responsable» per donar-la o treure-la. Els responsables veuen la presència de tothom a la Base.</p>
+      ${ok.map(m => row(m, m.userId === user.uid ? "" : `<button class="btn sm" type="button" data-ask-revoke="${esc(m.userId)}">Treu l'accés</button>`)
+        + `<div class="acc-roles" role="group" aria-label="Rols de ${esc(m.nom)}">${Object.entries(ROLES).concat([["responsable", "Responsable"]]).map(([k, t]) => { const on = k === "responsable" ? !!m.responsable : (m.comissions || []).includes(k);
+            return `<button class="btn sm" type="button" data-role="${k}" data-uid="${esc(m.userId)}" aria-pressed="${on}">${t}</button>`; }).join("")}</div>`
+        + `<div data-revoke-box="${esc(m.userId)}"></div>`).join("")}</details>
     ${no.length ? `<details class="acc-del"><summary>No aprovats · ${no.length}</summary>${no.map(m => row(m, `<button class="btn sm" type="button" data-estat="aprovat" data-uid="${esc(m.userId)}">Aprova</button>`)).join("")}</details>` : ""}
     <button class="btn sm" type="button" id="accReload">Actualitza la llista</button></div>`;
 }
@@ -339,7 +355,7 @@ async function refresh(){   // en obrir la configuració: comprova si ja t'han a
   lastRefresh = Date.now();
   const was = member?.estat;
   try{ await readMember(); }catch(e){ return; }
-  render();
+  render(); emit();
   if(member?.estat !== was && approved()) sync();
   if(isAdm) loadMembers();
 }
@@ -356,6 +372,7 @@ document.addEventListener("click", e => {
   else if(t.id === "accRelink") relink();
   else if(t.id === "accReload"){ lastRefresh = 0; refresh(); }
   else if(t.dataset.estat) setEstat(t.dataset.uid, t.dataset.estat);
+  else if(t.dataset.role) setRole(t.dataset.uid, t.dataset.role);
   else if(t.dataset.askRevoke){ const box = document.querySelector(`[data-revoke-box="${CSS.escape(t.dataset.askRevoke)}"]`); if(box){ box.dataset.revoke = t.dataset.askRevoke; slideConfirm(box, "Llisca per treure l'accés", () => setEstat(box.dataset.revoke, "rebutjat")); } }
 });
 $("themeBtn").addEventListener("click", () => { if(!$("viewPanel").hidden){ render(); refresh(); } });
@@ -382,6 +399,7 @@ document.addEventListener("click", e => {
 /* ---------- connexió amb trip.js ---------- */
 window.OV_CLOUD = {
   approved,
+  async ctx(){ if(!approved()) return null; const f = await fs(); return {F:f, db, user, member, isAdm, isResp: isAdm || !!member.responsable}; },
   renderCard,
   async saved(t){ if(!approved()) return; t.owner = user.uid; t.synced = false; try{ await DB.put(t); }catch(e){} sync(); },
   deleted(t){ if(!t || !t.owner) return; const q = store.get("ov2_cloud_del") || []; q.push({uid:t.owner, id:t.id}); store.set("ov2_cloud_del", q);

@@ -40,6 +40,13 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Regles: `firestore.rules` (es publiquen a mà a la consola o amb `firebase deploy --only firestore:rules`). Els administradors no veuen les sortides privades.
 - Versió del text de consentiment: `CONSENT_V` a `cloud.js`.
 
+## Club (Fase 2, `club.js`)
+- Pestanya «Club» (5a), només visible per a socis aprovats: Mur · Avisos · Anuncis · Base. Fa servir `window.OV_CLOUD.ctx()` i l'esdeveniment `ov-cloud`.
+- `publicacions/{uid}_{tripId}`: còpia del resum (no enllaç a la sortida privada), ruta opcional simplificada i sense els 200 m inicials i finals, `reaccions` = mapa {uid: up|clap|wow|down}.
+- `intencions` (s'apunten amb el mapa `apuntats`), `avisos` (només hi publiquen membres de la comissió; mapa `vist`), `anuncis` (+ subcol·lecció `interessats`, només la veu l'autor), `presencia/{uid}` (base o aigua; visible per a responsables o tot el club).
+- Rols al document del soci: `comissions` (junta, manteniment, economica) i `responsable`; els assigna l'administrador des de Compte.
+- El que caduca (`caduca`) ho esborra qualsevol soci que ho vegi. En esborrar el compte, `OV_CLUB.purge()` treu tot el que el soci ha publicat o marcat.
+
 ## Fonts de dades (V1)
 - **Previsió:** Open-Meteo forecast i marine. Ús no comercial.
 - **Estacions:** meteoelmasnou.cat (Meteotemplate). Cal demanar permís per a la V2.

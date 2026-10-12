@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=97">
+<link rel="stylesheet" href="app.css?v=99">
 </head>
 <body>
 <div class="app">
@@ -197,6 +197,8 @@
     </div>
     <label class="tn-name" for="tripName"><span class="lbl">Nom de la sortida <small>(opcional)</small></span>
       <input class="field" id="tripName" type="text" placeholder="P. ex. Regata de dissabte" autocomplete="off" style="font-family:var(--f-body)"></label>
+    <label class="tn-name" for="tripRet"><span class="lbl">Tornada prevista <small>(opcional)</small></span>
+      <select class="field" id="tripRet" style="font-family:var(--f-body)"><option value="0">Sense hora</option><option value="60">D'aquí a 1 h</option><option value="90">D'aquí a 1 h 30</option><option value="120">D'aquí a 2 h</option><option value="180">D'aquí a 3 h</option><option value="240">D'aquí a 4 h</option></select></label>
     <button class="cta" type="button" id="startTrip"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Comença la sortida</button>
     <p class="tn-tip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v9M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>No premis el botó d'apagar mentre graves</p>
     <div class="msg err" id="tripErr" hidden></div>
@@ -316,6 +318,11 @@
   </article>
 </section>
 
+<!-- ============ CLUB (només socis aprovats) ============ -->
+<section class="view" id="view-club" hidden>
+  <div id="clubView" class="view"></div>
+</section>
+
 <!-- ============ HISTORIAL ============ -->
 <section class="view" id="view-log" hidden>
   <div id="logList" class="view"></div>
@@ -333,15 +340,18 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>Mapes</button>
     <button type="button" data-go="log">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg>Historial</button>
+    <button type="button" data-go="club" id="tabClub" hidden>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20v-1a4 4 0 0 0-8 0v1"/><circle cx="12" cy="8" r="3"/><path d="M21 20v-1a3 3 0 0 0-2.5-3M17 5.5a2.5 2.5 0 0 1 0 5M3 20v-1a3 3 0 0 1 2.5-3M7 5.5a2.5 2.5 0 0 0 0 5"/></svg>Club</button>
   </div>
 </nav>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=97"></script>
-<script src="trip.js?v=97"></script>
-<script src="maps.js?v=97"></script>
-<script src="windmap.js?v=97"></script>
-<script src="cloud.js?v=98"></script>
+<script src="app.js?v=99"></script>
+<script src="trip.js?v=99"></script>
+<script src="maps.js?v=99"></script>
+<script src="windmap.js?v=99"></script>
+<script src="cloud.js?v=99"></script>
+<script src="club.js?v=99"></script>
 </body>
 </html>

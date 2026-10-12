@@ -103,6 +103,7 @@ function onPos(pos){
     if(p.cog == null && d > 4) p.cog = Math.round(bearing(last, p));
   }
   LIVE.pts.push(p);
+  window.OV_CLUB?.tripPos(LIVE, p);
   if(last && (p.t - last.t)/1000 > GAP_S){ saveLive(); liveGapNote(); }
   if(LIVE.pts.length % 6 === 0) saveLive();
   renderLive();
@@ -165,9 +166,11 @@ function setRecUI(){
 function startTrip(){
   $("tripErr").hidden = true;
   const eco = $("ecoMode").checked; store.set("ov2_eco", eco);
-  LIVE = {id: Date.now(), name: $("tripName").value.trim(), act, start: Date.now(), pts: [], wind: [], eco, station: stKey};
+  const ret = +($("tripRet")?.value || 0), t0 = Date.now();
+  LIVE = {id: t0, name: $("tripName").value.trim(), act, start: t0, pts: [], wind: [], eco, station: stKey, retorn: ret ? t0 + ret*60000 : null};
   if(!startWatch()){ LIVE = null; return; }
   saveLive(); setRecUI(); showRide(true);
+  window.OV_CLUB?.tripStart(LIVE);   // presència «a l'aigua» (només si el soci ho té activat)
 }
 let confirmStop = 0, confirmDiscard = 0;
 async function stopTrip(){
@@ -179,13 +182,13 @@ async function stopTrip(){
   trip.summary = summarize(trip);
   try{ await DB.put(trip); }catch(e){}
   window.OV_CLOUD?.saved(trip);
-  LIVE = null; store.del("ov2_live"); $("tripName").value = "";
+  LIVE = null; store.del("ov2_live"); $("tripName").value = ""; window.OV_CLUB?.tripEnd();
   destroyLiveMap(); setRecUI();
   go("log"); showTrip(trip.id);
 }
 function discardTrip(){
   if(Date.now() - confirmDiscard > 4000){ confirmDiscard = Date.now(); $("discardTrip").textContent = "Toca de nou: s'esborrarà la ruta"; setTimeout(() => $("discardTrip").textContent = "Descarta la sortida", 4000); return; }
-  stopWatch(); LIVE = null; store.del("ov2_live"); destroyLiveMap(); setRecUI();
+  stopWatch(); LIVE = null; store.del("ov2_live"); destroyLiveMap(); setRecUI(); window.OV_CLUB?.tripEnd();
 }
 
 /* ---------- càlculs ---------- */
@@ -539,7 +542,9 @@ async function showTrip(id){
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" type="button" id="expGpx">Exporta GPX</button><button class="btn" type="button" id="expCsv">Exporta CSV</button>
 </div>
+    <div id="clubShare"></div>
     <div id="delTrip"></div>`;
+  window.OV_CLUB?.shareBtn($("clubShare"), t);
   $("backList").onclick = renderList;
   $("expGpx").onclick = () => download(t, "gpx");
   $("expCsv").onclick = () => download(t, "csv");
