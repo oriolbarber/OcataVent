@@ -1,0 +1,1039 @@
+"use strict";
+/* ============ Mar del Masnou · previsió ============ */
+// Ubicacions: cada una té el punt de previsió, el d'onatge (mar endins), les seves estacions, les platges per a la bandera i el punt del mapa.
+// Les dues platges miren al SE, així que el terral (COAST) és el mateix.
+const LOCS = {
+  masnou:   {name:"El Masnou", lat:41.4766, lon:2.3185, mlat:41.465, mlon:2.33, home:[41.4766, 2.3185], wm:[41.4795, 2.3265],
+             stations:["masnou","ocata"], st:"masnou", smp:[21, 96], beaches:{"081189-p1":"Platja d'Ocata", "081189-p0":"Platja del Masnou"}, flag:"081189-p1"},
+  badalona: {name:"Badalona", lat:41.4461, lon:2.2506, mlat:41.435, mlon:2.262, home:[41.4461, 2.2506], wm:[41.4461, 2.2506],
+             stations:["badalona"], st:"badalona", smp:[13, 95], beaches:{"080155-p5":"Platja dels Patins de Vela", "080155-p6":"Platja dels Pescadors"}, flag:"080155-p5"}
+};
+let locKey = (() => { try{ return JSON.parse(localStorage.getItem("ov2_loc")); }catch(e){ return null; } })(); if(!LOCS[locKey]) locKey = "masnou";
+const LOC = LOCS[locKey];
+const COAST = 135; // la platja mira al SE
+const DEFAULTS = {
+  pati:     {name:"Patí català", short:"Patí",     min:5,  iMin:8,  iMax:16, max:20, gust:24, wOk:0.6, wMax:1.2},
+  windsurf: {name:"Windsurf",    short:"Windsurf", min:10, iMin:14, iMax:24, max:30, gust:34, wOk:1.2, wMax:2.2},
+  hobie:    {name:"Hobie Cat",   short:"Hobie",    min:6,  iMin:10, iMax:18, max:22, gust:26, wOk:0.8, wMax:1.5}
+};
+const SLOTS = [
+  {k:"mati",   label:"Matí",   ab:"M",  range:"9–12 h",  hours:[9,10,11]},
+  {k:"migdia", label:"Migdia", ab:"Mg", range:"12–15 h", hours:[12,13,14]},
+  {k:"tarda",  label:"Tarda",  ab:"T",  range:"15–19 h", hours:[15,16,17,18]}
+];
+const VERD = [{min:80,k:"ideal",t:"Ideal"},{min:60,k:"bo",t:"Bo"},{min:35,k:"marg",t:"Marginal"},{min:-1,k:"no",t:"No apte"}];
+const WINDS = ["Tramuntana","Gregal","Llevant","Xaloc","Migjorn","Garbí","Ponent","Mestral"];
+const WABBR = ["TRA","GRE","LLE","XAL","MIG","GAR","PON","MES"];
+const DAYS_L = ["Diumenge","Dilluns","Dimarts","Dimecres","Dijous","Divendres","Dissabte"];
+const MONTHS = ["gen","feb","març","abr","maig","juny","jul","ag","set","oct","nov","des"];
+const KMH = 0.539957;
+
+const store = {
+  get(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+let act = store.get("ov2_act"); if(!DEFAULTS[act]) act = "pati";
+let crit = JSON.parse(JSON.stringify(DEFAULTS));
+const savedCrit = store.get("ov2_crit"); if(savedCrit) for(const k in crit) if(savedCrit[k]) Object.assign(crit[k], savedCrit[k]);
+let DATA = null, ST = null, openDay = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const r1 = v => v==null||isNaN(v) ? "–" : (Math.round(v*10)/10).toLocaleString("ca");
+const r0 = v => v==null||isNaN(v) ? "–" : String(Math.round(v));
+const norm = d => ((d%360)+360)%360;
+const windName = d => d==null ? "–" : WINDS[Math.round(norm(d)/45)%8];
+const windAbbr = d => d==null ? "–" : WABBR[Math.round(norm(d)/45)%8];
+const isOffshore = d => { if(d==null) return false; const x = norm(d); return x>=255 || x<=15; };
+const isOnshore = d => { if(d==null) return false; const x = norm(d); return x>=75 && x<=195; };
+const pad = n => String(n).padStart(2,"0");
+function arrow(deg, size){
+  if(deg==null) return "";
+  const s = size||16;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 20 20" aria-hidden="true" style="flex:none"><g transform="rotate(${norm(deg+180)} 10 10)"><path d="M10 1.5 L15.5 16 L10 12.5 L4.5 16 Z" fill="currentColor"/></g></svg>`;
+}
+function wxIcon(code, size){
+  const z = size||18, s = `width="${z}" height="${z}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"`;
+  if(code==null) return "";
+  if(code>=95) return `<svg ${s} aria-label="Tempesta"><path d="M7 15a4 4 0 1 1 1-7.9A5 5 0 0 1 18 9a3 3 0 0 1 0 6"/><path d="M12 13l-2 4h3l-2 4"/></svg>`;
+  if(code>=51) return `<svg ${s} aria-label="Pluja"><path d="M7 14a4 4 0 1 1 1-7.9A5 5 0 0 1 18 8a3 3 0 0 1 0 6H7"/><path d="M9 17l-1 3M13 17l-1 3M17 17l-1 3"/></svg>`;
+  if(code>=3) return `<svg ${s} aria-label="Ennuvolat"><path d="M7 18a4 4 0 1 1 1-7.9A5 5 0 0 1 18 12a3 3 0 0 1 0 6Z"/></svg>`;
+  if(code>=1) return `<svg ${s} aria-label="Sol i núvols"><circle cx="8" cy="8" r="3"/><path d="M8 2v1M2 8h1M3.8 3.8l.7.7M12.2 3.8l-.7.7"/><path d="M9 19a3.5 3.5 0 1 1 1-6.8A4.5 4.5 0 0 1 19 14a2.5 2.5 0 0 1 0 5Z"/></svg>`;
+  return `<svg ${s} aria-label="Sol"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
+}
+const IC = {
+  gust:`<path d="M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h6"/>`,
+  wave:`<path d="M2 15c2.5 0 2.5-3 5-3s2.5 3 5 3 2.5-3 5-3 2.5 3 5 3"/><path d="M2 20c2.5 0 2.5-3 5-3s2.5 3 5 3 2.5-3 5-3 2.5 3 5 3"/>`,
+  per:`<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>`,
+  air:`<path d="M14 14.8V4a2 2 0 1 0-4 0v10.8a4 4 0 1 0 4 0z"/>`,
+  water:`<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>`,
+  sun:`<path d="M17 18a5 5 0 0 0-10 0M12 9V3M4.2 10.2l1.4 1.4M18.4 11.6l1.4-1.4M1 18h2M21 18h2M23 22H1"/>`,
+  speed:`<path d="M12 14l4-4"/><path d="M3.3 19a10 10 0 1 1 17.4 0"/>`,
+  dist:`<path d="M6 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M8.5 14.5l7-7"/>`,
+  course:`<circle cx="12" cy="12" r="9"/><path d="M12 7l3 8-3-2-3 2z"/>`,
+  clock:`<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`
+};
+const icon = (k, z) => `<svg width="${z||14}" height="${z||14}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
+const suit = t => t==null ? "" : t>=22 ? "Lycra o banyador" : t>=19 ? "Neoprè curt 2–3 mm" : t>=16 ? "Neoprè 3/2 mm" : "Neoprè 4/3 + escarpins";
+
+/* ---------- puntuació ---------- */
+function windScore(w, c){
+  if(w==null) return null;
+  if(w < c.min) return Math.max(0, 30*(w/c.min));
+  if(w < c.iMin) return 40 + 60*(w-c.min)/(c.iMin-c.min);
+  if(w <= c.iMax) return 100;
+  if(w <= c.max) return 100 - 60*(w-c.iMax)/(c.max-c.iMax);
+  return Math.max(0, 25 - 6*(w-c.max));
+}
+function waveScore(h, c){
+  if(h==null) return 100;
+  if(h <= c.wOk) return 100;
+  if(h <= c.wMax) return 100 - 60*(h-c.wOk)/(c.wMax-c.wOk);
+  return Math.max(0, 25 - 60*(h-c.wMax));
+}
+// Onada que arriba a la platja: amb mar de fons (període llarg) l'onada creix en arribar a la costa
+const beachWave = p => p.wave==null ? null : (p.tp!=null && p.tp >= 7 ? p.wave * (1 + Math.min(0.5, (p.tp-6)*0.1)) : p.wave);
+// Llum de dia: ¿l'hora (o l'instant) cau abans de la sortida + 30 min o després de la posta − 30 min?
+function darkAt(t){
+  if(!DATA || !DATA.daily || !t) return false; const i = DATA.daily.time.indexOf(t.slice(0,10)); if(i < 0) return false;
+  const ms = x => new Date(x).getTime(), at = ms(t), rise = ms(DATA.daily.sunrise[i]), set = ms(DATA.daily.sunset[i]);
+  return at + 30*60e3 < rise || at >= set - 30*60e3;
+}
+const HARD = ["Ratxes fortes","Tempesta","Pluja","Terral fort","Poca llum"];
+const INFO_FLAGS = ["Mar de fons","Aigua freda"];
+function scoreHour(p, c){
+  const ws = windScore(p.wind, c);
+  if(ws==null) return {score:null, flags:[], why:[]};
+  const hb = beachWave(p), os = waveScore(hb, c);
+  let s = Math.min(ws, os), pw = ws, po = os;
+  const flags = [];
+  if(p.gust!=null && p.gust > c.gust){ s = Math.min(s, 25); pw = Math.min(pw, 25); flags.push("Ratxes fortes"); }
+  else if(p.gust!=null && p.wind!=null && p.wind >= 4 && p.gust / p.wind > 1.6){ s -= 15; pw -= 15; flags.push("Ràfagues"); }   // racheig relatiu
+  if(p.tp!=null && p.tp >= 7 && p.wave!=null && p.wave >= 0.4) flags.push("Mar de fons");   // ja compta a l'onada de platja
+  if(isOffshore(p.dir) && p.wind >= 6){
+    s = p.wind >= 10 ? Math.min(s-25, 40) : s-25; pw = p.wind >= 10 ? Math.min(pw-25, 40) : pw-25; flags.push("Terral");
+    if(p.wind >= 10){ s = Math.min(s, 20); pw = Math.min(pw, 20); flags.push("Terral fort"); } }
+  const rain = p.code!=null && ((p.code>=61 && p.code<=67) || (p.code>=80 && p.code<=82));
+  if(p.code!=null && p.code>=95){ s = 0; flags.push("Tempesta"); }
+  else if(rain){ s = 0; flags.push("Pluja"); }
+  else if(p.code!=null && p.code>=51 && p.code<=57){ s -= 15; flags.push("Plugim"); }
+  else if(p.pp!=null && p.pp>=60){ s -= 15; flags.push("Probable pluja"); }
+  if(darkAt(p.t)){ s = Math.min(s, 10); flags.push("Poca llum"); }
+  if(p.sst!=null && p.sst < 17) flags.push("Aigua freda");
+  // Motius, en paraules, del que limita la sortida
+  const why = [];
+  if(p.wind < c.min) why.push("poc vent"); else if(p.wind < c.iMin) why.push("vent fluix");
+  if(p.wind > c.max) why.push("massa vent"); else if(p.wind > c.iMax) why.push("vent fort");
+  if(flags.includes("Ratxes fortes")) why.push("ratxes fortes"); else if(flags.includes("Ràfagues")) why.push("vent a ràfagues");
+  if(hb!=null && hb > c.wMax) why.push("onada alta"); else if(hb!=null && hb > c.wOk) why.push("onada");
+  [["Terral fort","terral fort"],["Terral","terral"],["Mar de fons","mar de fons"],["Tempesta","tempesta"],["Pluja","pluja"],["Plugim","plugim"],["Probable pluja","pluja probable"],["Poca llum","poca llum"]]
+    .forEach(([f,t]) => { if(flags.includes(f) && !why.includes(t) && !(t === "terral" && why.includes("terral fort"))) why.push(t); });
+  // primer els motius que ho fan no recomanable
+  const PRI = ["poca llum","tempesta","pluja","terral fort","ratxes fortes","massa vent","onada alta","poc vent"];
+  why.sort((x, y) => (PRI.includes(x) ? PRI.indexOf(x) : 99) - (PRI.includes(y) ? PRI.indexOf(y) : 99));
+  const cl = x => Math.max(0, Math.min(100, Math.round(x)));
+  return {score:cl(s), flags, why, wind:cl(pw), wave: p.wave==null ? null : cl(po), hb};
+}
+// Veredicte en 3 nivells, els mateixos que els colors: verd (Ideal / Bo), taronja (Limitat), vermell (No recomanat)
+const verdict = o => { const sc = (o && typeof o === "object") ? o.score : o;
+  if(sc==null) return {k:"no", t:"Sense dades", sub:""};
+  const k = sc >= 60 ? "ideal" : sc >= 35 ? "marg" : "no";
+  const t = sc >= 80 ? "Ideal" : sc >= 60 ? "Bo" : sc >= 35 ? "Limitat" : "No recomanat";
+  const why = (o && o.why) || [];
+  return {k, t, sub: sc >= 80 ? "" : why.slice(0, 2).join(" · ")}; };
+
+// Codi de 3 colors per a cada valor: verd = bo, taronja = es pot però amb limitacions, vermell = no adequat
+function lvWind(w, c){ if(w==null) return null; return (w < c.min || w > c.max) ? "no" : (w < c.iMin || w > c.iMax) ? "marg" : "ideal"; }
+function lvGust(g, c){ if(g==null) return null; return g > c.gust ? "no" : g > c.max ? "marg" : "ideal"; }
+function lvWave(h, c){ if(h==null) return null; return h > c.wMax ? "no" : h > c.wOk ? "marg" : "ideal"; }
+const lvTxt = (k, txt) => k ? `<span class="lv k-${k}">${txt}</span>` : txt;
+
+/* ---------- dades ---------- */
+const URL_FC = `https://api.open-meteo.com/v1/forecast?latitude=${LOC.lat}&longitude=${LOC.lon}`+
+  "&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m"+
+  "&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m"+
+  "&daily=sunrise,sunset,weather_code,temperature_2m_max,temperature_2m_min"+
+  "&wind_speed_unit=kn&timezone=Europe%2FMadrid&forecast_days=16";   // 16 dies: el calendari en pot mostrar dues setmanes
+const URL_MA = `https://marine-api.open-meteo.com/v1/marine?latitude=${LOC.mlat}&longitude=${LOC.mlon}`+
+  "&hourly=wave_height,wave_direction,wave_period,swell_wave_peak_period,sea_surface_temperature"+
+  "&current=wave_height,wave_direction,wave_period,sea_surface_temperature"+
+  "&cell_selection=sea&timezone=Europe%2FMadrid&forecast_days=16&past_days=1";
+// Boia de Barcelona II (Ports de l'Estat, xarxa costanera REDCOS): 41,32 N 2,20 E, 68 m de fondària, ~20 km al SO del Masnou.
+// Mesura cada hora l'altura significant (Hm0), l'altura màxima, el període de pic i la direcció de procedència.
+const BUOY = {name:"boia de Barcelona", url:"https://portus.puertos.es/portussvr/api/RTData/station/1731?locale=es", params:[13,17,34,20]};
+let BU = store.get("ov2_buoy") || {at:0, hours:{}};
+const HMAX_K = 1.6; // l'onada més alta d'una hora sol ser ~1,6 vegades l'altura significant (a la boia avui: 1,4–2,2)
+const STATIONS = {
+  ocata:  {name:"Ocata", url:"https://ocata2.meteoelmasnou.cat/meteotemplateLive.txt"},
+  masnou: {name:"El Masnou",  url:"https://www.meteoelmasnou.cat/meteotemplateLive.txt"},
+  // Badalona (Dalt de la Vila, uns 600 m terra endins i en alçada): mateix sistema (Meteotemplate) i mateixa xarxa meteoelmasnou.cat
+  badalona: {name:"Badalona", url:"https://badalona.meteoelmasnou.cat/meteotemplateLive.txt"}
+};
+// Per defecte, El Masnou: l'anemòmetre de l'estació d'Ocata està arrecerat i marca un 40–80 % del vent real (comprovat oct. 2026)
+let stKey = store.get("ov2_station_v3"); if(!LOC.stations.includes(stKey)) stKey = LOC.st;
+
+async function getJSON(u){ const r = await fetch(u, {cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+function build(fc, ma){
+  const hours = {}, H = fc.hourly;
+  H.time.forEach((t,i) => { hours[t] = {t, temp:H.temperature_2m[i], pp:H.precipitation_probability?.[i], code:H.weather_code[i],
+    wind:H.wind_speed_10m[i], dir:H.wind_direction_10m[i], gust:H.wind_gusts_10m[i], wave:null, wdir:null, per:null, sst:null}; });
+  if(ma && ma.hourly){ const M = ma.hourly;
+    M.time.forEach((t,i) => { const h = hours[t]; if(!h) return;
+      h.wave = M.wave_height?.[i] ?? null; h.wdir = M.wave_direction?.[i] ?? null; h.per = M.wave_period?.[i] ?? null; h.tp = M.swell_wave_peak_period?.[i] ?? null; h.sst = M.sea_surface_temperature?.[i] ?? null; }); }
+  const mwave = {}; if(ma && ma.hourly) ma.hourly.time.forEach((t,i) => { const v = ma.hourly.wave_height?.[i]; if(v != null) mwave[t] = v; });
+  const c = fc.current || {}, mc = (ma && ma.current) || {};
+  return { base: hours, hours, mwave, daily: fc.daily, fetchedAt: new Date().toISOString(), marineOk: !!(ma && ma.hourly),
+    nowBase: {t:c.time, temp:c.temperature_2m, code:c.weather_code, wind:c.wind_speed_10m, dir:c.wind_direction_10m, gust:c.wind_gusts_10m,
+      wave:mc.wave_height ?? null, per:mc.wave_period ?? null, wdir:mc.wave_direction ?? null, sst:mc.sea_surface_temperature ?? null} };
+}
+/* ---------- models de previsió ---------- */
+// «Automàtic» = la millor combinació d'Open-Meteo. AROME (Météo-France, 1,3–2,5 km) arriba a ~2 dies i ARPEGE el continua
+// fins a ~4 dies; més enllà, i per als camps que no té, s'omple amb l'automàtic.
+const MODELS = {
+  arome: {label:"AROME", api:"meteofrance_seamless", long:"AROME (Météo-France)"},
+  auto:  {label:"Open-Meteo", api:null, long:"Open-Meteo (barreja els models que funcionen millor a cada zona i termini)"},
+  ecmwf: {label:"ECMWF", api:"ecmwf_ifs", long:"ECMWF IFS 9 km (centre europeu)"},
+  icon:  {label:"ICON", api:"icon_eu", long:"ICON-EU (servei alemany, DWD)"},
+  ukmo:  {label:"UKMO", api:"ukmo_global_deterministic_10km", long:"UKMO Global 10 km (Met Office britànic)"},
+  opt:   {label:"Optimista", api:null, long:"Per a cada hora, el model més favorable"},
+  pes:   {label:"Pessimista", api:null, long:"Per a cada hora, el model més desfavorable"}
+};
+// Preferència: «best» = el model que més encerta avui respecte l'estació (per defecte), o un model fix triat per l'usuari
+// Models que es demanen a part i es comparen amb l'estació: [clau, nom a l'API d'Open-Meteo]
+const ALT_MODELS = ["arome","ecmwf","icon","ukmo"].map(k => [k, MODELS[k].api]);
+let modelPref = store.get("ov2_model_pref") || "best"; if(modelPref !== "best" && !MODELS[modelPref]) modelPref = "best";
+let model = "auto";
+function pickModel(){
+  if(modelPref !== "best") return modelPref;
+  const errs = modelErrors().filter(e => e.n >= 3);
+  if(!errs.length) return store.get("ov2_model_best") || "auto";   // encara no hi ha prou hores mesurades: el millor de l'últim cop
+  const best = errs.sort((a, b) => a.mae - b.mae)[0].k; store.set("ov2_model_best", best); return best;
+}
+const URL_ALT = `https://api.open-meteo.com/v1/forecast?latitude=${LOC.lat}&longitude=${LOC.lon}`+
+  "&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&models="+ALT_MODELS.map(m => m[1]).join(",")+
+  "&wind_speed_unit=kn&timezone=Europe%2FMadrid&forecast_days=7";
+function parseAlt(j){
+  if(!j || !j.hourly) return null; const H = j.hourly, out = {};
+  ALT_MODELS.forEach(([, m]) => { const o = {};
+    H.time.forEach((t,i) => { const w = H["wind_speed_10m_"+m]?.[i]; if(w == null) return;
+      o[t] = {wind:w, gust:H["wind_gusts_10m_"+m]?.[i] ?? null, dir:H["wind_direction_10m_"+m]?.[i] ?? null, temp:H["temperature_2m_"+m]?.[i] ?? null}; });
+    out[m] = o; });
+  return out;
+}
+// Construeix DATA.hours a partir de la base (automàtic) i del model triat
+function applyModel(){
+  if(!DATA || !DATA.base) return;
+  model = pickModel();
+  const hours = {}; let lastAlt = null;
+  const withAlt = (b, a, k) => Object.assign({}, b, {wind:a.wind, gust:a.gust ?? b.gust, dir:a.dir ?? b.dir, temp:a.temp ?? b.temp, src:k});
+  if(model === "opt" || model === "pes"){
+    // Optimista / pessimista: per a cada hora, el model que dona millor / pitjor valoració per a l'embarcació triada
+    const c = crit[act], alts = ALT_MODELS.map(([k, m]) => [k, DATA.alt?.[m]]);
+    for(const t in DATA.base){ const b = DATA.base[t]; let best = Object.assign({}, b, {src:"auto"}), bs = scoreHour(best, c).score ?? -1;
+      alts.forEach(([k, src]) => { const a = src && src[t]; if(!a) return; const h = withAlt(b, a, k), sc = scoreHour(h, c).score ?? -1;
+        if(model === "opt" ? sc > bs : sc < bs){ best = h; bs = sc; } });
+      hours[t] = best; }
+  } else {
+    const alt = MODELS[model].api && DATA.alt ? DATA.alt[MODELS[model].api] : null;
+    for(const t in DATA.base){ const b = DATA.base[t], a = alt && alt[t];
+      hours[t] = a ? withAlt(b, a, model) : Object.assign({}, b, {src:"auto"});
+      if(a) lastAlt = t; }
+  }
+  DATA.hours = hours; DATA.modelEnd = lastAlt;
+  applyWaves();
+  const h = hours[nowKey()];
+  DATA.now = Object.assign({}, DATA.nowBase, h && h.src !== "auto" ? {wind:h.wind, gust:h.gust, dir:h.dir, temp:h.temp} : {});
+  if(h) Object.assign(DATA.now, {wave:h.wave, hmax:h.hmax, hmaxE:h.hmaxE, tp:h.tp, wdir:h.wdir ?? DATA.now.wdir, wobs:h.wobs, wcorr:h.wcorr});
+  const lb = lastBuoy(); if(lb && buoySwell(lb) && Date.now() - lb.t < 3*3600e3) Object.assign(DATA.now, {wave:lb.hs, hmax:lb.hmax ?? +(lb.hs*HMAX_K).toFixed(2), hmaxE:lb.hmax == null, tp:lb.tp ?? DATA.now.tp, wdir:lb.dir ?? DATA.now.wdir, wobs:true, wcorr:false, wat:lb.t});
+}
+/* ---------- onatge: mesura de la boia i correcció de la previsió ---------- */
+const localKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+// La boia és a Barcelona (mar oberta, 68 m): només representa el Masnou quan hi ha mar de fons (període ≥ 7 s),
+// que arriba igual a tota la costa. La mar de vent curta de Barcelona no arriba al Masnou (comprovat 11 oct.: boia 0,4–0,55 m, platja ≈ 0,2 m).
+const buoySwell = b => !!(b && b.tp != null && b.tp >= 7);
+const lastBuoy = () => { const ks = Object.keys(BU.hours || {}).sort(); return ks.length ? BU.hours[ks[ks.length-1]] : null; };
+// Quant s'ha equivocat el model (a la cel·la del Masnou) respecte la boia les darreres 12 hores mesurades
+function waveFactor(){
+  if(!DATA) return null; const nk = nowKey(), mw = DATA.mwave || {};
+  const pairs = Object.keys(BU.hours || {}).filter(k => k <= nk).sort().reverse()
+    .filter(k => buoySwell(BU.hours[k])).map(k => [BU.hours[k].hs, mw[k] ?? DATA.base[k]?.wave]).filter(([b, m]) => b != null && m != null && m > 0.05).slice(0, 12);
+  if(pairs.length < 4) return null;
+  const b = pairs.reduce((a, p) => a + p[0], 0) / pairs.length, m = pairs.reduce((a, p) => a + p[1], 0) / pairs.length;
+  return {f: Math.min(2, Math.max(0.6, b / m)), buoy: b, model: m, n: pairs.length};
+}
+// Hores passades: mesura real de la boia. Hores futures: previsió × factor de correcció, que s'esvaeix en 48 h
+function applyWaves(){
+  const wf = waveFactor(), nk = nowKey(), now = Date.now(); DATA.wf = wf;
+  for(const t in DATA.hours){ const h = DATA.hours[t], b = BU.hours?.[t];
+    if(b && t <= nk && buoySwell(b)){ Object.assign(h, {wave:b.hs, hmax:b.hmax, tp:b.tp ?? h.tp, wdir:b.dir ?? h.wdir, wobs:true, wfc:h.wave}); continue; }
+    if(h.wave != null && wf && Math.abs(wf.f - 1) > 0.05){
+      const lead = Math.max(0, (new Date(t).getTime() - now) / 3600e3), w = Math.max(0, 1 - lead / 48);
+      if(w > 0){ h.wfc = h.wave; h.wave = +(h.wave * (1 + (wf.f - 1) * w)).toFixed(2); h.wcorr = true; } }
+    if(h.hmax == null && h.wave != null){ h.hmax = +(h.wave * HMAX_K).toFixed(2); h.hmaxE = true; }
+  }
+}
+async function loadBuoy(){
+  try{
+    const r = await fetch(BUOY.url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(BUOY.params), cache:"no-store"});
+    if(!r.ok) throw 0;
+    const hours = {};
+    (await r.json()).forEach(row => { const m = (row.fecha || "").match(/(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)/); if(!m) return;
+      const d = new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5])), o = {};          // Portus dona les hores en UTC
+      (row.datos || []).forEach(x => { if(x.valor != null && x.valor !== "" && !x.averia) o[x.paramEseoo] = +x.valor / (x.factor || 1); });
+      if(o.Hm0 != null) hours[localKey(d)] = {hs:o.Hm0, hmax:o.Hmax ?? null, tp:o.Tp ?? null, dir:o.MeanDir ?? null, t:d.getTime()}; });
+    if(Object.keys(hours).length){ BU = {at:Date.now(), hours}; store.set("ov2_buoy", BU); }
+  }catch(e){}
+  if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); }
+}
+// Error mitjà del vent previst respecte l'estació en les hores ja passades d'avui
+function modelErrors(){
+  if(!DATA || !DATA.base || OBS.key !== stKey) return [];
+  const rows = [["auto", DATA.base], ...ALT_MODELS.map(([k, m]) => [k, DATA.alt?.[m]])];
+  return rows.map(([k, src]) => { let sum = 0, n = 0;
+    for(const t in OBS.hours){ if(t >= nowKey()) continue; const o = OBS.hours[t], f = src && src[t]; if(o.wind != null && f && f.wind != null){ sum += Math.abs(o.wind - f.wind); n++; } }
+    return {k, mae: n ? sum/n : null, n}; }).filter(x => x.mae != null);
+}
+function showMsg(text, err){ const m = $("msg"); m.hidden = !text; m.textContent = text || ""; m.className = "msg"+(err?" err":""); }
+async function load(){
+  $("refresh").setAttribute("aria-busy","true");
+  try{
+    const [fc, ma, alt] = await Promise.all([getJSON(URL_FC), getJSON(URL_MA).catch(() => getJSON(URL_MA.replace("forecast_days=16", "forecast_days=8"))).catch(()=>null), getJSON(URL_ALT).catch(()=>null)]);
+    DATA = build(fc, ma); DATA.alt = parseAlt(alt); applyModel();
+    const {hours, ...toCache} = DATA; store.set("ov2_cache_" + locKey, toCache);
+    showMsg(DATA.marineOk ? "" : "Sense dades d'onatge ara mateix: la valoració només té en compte el vent.");
+  }catch(e){
+    const cached = store.get("ov2_cache_" + locKey) || (locKey === "masnou" ? store.get("ov2_cache") : null);
+    if(cached){ DATA = cached; if(!DATA.base){ DATA.base = DATA.hours; DATA.nowBase = DATA.now; } applyModel(); showMsg("Sense connexió. Mostro la previsió desada el "+stamp(cached.fetchedAt)+".", true); }
+    else { showMsg("No s'ha pogut carregar la previsió. Comprova la connexió i torna-ho a provar.", true); $("refresh").removeAttribute("aria-busy"); return; }
+  }
+  $("refresh").removeAttribute("aria-busy");
+  render();
+}
+async function loadStation(){
+  try{
+    const key = stKey, j = await getJSON(STATIONS[key].url+"?t="+Date.now());
+    if(key === stKey) ST = {key, wind:j.W*KMH, gust:j.G*KMH, dir:j.B, temp:j.T, hum:j.H, pres:j.P, at:(j.U||0)*1000};
+  }catch(e){}
+  if(DATA) renderNow();
+  return ST;
+}
+/* ---------- registres horaris de l'estació (avui) ---------- */
+// Mateixa consulta que la «Taula interactiva» de la web: Avui, per hores, vent mitjà, ratxa màx., direcció i temperatura
+let OBS = {key:null, at:0, hours:{}};
+const UNIT_KN = {kmh:0.539957, "km/h":0.539957, ms:1.943844, "m/s":1.943844, mph:0.868976, kt:1, kn:1, kts:1};
+const OBS_PARAMS = "avgbracketLWbracketR,maxbracketLGbracketR,avgbracketLBbracketR,avgbracketLTbracketR";
+const fmtLocal = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+// Registres de 5 minuts de l'estació (consulta «Taula interactiva», agrupació «Tot»), en nusos
+async function stationRecords(key, interval, fromMs, toMs){
+  const base = new URL(STATIONS[key].url).origin;
+  const q = `value=all&interval=${interval}&from=${fromMs ? encodeURIComponent(fmtLocal(fromMs)) : ""}&to=${toMs ? encodeURIComponent(fmtLocal(toMs)) : ""}&parameters=${OBS_PARAMS}`;
+  const r = await fetch(base+"/pages/station/tableAjax.php?"+q+"&t="+Date.now(), {cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status);
+  const doc = new DOMParser().parseFromString(await r.text(), "text/html");
+  const unitTxt = (doc.querySelector("thead th:nth-child(2)")?.textContent || "").toLowerCase();
+  const f = UNIT_KN[((unitTxt.match(/\(([^)]+)\)/) || [])[1] || "").replace(/\s/g,"")] ?? KMH;
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const out = [];
+  doc.querySelectorAll("tbody tr").forEach(tr => {
+    const td = [...tr.children].map(x => x.textContent.trim()); const m = td[0]?.match(/(\d\d)[\/.](\d\d)[\/.](\d{2,4})\s+(\d\d)[:.](\d\d)/); if(!m) return;   // 12/10/26 14:05 o 12.10.2026 14.05
+    const w = num(td[1]), g = num(td[2]);
+    out.push({t: new Date(m[3].length === 4 ? +m[3] : 2000 + +m[3], +m[2]-1, +m[1], +m[4], +m[5]).getTime(), wind: w==null?null:w*f, gust: g==null?null:g*f, dir: num(td[3]), temp: num(td[4])});
+  });
+  return out.sort((a,b) => a.t - b.t);
+}
+// Direcció mitjana vectorial (ponderada pel vent): 350° i 10° fan 0°, no 180°
+function vecDir(list){ let x = 0, y = 0; list.forEach(o => { if(o.dir!=null){ const w = Math.max(o.wind||0, 0.1); x += Math.sin(o.dir*Math.PI/180)*w; y += Math.cos(o.dir*Math.PI/180)*w; } }); return (x||y) ? norm(Math.atan2(x,y)*180/Math.PI) : null; }
+async function loadObs(){
+  const key = stKey;
+  try{
+    let recs = await stationRecords(key, "today"), recs24 = recs;
+    if(recs.length < 12) try{ recs24 = await stationRecords(key, "custom", Date.now() - 24*3600e3, Date.now()); }catch(e){}
+    const by = {};
+    recs.forEach(o => { const d = new Date(o.t), k = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`; (by[k] = by[k] || []).push(o); });
+    const hours = {};
+    for(const k in by){ const L = by[k], ws = L.map(o=>o.wind).filter(v=>v!=null), gs = L.map(o=>o.gust).filter(v=>v!=null), ts = L.map(o=>o.temp).filter(v=>v!=null);
+      hours[k] = {wind: ws.length ? ws.reduce((a,b)=>a+b,0)/ws.length : null, gust: gs.length ? Math.max(...gs) : null, dir: vecDir(L), temp: ts.length ? ts.reduce((a,b)=>a+b,0)/ts.length : null, n: L.length}; }
+    if(key === stKey){ OBS = {key, at: Date.now(), hours, recs: recs24, recs24h: recs24 !== recs}; if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); } }
+  }catch(e){}
+}
+// Hora combinada: mesura real de l'estació per a les hores passades i l'actual; previsió per a la resta
+function hourAt(date, h){
+  const k = hourKey(date, h), f = DATA.hours[k]; if(!f) return null;
+  const o = OBS.key === stKey ? OBS.hours[k] : null;
+  if(o && o.wind != null && k <= nowKey()) return Object.assign({}, f, {wind:o.wind, gust:o.gust ?? f.gust, dir:o.dir ?? f.dir, temp:o.temp ?? f.temp, obs:true, fc:f});
+  return f;
+}
+const stFresh = () => !!(ST && (Date.now() - ST.at) < 30*60*1000);
+const stamp = iso => { const d = new Date(iso); return d.toLocaleDateString("ca",{day:"numeric",month:"short"})+" a les "+d.toLocaleTimeString("ca",{hour:"2-digit",minute:"2-digit"}); };
+const hourKey = (date,h) => date+"T"+pad(h)+":00";
+const nowKey = () => (DATA?.now?.t || new Date().toISOString()).slice(0,13)+":00";
+const todayDate = () => DATA.daily.time.find(d => d === nowKey().slice(0,10)) || DATA.daily.time[0];
+// Previsió de vent per a un instant qualsevol (la fa servir el registre de sortides)
+function forecastAt(ms){
+  if(!DATA) return null; const d = new Date(ms);
+  const k = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+  return DATA.hours[k] || null;
+}
+
+function slotAgg(date, slot, c){
+  const hs = slot.hours.map(h => hourAt(date,h)).filter(Boolean);
+  if(!hs.length) return null;
+  const vals = f => hs.map(f).filter(x=>x!=null);
+  const avg = f => { const v = vals(f); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; };
+  const max = f => { const v = vals(f); return v.length ? Math.max(...v) : null; };
+  let sx=0, sy=0; hs.forEach(h => { if(h.dir!=null && h.wind!=null){ sx += Math.sin(h.dir*Math.PI/180)*h.wind; sy += Math.cos(h.dir*Math.PI/180)*h.wind; }});
+  const dir = (sx||sy) ? norm(Math.atan2(sx,sy)*180/Math.PI) : null;
+  const sc = hs.map(h => scoreHour(h,c));
+  const ss = sc.map(s=>s.score).filter(s=>s!=null);
+  let score = ss.length ? Math.round(Math.min(ss.reduce((a,b)=>a+b,0)/ss.length, Math.min(...ss)+25)) : null;
+  const gmax = Math.max(...hs.map(h => h.gust ?? 0));
+  if(score != null && gmax > c.gust) score = Math.min(score, 25);   // la ratxa màxima de la franja també compta
+  return {wind:avg(h=>h.wind), gust:max(h=>h.gust), dir, wave:max(h=>h.wave), per:avg(h=>h.per), temp:avg(h=>h.temp), sst:avg(h=>h.sst),
+    code:max(h=>h.code), score, flags:[...new Set(sc.flatMap(s=>s.flags))], why:[...new Set(sc.flatMap(s=>s.why || []))], past: hs[hs.length-1].t < nowKey()};
+}
+
+/* ---------- indicador d'idoneïtat ---------- */
+// Valoració de la portada: mitjana de l'última hora mesurada i de les 2 hores següents de previsió
+function scoreWindow(n, c){
+  const now = Date.now(), recs = OBS.key === stKey ? (OBS.recs || []).filter(o => o.t >= now - 3600e3 && o.wind != null) : [];
+  const last = recs.length ? Object.assign({}, n, {wind: recs.reduce((a,o)=>a+o.wind,0)/recs.length, gust: Math.max(...recs.map(o => o.gust ?? o.wind)), dir: vecDir(recs) ?? n.dir}) : n;
+  const nk = nowKey(), d = new Date(nk.slice(0,13) + ":00:00");
+  const next = [1, 2].map(i => { const x = new Date(d.getTime() + i*3600e3); return DATA.hours[localKey(x)]; }).filter(Boolean);
+  const all = [last, ...next].map(p => scoreHour(p, c)).filter(r => r.score != null);
+  if(!all.length) return scoreHour(n, c);
+  const avg = f => { const v = all.map(f).filter(x => x != null); return v.length ? Math.round(v.reduce((a,b)=>a+b,0)/v.length) : null; };
+  const PRI = ["poca llum","tempesta","pluja","terral fort","ratxes fortes","massa vent","onada alta","poc vent"];
+  const why = [...new Set(all.flatMap(r => r.why))].sort((x, y) => (PRI.includes(x) ? PRI.indexOf(x) : 99) - (PRI.includes(y) ? PRI.indexOf(y) : 99));
+  return {score: avg(r => r.score), wind: avg(r => r.wind), wave: avg(r => r.wave), flags: [...new Set(all.flatMap(r => r.flags))], why, n: all.length};
+}
+// Indicador circular: anell exterior = idoneïtat global (per trams de color), anells interiors = vent (blanc/negre) i onades (blau)
+const kOf = sc => sc==null ? "no" : sc >= 60 ? "ideal" : sc >= 35 ? "marg" : "no";
+function gaugeSvg(s0, v){
+  // els arcs es dibuixen amb el mateix valor arrodonit que es mostra (x/10), perquè la llargada quadri amb el número
+  const q = x => x == null ? null : Math.round(x/10)*10, s = Object.assign({}, s0, {score: q(s0.score), wind: q(s0.wind), wave: q(s0.wave)});
+  const score = s.score, P = (a, r) => [Math.sin(a*Math.PI/180)*r, -Math.cos(a*Math.PI/180)*r];
+  const arc = (a0, a1, r) => { const [x0,y0] = P(a0,r), [x1,y1] = P(a1,r); return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+  const ring = (val, r, w, color, track) => { let g = `<circle r="${r}" fill="none" stroke="${track}" stroke-width="${w}"/>`;
+    if(val > 0) g += `<path d="${arc(0, Math.min(359.9, val/100*360), r)}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/>`; return g; };
+  let g = `<circle r="109" fill="none" stroke="var(--line)" stroke-width="1.2"/>`;
+  // anell global, acolorit per trams (vermell < 35, taronja < 60, verd)
+  g += `<circle r="100" fill="none" stroke="var(--grid)" stroke-width="12"/>`;
+  // degradat continu: vermell a dalt → taronja cap a 5 → verd a 10 (trams petits, perquè l'SVG no té degradat cònic)
+  const gcol = f => f < 0.5 ? `color-mix(in srgb, var(--marg) ${Math.round(f/0.5*100)}%, var(--no))` : `color-mix(in srgb, var(--ideal) ${Math.round((f-0.5)/0.5*100)}%, var(--marg))`;
+  if(score > 0){ const end = Math.min(359.9, score/100*360), st = 3;
+    const [cx0,cy0] = P(0, 100); g += `<circle cx="${cx0}" cy="${cy0}" r="6" fill="${gcol(0)}"/>`;
+    for(let a = 0; a < end; a += st){ const a1 = Math.min(end, a + st + 0.6); g += `<path d="${arc(a, a1, 100)}" fill="none" stroke="${gcol(a/360)}" stroke-width="12"/>`; }
+    const [ex,ey] = P(end, 100); g += `<circle cx="${ex.toFixed(2)}" cy="${ey.toFixed(2)}" r="6" fill="${gcol(end/360)}"/>`; }
+  g += ring(s.wave ?? 0, 88, 6, "var(--wave-l)", "color-mix(in srgb, var(--wave-l) 14%, transparent)");
+  g += ring(s.wind ?? 0, 79, 6, "var(--ink)", "color-mix(in srgb, var(--ink) 10%, transparent)");
+  g += `<path d="M0 -107 l-6 -9 h12 z" fill="var(--ideal)"/>`;
+  const n10 = x => x==null ? "–" : String(Math.round(x/10));
+  g += `<text y="-22" text-anchor="middle" font-family="Rajdhani,sans-serif" font-weight="700" font-size="48" fill="var(--${v.k})">${n10(score)}<tspan font-size="18" fill="var(--muted)" dx="2">/10</tspan></text>`;
+  g += `<text y="-2" text-anchor="middle" font-family="Rajdhani,sans-serif" font-weight="700" font-size="16" fill="var(--${v.k})" letter-spacing=".5">${esc(v.t.toUpperCase())}</text>`;
+  const mini = (x, val, lbl, ic) => { const r = 16, cy = 32, a = (d) => { const t = (180 + d) * Math.PI/180; return [x + Math.cos(t)*r, cy + Math.sin(t)*r]; };
+    const [sx,sy] = a(0), [ex,ey] = a(Math.max(0.1, (val ?? 0)/100*180)), k = kOf(val);
+    return `<path d="M${x-r} ${cy} A${r} ${r} 0 0 1 ${x+r} ${cy}" fill="none" stroke="var(--grid)" stroke-width="4" stroke-linecap="round"/>`+
+      (val ? `<path d="M${sx.toFixed(1)} ${sy.toFixed(1)} A${r} ${r} 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${ic === "w" ? "var(--ink)" : "var(--wave-l)"}" stroke-width="4" stroke-linecap="round"/>` : "")+
+      `<g transform="translate(${x-7} ${cy-14})" fill="none" stroke="${ic === "w" ? "var(--ink)" : "var(--wave-l)"}" stroke-width="1.6" stroke-linecap="round">${ic === "w" ? `<path d="M1 4h7a2 2 0 1 0-2-2M1 7h10a2 2 0 1 1-2 2M1 10h5"/>` : `<path d="M0 8c2-3 4-3 6 0s4 3 6 0M0 11c2-3 4-3 6 0s4 3 6 0"/>`}</g>`+
+      `<text x="${x}" y="${cy+11}" text-anchor="middle" font-family="Rajdhani,sans-serif" font-weight="700" font-size="10" fill="var(--muted)" letter-spacing=".6">${lbl}</text>`+
+      `<text x="${x}" y="${cy+26}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-weight="700" font-size="14" fill="var(--ink)">${n10(val)}<tspan font-size="8" fill="var(--muted)">/10</tspan></text>`; };
+  g += mini(-32, s.wind, "VENT", "w") + mini(32, s.wave, "ONADES", "o");
+  return `<svg viewBox="-114 -120 228 230" role="img" aria-label="Idoneïtat ${esc(v.t)}: ${n10(score)} sobre 10; vent ${n10(s.wind)}, onades ${n10(s.wave)}">${g}</svg>`;
+}
+
+/* ---------- rosa dels vents ---------- */
+// Rosa dels vents amb histograma del dia: barres cada 10°, llargada = temps que ha bufat d'aquella direcció,
+// apilades per força del vent (verd fluix → vermell fort). El con blanc marca la direcció d'ara.
+// Histograma: minuts de vent per direcció (sectors de 10°). Capa 0 = registrat a l'estació (ambre);
+// capes 1–3 = previsió de la resta del dia, pel codi de colors de l'embarcació (verd, taronja, vermell).
+const ROSE_LAYERS = ["reg","fc"];
+function roseHist(recs, fc){
+  const sec = Array.from({length:36}, () => [0,0]), add = (dir, layer, min) => { if(dir==null) return; sec[Math.round(norm(dir)/10) % 36][layer] += min; };
+  const R = (recs || []).filter(o => o.dir!=null && o.wind!=null && o.wind >= 0.5);
+  R.forEach((o, i) => { const nx = R[i+1] || R[i-1]; const step = nx ? Math.min(30, Math.max(1, Math.abs(nx.t - o.t)/60000)) : 10; add(o.dir, 0, step); });
+  (fc || []).forEach(h => { if(h.wind!=null && h.wind >= 0.5) add(h.dir, 1, 60); });
+  return sec;
+}
+// Hores de previsió d'avui que queden (de la propera hora fins a la posta)
+function roseForecast(){
+  if(!DATA) return []; const td = todayDate(), i = DATA.daily.time.indexOf(td), set = i >= 0 ? new Date(DATA.daily.sunset[i]).getHours() : 20, nh = +nowKey().slice(11,13);
+  // Optimista / Pessimista trien model segons l'embarcació: l'histograma ha de ser el mateix per a totes,
+  // així que llavors fa servir el model que més encerta (o la base d'Open-Meteo)
+  const per = model === "opt" || model === "pes", bk = store.get("ov2_model_best") || "auto", alt = per && MODELS[bk]?.api ? DATA.alt?.[MODELS[bk].api] : null;
+  const out = []; for(let h = nh + 1; h <= set; h++){ const k = hourKey(td, h), p = per ? (alt?.[k] ? Object.assign({}, DATA.base[k], alt[k]) : DATA.base[k]) : DATA.hours[k]; if(p) out.push(p); } return out;
+}
+// icona d'onada (dibuixada a l'editor d'icones, graella 24×24)
+const WAVE_IC = ["M4 10.5C6 8 3 5.5 7 9C9 11 10.5 11 12 9C13.5 7 9.5 5 16.5 9C18 10 19.5 11 18 10","M4 17C6.5 13.5 3 12 7.5 15.5C9 17 10.5 17 12 15C13.5 13 10 11.5 16.5 15C18 16 19.5 17 16.5 15"];
+const waveIc = sz => `<svg class="wave-ic" width="${sz}" height="${sz}" viewBox="2 3 18 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${WAVE_IC.map(d => `<path d="${d}"/>`).join("")}</svg>`;
+function roseSvg(o){
+  const R = 100, ri = 38, Z = o.card ? 1.35 : 1, P = (a, r) => [Math.sin(a*Math.PI/180)*r, -Math.cos(a*Math.PI/180)*r];
+  const wedge = (a0, a1, ra, rb, fill, extra) => { const [x0,y0] = P(a0,rb), [x1,y1] = P(a1,rb), [x2,y2] = P(a1,ra), [x3,y3] = P(a0,ra);
+    return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${rb} ${rb} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)} A${ra} ${ra} 0 0 0 ${x3.toFixed(1)} ${y3.toFixed(1)} Z" fill="${fill}"${extra||""}/>`; };
+  // Tot el que té direcció va dins #roseRot, que gira amb la brúixola; el centre i el número queden quiets
+  const bg = `<circle r="${R}" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.5"/>`;
+  let g = "";
+  for(let a=0; a<360; a+=45){ const [x0,y0] = P(a, ri), [x1,y1] = P(a, R-8); g += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`; }
+  // histograma
+  const H = o.hist, tot = H ? H.map(b => b.reduce((x,y)=>x+y,0)) : [], mx = Math.max(1, ...tot), L = R - 10 - ri;
+  if(H) H.forEach((bins, i) => { if(!tot[i]) return; let ra = ri + 1; const a0 = i*10 - 4, a1 = i*10 + 4;
+    let cum = 0; bins.forEach((n, b) => { if(!n) return; cum += n; const rb = ri + 1 + Math.sqrt(cum/mx)*L; g += b ? wedge(a0, a1, ra, rb, "var(--ink)", ' fill-opacity=".14" stroke="var(--ink)" stroke-width=".9" stroke-opacity=".75"') : wedge(a0, a1, ra, rb, "var(--ink)", ' fill-opacity=".85"'); ra = rb; }); });   // escala d'arrel: les direccions amb poca estona també es veuen
+  // escala exterior
+  for(let a=0; a<360; a+=10){ const big = a%45===0, [x0,y0] = P(a, R), [x1,y1] = P(a, R-(big?9:4));
+    g += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="${big?"var(--ink)":"var(--muted)"}" stroke-width="${big?2:1}"/>`; }
+  // només si l'onada ve gairebé de la mateixa direcció (< 14°) la icona tapa la lletra; si no, totes dues hi caben al seu lloc
+  const wHide = o.wdir!=null ? WABBR.findIndex((t,i) => Math.abs(((o.wdir - i*45 + 540) % 360) - 180) < 14) : -1;
+  WABBR.forEach((t,i) => { if(i === wHide) return; const [x,y] = P(i*45, R+12*Z); g += `<text x="${x.toFixed(1)}" y="${(y+4*Z).toFixed(1)}" text-anchor="middle" font-size="${11*Z}" font-weight="700" fill="${isOffshore(i*45) ? "var(--marg)" : "var(--sea)"}" font-family="Rajdhani,sans-serif" letter-spacing=".5" class="upr">${t}</text>`; });
+  // punts cardinals (N, E, S, O) per fora de les lletres dels vents; si l'onada hi cau a sobre, la lletra no es dibuixa
+  if(o.card) ["N","E","S","O"].forEach((t,i) => { let a = i*90; const dw = o.wdir!=null ? ((o.wdir - a + 540) % 360) - 180 : 99;
+    if(Math.abs(dw) < 24) a += dw > 0 ? dw - 24 : dw + 24;   // l'onada hi cau a sobre: la lletra es desplaça una mica al costat
+    const [x,y] = P(a, R+48);
+    g += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><text class="upr" y="7" text-anchor="middle" font-size="21" font-weight="800" fill="var(--ink)" font-family="Rajdhani,sans-serif">${t}</text></g>`; });
+  // con de la direcció del vent actual (l'onada es dibuixa al final, per fora de la circumferència)
+  if(o.dir!=null){ const [x0,y0] = P(o.dir-11, R), [x1,y1] = P(o.dir+11, R), [xc,yc] = P(o.dir, ri-6);
+    g += `<g class="needle"><path d="M${xc.toFixed(1)} ${yc.toFixed(1)} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z" fill="${o.k ? `var(--${o.k})` : "var(--ink)"}" fill-opacity=".38" stroke="${o.k ? `var(--${o.k})` : "var(--ink)"}" stroke-width="2"/></g>`; }
+  // pantalla de ruta: rumb del GPS (agulla blava) i direcció cap a la base (punt verd)
+  if(o.cog!=null){ const y0 = -(ri-2), yh = -(R-22), y1 = -(R+4);   // fletxa de cartell: tija gruixuda i punta ampla
+    g += `<polygon transform="rotate(${o.cog})" points="-6,${y0} 6,${y0} 6,${yh} 15,${yh} 0,${y1} -15,${yh} -6,${yh}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke"/>`; }
+  if(o.home!=null){ const [x,y] = P(o.home, R-14*Z); g += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${Z})"><g class="upr"><circle r="11" fill="var(--ideal)" stroke="var(--surface)" stroke-width="2"/><path d="M-5 1 0-4 5 1M-3.5 0v4.5h7V0" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></g></g>`; }
+  let fx = `<circle r="${ri-4}" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>`;
+  if(o.cv != null) fx += `<text y="-13" text-anchor="middle" font-size="10" font-weight="700" fill="var(--muted)" font-family="Rajdhani,sans-serif" letter-spacing="1">${o.cl || ""}</text><text y="13" text-anchor="middle" font-size="27" font-weight="700" fill="var(--ink)" font-family="Rajdhani,sans-serif">${o.cv}<tspan font-size="11" fill="var(--muted)" dx="2">${o.cu || ""}</tspan></text>`;
+  else {
+  fx += `<g transform="translate(-9 -27)" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><path d="M1 5h9a2.5 2.5 0 1 0-2.5-2.5M1 9h13a2.5 2.5 0 1 1-2.5 2.5M1 13h6"/></g>`;
+  fx += `<text y="12" text-anchor="middle" font-size="26" font-weight="700" fill="var(--ink)" font-family="Rajdhani,sans-serif">${r0(o.wind)}<tspan font-size="11" fill="var(--muted)" dx="2">kn</tspan></text>`;
+  }
+  // onada: icona + alçada per fora de la rosa, al costat d'on ve
+  let wl = "";
+  if(o.wdir!=null){ const [x,y] = P(o.wdir, R+17*Z), t = o.wave!=null ? `${r1(o.wave)} m` : "";
+    // la lletra de la direcció que tapa la icona es posa just a sobre; a dalt i a baix de tot no hi cabria i va al costat
+    const wLbl = wHide >= 0 ? `<text ${Math.abs(y) > 90 ? `x="-16" y="${t ? -2 : 4}" text-anchor="end"` : `y="${t ? -20 : -13}" text-anchor="middle"`} font-size="11" font-weight="700" fill="${isOffshore(wHide*45) ? "var(--marg)" : "var(--sea)"}" font-family="Rajdhani,sans-serif" letter-spacing=".5">${WABBR[wHide]}</text>` : "";
+    g += `<g class="rose-wave" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${Z})"><g class="upr"><g transform="translate(-12 -${t?18:11})" fill="none" stroke="var(--wave-l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${WAVE_IC.map(d => `<path d="${d}"/>`).join("")}</g>${t ? `<text y="14" text-anchor="middle" font-size="13" font-weight="700" fill="var(--wave-l)" font-family="Rajdhani,sans-serif">${t}</text>` : ""}${wLbl}</g></g>`;
+    wl = `, onada de ${windName(o.wdir)}${o.wave!=null ? ` de ${r1(o.wave)} m` : ""}`; }
+  const vb = o.card ? "-163 -163 326 326" : "-136 -136 272 272";
+  return `<svg viewBox="${vb}" role="img" aria-label="Vent de ${windName(o.dir)} a ${r0(o.wind)} nusos${wl}, amb l'histograma de direccions d'avui">${bg}<g class="rose-rot">${g}</g>${fx}<path class="cmp-mark" d="M0 -${R+19}l-6 -9h12z" fill="var(--accent)"/></svg>`;
+}
+
+/* ---------- brúixola: la rosa s'orienta com el món real ---------- */
+// Amb la brúixola activa, el nord de la rosa apunta al nord de veritat; el triangle de dalt és cap on mira el mòbil.
+let cmpOn = false, cmpH = null, cmpU = 0, cmpGot = false;
+// La rosa de la pantalla de ruta gira sempre: amb la brúixola si n'hi ha, i si no, amb el rumb del GPS (rideCogH).
+window.rideCmpOn = false; window.rideCogH = null;
+function cmpApply(){
+  document.querySelectorAll(".rose-rot").forEach(g => {
+    const sv = g.ownerSVGElement, ride = !!g.closest("#ride");
+    const h = ride ? (cmpH != null ? cmpU : window.rideCogH) : (cmpOn && cmpH != null ? cmpU : null);
+    sv.classList.toggle("cmp", h != null);
+    const a = h != null ? -h : 0;
+    g.style.transform = `rotate(${a}deg)`;
+    g.querySelectorAll(".upr").forEach(t => t.style.transform = `rotate(${-a}deg)`);
+  });
+  const src = document.getElementById("rideCsrc");
+  if(src && window.rideCmpOn) src.textContent = cmpH != null ? "Orientada amb la brúixola: dalt = cap on mires" : window.rideCogH != null ? "Orientada amb el rumb: dalt = cap on navegues" : "Nord a dalt";
+}
+let cmpListening = false;
+function cmpListen(){
+  const need = cmpOn || window.rideCmpOn, ev = "ondeviceorientationabsolute" in window ? "deviceorientationabsolute" : "deviceorientation";
+  if(need && !cmpListening){ addEventListener(ev, cmpRead); cmpListening = true; }
+  if(!need && cmpListening){ removeEventListener(ev, cmpRead); cmpListening = false; cmpH = null; }
+}
+async function cmpPerm(){
+  try{ if(typeof DeviceOrientationEvent !== "undefined" && DeviceOrientationEvent.requestPermission) return await DeviceOrientationEvent.requestPermission() === "granted"; }catch(e){ return false; }
+  return true;
+}
+function cmpRead(e){
+  let h = null;
+  if(e.webkitCompassHeading != null) h = e.webkitCompassHeading;                       // iPhone
+  else if(e.alpha != null && (e.absolute || e.type === "deviceorientationabsolute")) h = 360 - e.alpha;  // Android
+  if(h == null) return;
+  h = (h + (screen.orientation?.angle || 0) + 360) % 360; cmpGot = true;
+  // gir continu (sense fer la volta sencera en passar de 359° a 0°) i una mica suavitzat
+  if(cmpH == null){ cmpH = h; cmpU = h; } else { const d = ((h - cmpH + 540) % 360) - 180; cmpH = h; cmpU += d; }
+  if(!cmpRead.raf) cmpRead.raf = requestAnimationFrame(() => { cmpRead.raf = 0; cmpApply(); });
+}
+async function cmpToggle(){
+  const b = $("cmpBtn");
+  if(cmpOn){ cmpOn = false; cmpListen(); cmpApply(); b.setAttribute("aria-pressed","false"); return; }
+  if(!await cmpPerm()){ showMsg("Sense permís per fer servir la brúixola del mòbil."); return; }
+  cmpOn = true; cmpGot = false; b.setAttribute("aria-pressed","true"); cmpListen();
+  setTimeout(() => { if(cmpOn && !cmpGot){ showMsg("Aquest mòbil o navegador no dona la brúixola: la rosa es queda amb el nord a dalt."); cmpOn = false; b.setAttribute("aria-pressed","false"); cmpListen(); cmpApply(); } }, 2500);
+}
+document.addEventListener("click", e => { if(e.target.closest && e.target.closest("#cmpBtn")) cmpToggle(); });
+
+/* ---------- gràfic horari ---------- */
+// Amplada real disponible (px) perquè el gràfic hi càpiga sencer, sense lliscar, i les lletres no s'encongeixin
+function chartW(el){ const w = el && el.clientWidth ? el.clientWidth - (parseFloat(getComputedStyle(el).paddingLeft)||0) - (parseFloat(getComputedStyle(el).paddingRight)||0) : 0;
+  return Math.round(Math.min(760, Math.max(300, w || (innerWidth - 40)))); }
+function hourChart(date, h0, h1, wide, Wpx){
+  const c = crit[act], hrs = [];
+  for(let h=h0; h<=h1; h++){ const p = hourAt(date,h); if(p) hrs.push({h, p, s:scoreHour(p,c)}); }
+  if(hrs.length < 2) return "";
+  const big = document.documentElement.dataset.size === "big";
+  const W = wide ? (Wpx || 760) : 380, Hh = wide ? (big ? 200 : 170) : 108, L = wide ? 26 : 6, R = wide ? 30 : 6, T = wide ? 22 : 22, B = wide ? 36 : 20;
+  const pw = W-L-R, ph = Hh-T-B, n = hrs.length, dx = pw/(n-1);
+  // escala ajustada a les dades que es veuen (no als criteris), perquè el gràfic sigui baixet i aprofiti l'alçada
+  const maxK = Math.max(10, Math.ceil(Math.max(...hrs.map(x=>Math.max(x.p.gust||0, x.p.wind||0)))*1.1/5)*5);
+  const maxW = Math.max(0.5, Math.ceil(Math.max(...hrs.map(x=>x.p.wave||0))*1.15*2)/2);
+  const X = j => L + dx*j, yK = k => T + ph - (k/maxK)*ph, yW = w => T + ph - (w/maxW)*ph;
+  const fs = big ? 13 : 11, thin = dx < 24;  // poc espai entre hores: etiquetes d'hora alternes
+  const id = "g"+Math.random().toString(36).slice(2,7);
+  let g = `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--ink)" stop-opacity=".16"/><stop offset="1" stop-color="var(--ink)" stop-opacity="0"/></linearGradient></defs>`;
+  if(c.iMin < maxK){ const top = yK(Math.min(c.iMax, maxK)); g += `<rect x="${L}" y="${top}" width="${pw}" height="${yK(c.iMin)-top}" fill="var(--ideal-t)" opacity=".7"/>`; }
+  if(wide) for(let k=0;k<=maxK;k+=(maxK > 25 ? 10 : 5)) g += `<line x1="${L}" x2="${W-R}" y1="${yK(k)}" y2="${yK(k)}" stroke="var(--grid)"/><text x="${L-6}" y="${yK(k)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${k}</text>`;
+  else g += `<line x1="${L}" x2="${W-R}" y1="${yK(0)}" y2="${yK(0)}" stroke="var(--grid)"/>`;
+  const nk = nowKey(), ni = hrs.findIndex(x => x.p.t === nk);
+  if(ni >= 0) g += `<line x1="${X(ni)}" x2="${X(ni)}" y1="${T-14}" y2="${yK(0)}" stroke="var(--accent-2)" stroke-width="1.5" stroke-dasharray="3 3"/><text x="${X(ni)}" y="${T-16}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--accent-2)" font-family="Rajdhani,sans-serif" letter-spacing="1">ARA</text>`;
+  const pts = hrs.map((x,j) => [X(j), yK(x.p.wind||0)]), gpts = hrs.map((x,j) => [X(j), yK(x.p.gust||0)]);
+  g += `<path d="M${X(0)} ${yK(0)} L${pts.map(p=>p.join(" ")).join(" L")} L${X(n-1)} ${yK(0)} Z" fill="url(#${id})"/>`;
+  g += `<polyline points="${gpts.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  const lastObs = hrs.reduce((a,x,j) => x.p.obs ? j : a, -1);
+  if(lastObs >= 0){
+    // previsió que hi havia per a les hores ja passades (fina, per comparar)
+    const pf = hrs.slice(0, lastObs+1).map((x,j) => [X(j), yK((x.p.fc||x.p).wind||0)]);
+    if(pf.length > 1) g += `<polyline points="${pf.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3" opacity=".6"/>`;
+    if(lastObs < n-1) g += `<polyline points="${pts.slice(lastObs).map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>`;
+    g += `<polyline points="${pts.slice(0, lastObs+1).map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--accent-2)" stroke-width="3" stroke-linejoin="round"/>`;
+  } else g += `<polyline points="${pts.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  // cursor de l'hora seleccionada (es mou des de JS sense redibuixar)
+  g += `<g class="hsel" style="display:none"><rect x="${-dx/2}" y="${T-18}" width="${dx}" height="${ph+18}" fill="var(--ink)" opacity=".07" rx="4"/><line x1="0" x2="0" y1="${T-18}" y2="${yK(0)}" stroke="var(--ink)" stroke-width="1.5"/></g>`;
+  if(wide){ const wp = hrs.map((x,j) => x.p.wave==null ? null : [X(j), yW(x.p.wave)]).filter(Boolean);
+    if(wp.length>1) g += `<polyline points="${wp.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--wave-l)" stroke-width="2.5" stroke-dasharray="1 0"/>`;
+    for(let w=0; w<=maxW+1e-9; w+=0.5) g += `<text x="${W-R+6}" y="${yW(w)+4}" font-size="11" fill="var(--wave-l)" font-family="IBM Plex Mono,monospace">${w.toLocaleString("ca")}</text>`;
+    g += `<text x="${L-6}" y="12" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Rajdhani,sans-serif" font-weight="700">KN</text><text x="${W-R+6}" y="12" font-size="10" fill="var(--wave-l)" font-family="Rajdhani,sans-serif" font-weight="700">M</text>`; }
+  hrs.forEach((x,j) => {
+    const [px,py] = pts[j], k = verdict(x.s).k, kw = lvWind(x.p.wind, c);
+    g += `<circle cx="${px}" cy="${py}" r="${wide?4.5:3.5}" fill="var(--${k})" stroke="${x.p.obs ? "var(--accent-2)" : "var(--surface)"}" stroke-width="${x.p.obs ? 2 : 1.5}"/>`;
+    const showLbl = wide ? (!thin || j%2===0 || dx >= 18) : j%2===0;
+    if(showLbl) g += `<text x="${px}" y="${py-9}" text-anchor="middle" font-size="${wide?fs:10}" font-weight="700" fill="var(--${kw || "ink"})" font-family="IBM Plex Mono,monospace">${r0(x.p.wind)}</text>`;
+    if(wide){ g += `<g transform="translate(${px-7} ${Hh-B+4})" style="color:var(--ink)">${arrow(x.p.dir,14)}</g>`; if(!thin || j%2===0) g += `<text x="${px}" y="${Hh-4}" text-anchor="middle" font-size="${fs}" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${x.h}</text>`; }
+    else if(j%2===0) g += `<text x="${px}" y="${Hh-4}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${x.h}h</text>`;
+  });
+  return `<svg class="hc" viewBox="0 0 ${W} ${Hh}" data-date="${date}" data-hs="${hrs.map(x=>x.h).join(",")}" data-l="${L}" data-dx="${dx}" data-w="${W}" role="img" aria-label="Vent per hores: toca o arrossega per triar una hora">${g}</svg>`;
+}
+/* ---------- hora seleccionada, compartida pel gràfic, el mapa de vent i les taules ---------- */
+let SEL = null;
+// Avui / Demà: automàtic (demà a partir d'una hora abans de la posta) fins que l'usuari en tria un
+let dayView = null, dayViewDate = null;
+function autoDay(){ const i = DATA.daily.time.indexOf(todayDate()); const set = i >= 0 ? new Date(DATA.daily.sunset[i]).getTime() : Infinity; return Date.now() >= set - 3600e3 ? "tom" : "today"; }
+// dayView: "today", "tom" o una data concreta triada al calendari (AAAA-MM-DD)
+function viewDay(){ if(dayViewDate !== todayDate()){ dayView = null; dayViewDate = todayDate(); }
+  if(dayView && /^\d{4}-/.test(dayView)) return DATA.daily.time.includes(dayView) && dayView >= todayDate() ? dayView : todayDate();
+  const i = DATA.daily.time.indexOf(todayDate()); return (dayView || autoDay()) === "tom" && DATA.daily.time[i+1] ? DATA.daily.time[i+1] : todayDate(); }
+// selector de dia: Avui · Demà · calendari (fins on arriba la previsió)
+function daySeg(cls, big){
+  const td = todayDate(), vd = viewDay(), i = DATA.daily.time.indexOf(td), tm = DATA.daily.time[i+1], last = DATA.daily.time[DATA.daily.time.length-1];
+  const other = vd !== td && vd !== tm, sd = d => { const x = new Date(d + "T12:00:00"); return DAYS_S[x.getDay()] + " " + x.getDate(); };
+  const b = (v, lbl, on, sub) => `<button type="button" data-dayv="${v}" aria-pressed="${on}">${big ? `<b>${lbl}</b><small>${sub}</small>` : lbl}</button>`;
+  const cal = `<button type="button" class="day-cal" data-daycal aria-pressed="${other}" aria-label="Tria un dia al calendari">${big ? "" : ""}<svg width="${big ? 22 : 18}" height="${big ? 22 : 18}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>${other ? `<span>${sd(vd)}</span>` : big ? "<small>Calendari</small>" : ""}</button>`;
+  return `<div class="seg ${cls}" role="group" aria-label="Dia">${b("today", "Avui", vd === td, sd(td))}${tm ? b("tom", "Demà", vd === tm, sd(tm)) : ""}${cal}</div>`;
+}
+const selKey = () => (SEL && DATA && DATA.hours[SEL]) ? SEL : (DATA && viewDay() !== todayDate() ? hourKey(viewDay(), 12) : nowKey());
+// Gràfic del dia de l'hora triada (dins la targeta del mapa de vent)
+let chartDate = null;
+function renderDayChart(){
+  const host = $("dayChart"); if(!host || !DATA) return;
+  const k = selKey(), d = DATA.daily.time.includes(k.slice(0,10)) ? k.slice(0,10) : viewDay();
+  chartDate = d; host.innerHTML = hourChart(d, 7, 21, true, chartW($("windMap")));
+  $("dayLegend").innerHTML = chartLegend(true);
+}
+function readout(k){
+  const date = k.slice(0,10), h = +k.slice(11,13), p = hourAt(date, h); if(!p) return "";
+  const c = crit[act], v = verdict(scoreHour(p, c)), d = new Date(date+"T12:00:00");
+  const day = "";   // la data ja surt a la capçalera de la targeta
+  const src = p.obs ? `Mesurat · ${STATIONS[stKey].name}` : `Previsió · ${(MODELS[p.src] || MODELS[model]).label}`;
+  // fila 1: hora + veredicte (esquerra) i motiu (dreta) · fila 2: font de les dades (esquerra) · fila 3: valors
+  return `<span class="rd-top"><span class="rd-h"><b>${day}${pad(h)}:00</b><span class="tag k-${v.k}"><span class="vd"></span>${v.t}</span></span>${v.sub ? `<span class="rd-why k-${v.k}">${v.sub.split(" · ").map(x => `<span>${esc(x)}</span>`).join(" · ")}</span>` : ""}</span><span class="rd-m${p.obs ? " obs" : ""}" title="${esc(src)}">${p.code != null ? wxIcon(p.code, 18) : ""}<span>${esc(src)}</span></span>
+    <span class="rd-v"><span>${arrow(p.dir,14)} Vent ${lvTxt(lvWind(p.wind,c), r0(p.wind)+" kn")} ${windAbbr(p.dir)}</span><span>Ratxa ${lvTxt(lvGust(p.gust,c), r0(p.gust)+" kn")}</span>
+    <span>Onada ${lvTxt(lvWave(p.wave,c), r1(p.wave)+" m")}${p.hmax!=null ? ` <small>(màx ${p.hmaxE?"≈":""}${r1(p.hmax)})</small>` : ""}${p.tp!=null||p.per!=null ? ` · ${r0(p.tp ?? p.per)} s` : ""}</span></span>`;
+}
+function applySel(){
+  if(!DATA) return; const k = selKey(), date = k.slice(0,10), h = String(+k.slice(11,13));
+  if(date !== chartDate && $("dayChart")) renderDayChart();
+  document.querySelectorAll("svg.hc").forEach(svg => { const d = svg.dataset, g = svg.querySelector(".hsel"); if(!g) return;
+    const j = d.date === date ? d.hs.split(",").indexOf(h) : -1;
+    if(j < 0){ g.style.display = "none"; return; }
+    g.setAttribute("transform", `translate(${(+d.l) + (+d.dx)*j} 0)`); g.style.display = ""; });
+  document.querySelectorAll(".hc-read").forEach(el => { el.innerHTML = readout(k); });
+  document.querySelectorAll("tr[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === k));
+}
+// src: "chart" | "table" | "wm" (el mapa ja s'ha mogut tot sol)
+function selectHour(k, src){
+  if(!DATA || !DATA.hours[k]) return; SEL = k; applySel();
+  if(src !== "wm" && window.wmSelect) wmSelect(k, true);
+}
+window.SEL_K = () => DATA ? selKey() : SEL;
+window.mmSel = (k) => { if(DATA && DATA.hours[k]){ SEL = k; applySel(); } };
+let hcDrag = null;
+function hcPick(svg, clientX){
+  const r = svg.getBoundingClientRect(), d = svg.dataset, hs = d.hs.split(",");
+  const x = (clientX - r.left) * (+d.w) / r.width;
+  const j = Math.max(0, Math.min(hs.length-1, Math.round((x - (+d.l)) / (+d.dx))));
+  const k = hourKey(d.date, +hs[j]); if(k !== SEL) selectHour(k, "chart");
+}
+document.addEventListener("pointerdown", e => { const svg = e.target.closest && e.target.closest("svg.hc"); if(!svg) return; hcDrag = svg; hcPick(svg, e.clientX); });
+document.addEventListener("pointermove", e => { if(hcDrag) hcPick(hcDrag, e.clientX); });
+["pointerup","pointercancel"].forEach(t => document.addEventListener(t, () => { hcDrag = null; }));
+document.addEventListener("click", e => { const tr = e.target.closest && e.target.closest("tr[data-k]"); if(tr) selectHour(tr.dataset.k, "table"); });
+const chartLegend = wide => `<details class="legend-d"><summary>Què és cada línia?</summary><div class="legend"><span><span class="sw" style="background:var(--accent-2)"></span>Vent mesurat</span><span><span class="sw" style="background:var(--ink)"></span>Vent previst (kn)</span><span><span class="sw" style="background:var(--muted)"></span>Ratxa</span>${wide?`<span><span class="sw" style="background:var(--wave-l)"></span>Onada (m)</span>`:""}<span><span class="sw" style="background:var(--ideal-t);height:10px"></span>Vent ideal ${esc(DEFAULTS[act].short)}</span></div>
+  <div class="legend lv-legend"><span><span class="vd" style="background:var(--ideal)"></span>Bo</span><span><span class="vd" style="background:var(--marg)"></span>Amb limitacions</span><span><span class="vd" style="background:var(--no)"></span>No adequat</span></div>
+  <p class="note">Toca o arrossega el gràfic per veure les dades d'una hora a la targeta de sobre.</p></details>`;
+function hourTable(date, h0, h1){
+  const c = crit[act], nk = nowKey(); let rows = "";
+  for(let h=h0; h<=h1; h++){ const p = hourAt(date,h); if(!p) continue; const s = scoreHour(p,c), v = verdict(s);
+    rows += `<tr data-k="${p.t}" class="${p.t===nk?"now-row":""}"><td class="l">${h}:00${p.obs ? `<small class="obs">mesurat</small>` : ""}</td><td class="l"><span class="tag k-${v.k}"><span class="vd"></span>${v.t}</span></td>
+      <td class="l"><span style="display:inline-flex;align-items:center;gap:4px">${arrow(p.dir,14)}${windAbbr(p.dir)}</span></td>
+      <td><b>${lvTxt(lvWind(p.wind,c), r0(p.wind))}</b></td><td>${lvTxt(lvGust(p.gust,c), r0(p.gust))}</td><td>${lvTxt(lvWave(p.wave,c), r1(p.wave))}${p.wobs ? `<small class="obs">boia</small>` : ""}</td><td>${p.hmax!=null ? (p.hmaxE?"≈":"")+r1(p.hmax) : "–"}</td><td>${r0(p.tp ?? p.per)}</td><td>${r0(p.temp)}°</td><td>${r1(p.sst)}°</td><td>${p.pp ?? "–"}%</td>
+      <td class="warn">${s.flags.map(esc).join(" · ")}</td></tr>`; }
+  return `<div class="tbl"><table><thead><tr><th class="l">Hora</th><th class="l">Estat</th><th class="l">Dir.</th><th>Vent</th><th>Ratxa</th><th>Onada</th><th>Màx.</th><th>Per. s</th><th>Aire</th><th>Aigua</th><th>Pluja</th><th class="l">Avisos</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+/* ---------- informació oficial: bandera de bany (Gencat) i avisos (Meteocat) ---------- */
+// Bandera: dades obertes «Estat de les platges de Catalunya» (Platja d'Ocata = 081189-p1, Platja del Masnou = 081189-p0).
+// Avisos: Situacions Meteorològiques de Perill (SMP) de Meteocat per al Maresme (21) i la seva zona de mar (96).
+const BEACHES = LOC.beaches;
+const SMP_ZONES = LOC.smp;   // Meteocat: comarca i zona de mar (Maresme 21/96 · Barcelonès 13/95)
+let INFO = {flag:null, alerts:[], at:0, ok:{flag:false, smp:false}};
+const ymd = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+async function loadFlag(){
+  const where = encodeURIComponent(Object.keys(BEACHES).map(c => `codiplatja='${c}'`).join(" OR "));
+  const r = await fetch(`https://analisi.transparenciacatalunya.cat/resource/4baz-cjv2.json?$where=${where}&$select=codiplatja,estat_data,estat_bandera,estat_motiubandera,estat_estatmar,estat_meduses&$order=:id DESC&$limit=4`, {cache:"no-store"});
+  if(!r.ok) throw 0;
+  const rows = await r.json();
+  const row = rows.find(x => x.codiplatja === LOC.flag) || rows[0]; if(!row) return null;
+  const m = (row.estat_data || "").match(/(\d\d)\/(\d\d)\/(\d{4})T(\d\d):(\d\d)/);
+  const at = m ? Date.UTC(+m[3], +m[2]-1, +m[1], +m[4], +m[5]) : null;
+  const med = (row.estat_meduses || "").split(";").filter(x => x && x !== "N/A").map(x => x.split(",")[0]);
+  return {beach: BEACHES[row.codiplatja] || "", color: (row.estat_bandera || "").toLowerCase(), reason: row.estat_motiubandera && row.estat_motiubandera !== "N/A" ? row.estat_motiubandera : "", sea: row.estat_estatmar && row.estat_estatmar !== "N/A" ? row.estat_estatmar : "", jelly: med, at};
+}
+async function loadSmp(){
+  const out = new Map(), now = new Date(), todayK = ymd(now), hourNow = now.getHours();
+  for(const d of [now, new Date(now.getTime() + 864e5)]){
+    let list;
+    try{ const r = await fetch(`https://static-m.meteo.cat/ginys/pronostic/smp/episodisOberts/avisos-episodis-oberts-${ymd(d)}.json`, {cache:"no-store"}); if(r.status === 404) continue; if(!r.ok) throw 0; list = await r.json(); }
+    catch(e){ if(d === now) throw e; continue; }
+    (list || []).forEach(ep => (ep.avisos || []).forEach(av => (av.evolucions || []).forEach(ev => (ev.periodes || []).forEach(pe => (pe.afectacions || []).forEach(af => {
+      if(!SMP_ZONES.includes(af.idComarca)) return;
+      const day = (ev.dia || "").slice(0,10).replace(/-/g,""); if(day < todayK) return;
+      const h1 = Number((pe.nom || "00-00").split("-")[1]) || 24;
+      if(day === todayK && h1 <= hourNow) return;              // franja ja passada
+      const key = `${ep.meteor?.nom}|${day}`, cur = out.get(key) || {meteor: ep.meteor?.nom || "Avís", tipus: av.tipus, day, llindar: af.llindar || ev.llindar1, perill: 0, periods: new Set(), zones: new Set()};
+      cur.perill = Math.max(cur.perill, af.perill || 0); cur.periods.add(pe.nom); cur.zones.add(af.idComarca === 96 ? "mar" : "terra");
+      if(av.tipus === "Avís") cur.tipus = "Avís";
+      out.set(key, cur);
+    })))));
+  }
+  return [...out.values()].sort((a,b) => a.day.localeCompare(b.day) || b.perill - a.perill)
+    .map(a => Object.assign(a, {periods:[...a.periods].sort(), zones:[...a.zones]}));
+}
+async function loadInfo(){
+  const [f, s] = await Promise.allSettled([loadFlag(), loadSmp()]);
+  INFO = {flag: f.status === "fulfilled" ? f.value : null, alerts: s.status === "fulfilled" ? s.value : [], at: Date.now(), ok:{flag: f.status === "fulfilled", smp: s.status === "fulfilled"}};
+  renderInfo();
+}
+const FLAG = {verda:{k:"ideal", t:"verda"}, groga:{k:"marg", t:"groga"}, vermella:{k:"no", t:"vermella"}};
+const PERILL = p => p >= 5 ? {k:"no", t:"perill molt alt"} : p >= 3 ? {k:"no", t:"perill alt"} : {k:"marg", t:"perill moderat"};
+function renderInfo(){
+  const el = $("info"); if(!el) return;
+  const parts = [], today = ymd(new Date()), tomorrow = ymd(new Date(Date.now() + 864e5));
+  INFO.alerts.forEach(a => { const pv = PERILL(a.perill), when = a.day === today ? "avui" : a.day === tomorrow ? "demà" : a.day.slice(6)+"/"+a.day.slice(4,6);
+    const hrs = a.periods.length === 4 ? "tot el dia" : a.periods.map(p => p.replace("-", "–")+" h").join(", ");
+    parts.push(`<div class="info-row k-${pv.k}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>
+      <span><b>${esc(a.tipus)} Meteocat · ${esc(a.meteor)}</b><br>${esc(a.llindar || "")} · ${when} ${esc(hrs)} · ${pv.t}${a.zones.includes("mar") ? " · zona de mar del Maresme" : " · Maresme"}</span></div>`); });
+  el.innerHTML = parts.join("");   // només hi surten avisos actius
+  renderFlag();
+}
+// Traços de la bandera, de l'editor d'icones (traç 1 = pal; la resta, farcit del color de la bandera)
+const FLAG_IC = ["M5 23L5 3","M5 3L19 4L18.5 7.5L19 13L5 12Z"];
+// Bandera de bany: icona petita sota l'indicador (gris = sense dades d'avui). Tocant-la es veu el detall.
+function renderFlag(){
+  const el = $("gflag"); if(!el) return;
+  const f = INFO.flag, fresh = !!(f && f.at && new Date(f.at).toDateString() === new Date().toDateString()), fl = fresh && f && FLAG[f.color];
+  const col = fl ? `var(--${fl.k})` : "var(--muted)";
+  const txt = fl ? `Bandera ${fl.t} · ${f.beach} · ${new Date(f.at).toTimeString().slice(0,5)}` + [f.reason, f.sea ? "mar "+f.sea : "", f.jelly.length ? "meduses: "+f.jelly.join(", ") : ""].filter(Boolean).map(x => " · "+x).join("")
+    : (INFO.ok.flag ? "Bandera de bany: sense dades avui" + (f && FLAG[f.color] ? ` (darrera: ${FLAG[f.color].t}, ${new Date(f.at).toLocaleDateString("ca",{day:"numeric",month:"short"})})` : "") : "Bandera de bany: no disponible ara");
+  el.innerHTML = `<button type="button" class="gflag-b" aria-label="${esc(txt)}" title="${esc(txt)}" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="${FLAG_IC[0]}" stroke="${col}" stroke-width="2.4"/>${FLAG_IC.slice(1).map(d => `<path d="${d}" fill="${col}" stroke="${col}" stroke-width="1"${fl ? "" : ' fill-opacity=".45"'}/>`).join("")}</svg></button><span class="gflag-t" hidden>${esc(txt)}</span>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".gflag-b"); if(!b) return; const t = b.nextElementSibling; t.hidden = !t.hidden; b.setAttribute("aria-expanded", String(!t.hidden)); });
+
+/* ---------- render ---------- */
+// Siluetes de les embarcacions: patí (casc doble, una vela), windsurf (taula i vela amb wishbone), Hobie Cat (catamarà amb major i floc)
+const BOAT_IC = {
+  pati: `<path d="M17 3.5L18.5 16.5"/><path d="M17 4L8 15L18 15"/><path d="M3 17.5L21.5 17.5L21.5 19L4.5 19Z"/><path d="M2 19L20.5 19"/>`,
+  windsurf: `<path d="M3 20.5c4 1.2 13 1.2 18-1.5"/><path d="M8.5 19.5 13 2.5"/><path d="M13 2.5c4.5 3 6.5 8 5.5 13L9.6 18"/><path d="M10.6 11.5l7.6 1.2"/>`,
+  hobie: `<path d="M16 1L15.5 16.5"/><path d="M16.5 5.5L20 15L16.5 14.5"/><path d="M16 1.5L7 14L14.5 14.5"/><path d="M3 17.5L21 17.5L20 19.5L5 19.5Z"/><path d="M3.5 20L18 20"/>`
+};
+const boatIcon = (k, z) => `<svg width="${z||22}" height="${z||22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BOAT_IC[k]}</svg>`;
+function renderSeg(){
+  $("actSeg").innerHTML = Object.keys(DEFAULTS).map(k => `<button type="button" data-act="${k}" aria-pressed="${k===act}" aria-label="${esc(DEFAULTS[k].name)}" title="${esc(DEFAULTS[k].name)}">${boatIcon(k)}</button>`).join("");
+  const n = $("actName"); if(n) n.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;color:var(--ink)">${boatIcon(act,18)}${esc(DEFAULTS[act].name)}</span>`;
+}
+function stat(ic, label, v, unit, x){ return `<div class="stat"><div class="k"><span class="chip-ic">${icon(ic)}</span><span class="lbl">${label}</span></div><div class="v">${v}${unit?`<small>${unit}</small>`:""}</div><div class="x">${x||"&nbsp;"}</div></div>`; }
+function renderNow(){
+  if(!DATA) return;
+  const fc = DATA.now, c = crit[act], live = stFresh();
+  const n = live ? Object.assign({}, fc, {wind:ST.wind, gust:ST.gust, dir:ST.dir, temp:ST.temp}) : fc;
+  if(n.wind==null){ $("hero").hidden = true; return; }
+  $("hero").hidden = false;
+  const s = scoreWindow(n, c), v = verdict(s);
+  const mins = live ? Math.max(0, Math.round((Date.now()-ST.at)/60000)) : null;
+  $("src").className = "src"+(live?" live":"");
+  $("src").innerHTML = `<span class="dot"></span>${live ? `${STATIONS[stKey].name} · fa ${mins} min` : `${STATIONS[stKey].name}: sense dades · model`}${LOC.stations.length > 1 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>` : ""}`;
+  $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+". Canvia d'estació");
+  $("gauge").innerHTML = gaugeSvg(s, v) + `<div class="grow"><div class="gflag" id="gflag"></div><span class="g-why k-${v.k}">${esc(v.sub || "")}</span></div>`; renderFlag();
+  const kind = isOffshore(n.dir) ? "terral" : isOnshore(n.dir) ? "de mar" : "lateral";
+  $("rose").innerHTML = `<button type="button" class="cmp-btn" id="cmpBtn" aria-pressed="${cmpOn}" aria-label="Orienta la rosa amb la brúixola del mòbil" title="Orienta amb la brúixola"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 15 12h-6z" fill="currentColor"/><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35"/></svg></button>` + roseSvg({k: lvWind(n.wind, c), dir:n.dir, wind:n.wind, fcDir:fc.dir, wdir:fc.wdir, wave:fc.wave, live, hist: roseHist(OBS.key === stKey ? OBS.recs : [], roseForecast())}); cmpApply();
+  // sense repetir el que ja diu el motiu de sota l'indicador
+  // Els avisos (vermells) van com a text al motiu de sota l'indicador; només la informació (mar de fons, aigua freda) va en etiqueta grisa
+  const FW = {"Ràfagues":"vent a ràfagues","Probable pluja":"pluja probable","Terral":"terral"}, why = (s.why || []).filter(w => !INFO_FLAGS.some(f => f.toLowerCase() === w));
+  s.flags.filter(f => !INFO_FLAGS.includes(f)).forEach(f => { const w = FW[f] || f.toLowerCase(); if(!why.includes(w) && !(f === "Terral" && why.includes("terral fort"))) why.push(w); });
+  const gw = document.querySelector("#gauge .g-why"); if(gw && why.length) gw.textContent = why.join(" · ");
+  $("flags").innerHTML = s.flags.filter(f => INFO_FLAGS.includes(f)).map(f => `<span class="flag info">${esc(f)}</span>`).join("");
+  const i = DATA.daily.time.indexOf(todayDate());
+  $("stats").innerHTML =
+    stat("gust", "Ratxa", lvTxt(lvGust(n.gust,c), r0(n.gust)), "kn", n.gust!=null&&n.wind!=null ? "+"+r0(n.gust-n.wind)+" sobre la mitjana" : "") +
+    stat("wave", "Onada", lvTxt(lvWave(fc.wave,c), r1(fc.wave)), "m", (fc.hmax!=null ? `màx ${fc.hmaxE?"≈":""}${r1(fc.hmax)} m · ` : "") + waveSrc(fc)) +
+    stat("per", "Període", r1(tpOf(fc)), "s", tpOf(fc)!=null ? (tpOf(fc)<5 ? "mar de vent, curta" : tpOf(fc)<7 ? "mar mixta" : "mar de fons: a la platja creix") + (fc.wdir!=null ? " · de "+windAbbr(fc.wdir) : "") : "") +
+    stat("air", "Aire", r0(n.temp), "°C", live ? `Hum. ${r0(ST.hum)}% · ${r0(ST.pres)} hPa` : "") +
+    stat("water", "Aigua", r1(fc.sst), "°C", suit(fc.sst)) +
+    stat("sun", "Posta", DATA.daily.sunset[i]?.slice(11,16) || "–", "", "Sortida "+(DATA.daily.sunrise[i]?.slice(11,16)||"–"));
+  const td = todayDate();
+  // Vista de lletra gran: només xifres i paraules, sense indicadors gràfics
+  const row = (k, v, u, x) => `<div class="brow"><span class="bk">${k}</span><span class="bv">${v}${u?`<small>${u}</small>`:""}</span>${x?`<span class="bx">${x}</span>`:""}</div>`;
+  const bvd = viewDay(), bTom = bvd !== td, dlab = d => { const x = new Date(d + "T12:00:00"); return DAYS_S[x.getDay()] + " " + x.getDate(); };
+  const tmD = DATA.daily.time[DATA.daily.time.indexOf(td) + 1];
+  const bday = daySeg("bday", true);
+  const bslots = SLOTS.map(sl => { const a = slotAgg(bvd, sl, c); if(!a) return ""; const vv = verdict(a);
+    return `<div class="bslot k-${vv.k}${a.past?" past":""}"><span class="bk">${sl.label}</span><span class="tag"><span class="vd"></span>${vv.t}</span><span class="bw">${r0(a.wind)}<small>/${r0(a.gust)} kn</small></span><span class="bx">${windName(a.dir)} · ${r1(a.wave)} m</span></div>`; }).join("");
+  $("bigNow").innerHTML = `<div class="bverdict k-${v.k}"><span>${v.t}</span><small>${s.score ?? "–"}/100</small></div>
+    ${s.flags.length ? `<div class="flags">${s.flags.map(f => `<span class="flag">${esc(f)}</span>`).join("")}</div>` : ""}
+    ${row("Vent", lvTxt(lvWind(n.wind,c), r0(n.wind)), "kn", `<span style="display:inline-flex;align-items:center;gap:6px">${arrow(n.dir,26)}${windName(n.dir)} · ${kind}</span>`)}
+    ${row("Ratxa", lvTxt(lvGust(n.gust,c), r0(n.gust)), "kn")}
+    ${row("Onada", lvTxt(lvWave(fc.wave,c), r1(fc.wave)), "m", (fc.hmax!=null ? `màx ${r1(fc.hmax)} m · ` : "") + (tpOf(fc)!=null ? r0(tpOf(fc))+" s" : "")+(fc.wdir!=null?" · de "+windName(fc.wdir):""))}
+    ${row("Aire", r0(n.temp), "°C")}
+    ${row("Aigua", r1(fc.sst), "°C", suit(fc.sst))}
+    ${row("Posta del sol", DATA.daily.sunset[i]?.slice(11,16) || "–", "")}
+    <div class="bslots">${bday}${bslots}</div>`;
+  const vd = viewDay(), isTom = vd !== td;
+  const slots = SLOTS.map(sl => { const a = slotAgg(vd, sl, c); if(!a) return "";
+    const vv = verdict(a);
+    return `<div class="sl k-${vv.k}${a.past?" past":""}"><div class="h">${sl.label}<span class="tag"><span class="vd"></span>${vv.t}</span></div>
+      <div class="w">${arrow(a.dir,13)}${r0(a.wind)}<small>/${r0(a.gust)} kn</small></div><div class="o">${windAbbr(a.dir)} · ${r1(a.wave)} m</div>${a.code != null ? `<span class="sl-wx">${wxIcon(a.code, 18)}</span>` : ""}</div>`; }).join("");
+  const ol = $("outlook");
+  const dd = new Date(vd + "T12:00:00");
+  ol.innerHTML = `<div class="card-h" style="margin-bottom:6px">${daySeg("day-seg", false)}
+    ${vd === td || vd === DATA.daily.time[DATA.daily.time.indexOf(td)+1] ? `<span class="lbl day-date">${DAYS_L[dd.getDay()]} ${dd.getDate()} ${MONTHS[dd.getMonth()]}</span>` : ""}</div>
+    <div class="slots">${slots}</div>`;
+  renderDayChart(); applySel();
+}
+const tpOf = p => p.tp ?? p.per ?? null;
+function waveSrc(p){
+  if(p.wobs){ const m = p.wat ? Math.round((Date.now() - p.wat)/60000) : null; return "boia BCN" + (m!=null ? (m < 90 ? ` fa ${m} min` : ` fa ${Math.round(m/60)} h`) : ""); }
+  return p.wcorr ? "previsió corregida" : (p.wdir!=null ? "de "+windName(p.wdir) : "previsió");
+}
+function renderHours(){
+  if(window.renderWindMap) setTimeout(renderWindMap, 0);
+  // tot el dia (7–21 h) del dia que es mira al selector Avui/Demà; les hores passades surten com a «mesurat»
+  const td = viewDay(), isTom = td !== todayDate();
+  const errs = modelErrors(), bestE = errs.length ? Math.min(...errs.map(e => e.mae)) : null;
+  renderModelBox(errs, bestE);
+  const tdI = DATA.daily.time.indexOf(todayDate()), hx = new Date(td + "T12:00:00");
+  $("hoursTitle").textContent = td === todayDate() ? "Hores d'avui" : td === DATA.daily.time[tdI+1] ? "Hores de demà" : `Hores ${DAYS_L[hx.getDay()].toLowerCase()} ${hx.getDate()}`;
+  const wf = DATA.wf;
+  $("iHours").innerHTML = `<p>Cada fila és una hora, de les 7 a les 21 h. Les hores que ja han passat diuen <b>mesurat</b> i fan servir les dades de l'estació ${esc(STATIONS[stKey].name)}; la resta són previsió del model ${esc(MODELS[model].label)}. Llisca la taula cap als costats per veure totes les columnes.</p>` +
+    (wf && Math.abs(wf.f-1) > 0.05
+      ? `<p><b>Onada corregida ×${r1(wf.f)}.</b> Ara hi ha mar de fons (onada llarga, de 7 s o més) i la ${esc(BUOY.name)} mesura ${wf.f > 1 ? "més" : "menys"} onada que la que dona el model. Per això, a les hores de mar de fons, la previsió d'onada es multiplica per aquest factor. Amb onada curta no es corregeix.</p>`
+      : `<p>L'onada és la del model. Només es corregeix amb les mesures de la ${esc(BUOY.name)} quan hi ha mar de fons (onada de 7 s o més).</p>`);
+  $("hoursBody").innerHTML = hourTable(td, 7, 21);
+  applySel();
+  const best = SLOTS.map(sl => ({sl, a:slotAgg(td, sl, crit[act])})).filter(x=>x.a && !x.a.past).sort((a,b)=>b.a.score-a.a.score)[0];
+  $("peekHours").textContent = best ? "Millor: "+best.sl.label.toLowerCase()+" · "+verdict(best.a).t.toLowerCase() : "";
+}
+function renderModelBox(errs, bestE){
+  $("peekModel").textContent = modelPref === "best" ? "El que més encerta · " + MODELS[model].label : MODELS[modelPref].label;
+  const opt = (v, t) => `<option value="${v}"${modelPref === v ? " selected" : ""}>${t}</option>`;
+  $("modelBox").innerHTML = `<label class="model-pick"><span class="sr">Model</span>
+      <select id="modelSel">${opt("best", "El que més encerta avui" + (modelPref === "best" ? ` (${MODELS[model].label})` : ""))}${opt("opt","Optimista (el model més favorable)")}${opt("pes","Pessimista (el model més desfavorable)")}${opt("arome","AROME")}${opt("icon","ICON")}${opt("ecmwf","ECMWF")}${opt("ukmo","UKMO")}${opt("auto","Open-Meteo (barreja de models)")}</select></label>
+    ${errs.length ? `<div class="model-err-row"><span class="lbl">Error d'avui vs. estació ${esc(STATIONS[stKey].name)}</span>${[...errs].sort((x, y) => x.mae - y.mae).map(e => `<span class="${e.mae === bestE ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>` : `<p class="note">Encara no hi ha prou hores mesurades avui per comparar els models.</p>`}`;
+}
+function dayName(date, i){ const d = new Date(date+"T12:00:00"); return {name: i===0 ? "Avui" : i===1 ? "Demà" : DAYS_L[d.getDay()], dm: d.getDate()+" "+MONTHS[d.getMonth()]}; }
+function renderWeek(){
+  const c = crit[act], D = DATA.daily; let html = "", good = 0;
+  D.time.forEach((date, i) => { if(i >= 7) return;   // la llista setmanal: 7 dies (la resta, al calendari)
+    const dn = dayName(date, i), aggs = SLOTS.map(sl => slotAgg(date, sl, c));
+    const pills = aggs.map((a,j) => { if(!a) return `<span class="pill k-no" style="opacity:.3">–</span>`; const vv = verdict(a); if(!a.past && a.score>=60) good++;
+      return `<span class="pill k-${vv.k}" title="${SLOTS[j].label}: ${vv.t}"${a.past?' style="opacity:.45"':""}>${SLOTS[j].ab}</span>`; }).join("");
+    const ws = aggs.filter(Boolean).map(a=>a.wind), wv = aggs.filter(Boolean).map(a=>a.wave).filter(x=>x!=null);
+    const domDir = aggs.filter(Boolean).sort((a,b)=>b.wind-a.wind)[0]?.dir;
+    const open = openDay === date;
+    html += `<button type="button" class="wrow" data-day="${date}" aria-expanded="${open}" aria-label="${dn.name} ${dn.dm}: mostra les hores">
+      <span class="d"><b><span class="dn">${dn.name}</span>${wxIcon(D.weather_code[i],20)}</b><span>${dn.dm} · <i>${r0(D.temperature_2m_min[i])}–${r0(D.temperature_2m_max[i])}°</i></span></span>
+<span class="pills">${pills}</span>
+      <span class="wr"><span class="wr-w"><em>${windAbbr(domDir)}</em>${arrow(domDir,13)}<b>${ws.length?r0(Math.min(...ws))+"–"+r0(Math.max(...ws)):"–"}</b><small>kn</small></span><span class="wr-o">${waveIc(14)}<b>${wv.length?Math.max(...wv).toFixed(1).replace(".",","):"–"}</b><small>m</small></span></span>
+      <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`;
+    if(open) html += `<div class="wdetail"><div class="hc-read"></div><div class="chart">${hourChart(date, 7, 21, true, chartW($("week")) - 8)}</div>${chartLegend(true)}</div>`;
+  });
+  const end = DATA.modelEnd && model !== "auto" ? (() => { const d = new Date(DATA.modelEnd); return `Previsió ${MODELS[model].label} fins ${DAYS_L[d.getDay()].toLowerCase()} a les ${pad(d.getHours())} h; després, Open-Meteo.`; })() : "";
+  $("week").innerHTML = (end ? `<p class="note" style="margin-bottom:6px">${esc(end)}</p>` : "") + html;
+  applySel();
+  $("peekWeek").textContent = good ? good+" franges bones o ideals" : "Cap franja bona";
+}
+function renderCrit(){
+  const c = crit[act];
+  $("critBoat").textContent = DEFAULTS[act].name;
+  $("peekCrit").textContent = `${DEFAULTS[act].short} · ideal ${c.iMin}–${c.iMax} kn · onada fins a ${r1(c.wMax)} m`;
+  const F = [["min","Vent mínim (kn)",1],["iMin","Ideal des de (kn)",1],["iMax","Ideal fins a (kn)",1],["max","Vent màxim (kn)",1],["gust","Ratxa màxima (kn)",1],["wOk","Onada còmoda (m)",0.1],["wMax","Onada màxima (m)",0.1]];
+  $("crit").innerHTML = F.map(([k,l,st]) => `<label for="c_${k}">${l}<input id="c_${k}" type="number" inputmode="decimal" step="${st}" min="0" value="${c[k]}" data-k="${k}"></label>`).join("");
+}
+function render(){
+  renderSeg(); renderCrit();
+  if(!DATA) return;
+  renderNow(); renderHours(); renderWeek();
+  $("updated").textContent = "Previsió descarregada el "+stamp(DATA.fetchedAt)+".";
+}
+
+/* ---------- tema ---------- */
+const THEMES = ["auto","dark","light"];
+const THEME_IC = {
+  auto:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>`,
+  dark:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>`,
+  light:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`
+};
+const GEAR_IC = `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
+const THEME_LBL = {auto:"automàtic (segons el mòbil)", dark:"fosc", light:"clar"};
+let theme = store.get("ov2_theme"); if(!THEMES.includes(theme)) theme = "auto";
+function applyTheme(){
+  if(theme === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+  $("themeBtn").innerHTML = GEAR_IC;
+  const dark = theme === "dark" || (theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  $("themeColor").setAttribute("content", dark ? "#060c19" : "#e9eef5");
+  window.dispatchEvent(new Event("mm-theme"));
+}
+let textSize = store.get("ov2_size") === "big" ? "big" : "normal";
+function applySize(){ if(textSize === "big") document.documentElement.dataset.size = "big"; else delete document.documentElement.dataset.size; }
+function renderViewPanel(){
+  $("peekVis").textContent = {auto:"Tema automàtic", dark:"Tema fosc", light:"Tema clar"}[theme] + " · lletra " + (textSize === "big" ? "gran" : "petita");
+  document.querySelectorAll("#themeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.theme === theme)));
+  document.querySelectorAll("#sizeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.size === textSize)));
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".ib-i[data-info]"); if(!b) return; const el = $(b.dataset.info); el.hidden = !el.hidden; b.setAttribute("aria-expanded", String(!el.hidden));
+  const sm = b.closest("summary"); if(sm){ e.preventDefault(); if(!el.hidden) sm.parentElement.open = true; } });   // dins d'un desplegable: la (i) no el plega
+$("themeBtn").addEventListener("click", () => { const p = $("viewPanel"); p.hidden = !p.hidden; if(!p.hidden && DATA){ const errs = modelErrors(); renderModelBox(errs, errs.length ? Math.min(...errs.map(e => e.mae)) : null); } $("themeBtn").setAttribute("aria-expanded", String(!p.hidden)); renderViewPanel(); });
+$("themeSeg").addEventListener("click", e => { const b = e.target.closest("button[data-theme]"); if(!b) return; theme = b.dataset.theme; store.set("ov2_theme", theme); applyTheme(); renderViewPanel(); });
+$("sizeSeg").addEventListener("click", e => { const b = e.target.closest("button[data-size]"); if(!b) return; textSize = b.dataset.size; store.set("ov2_size", textSize); applySize(); renderViewPanel(); });
+document.addEventListener("change", e => { if(e.target.id !== "modelSel") return; modelPref = e.target.value; store.set("ov2_model_pref", modelPref);
+  if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); } });
+$("closeView").addEventListener("click", () => { $("viewPanel").hidden = true; $("themeBtn").setAttribute("aria-expanded","false"); });
+applySize();
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
+applyTheme();
+
+/* ---------- confirmació lliscant (per esborrar o descartar) ---------- */
+// Cal arrossegar el botó fins a l'altra punta: no es pot fer sense voler, ni amb guants ni amb el mòbil mullat.
+function slideConfirm(el, label, onDone){
+  el.innerHTML = `<div class="slc" tabindex="0" role="slider" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="slc-t">${esc(label)}</span><span class="slc-k" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>`;
+  const tr = el.firstChild, kn = tr.querySelector(".slc-k"); let x0 = null, dx = 0, max = 0;
+  const set = v => { dx = Math.max(0, Math.min(max, v)); kn.style.transform = `translateX(${dx}px)`; tr.style.setProperty("--p", max ? dx/max : 0); tr.setAttribute("aria-valuenow", String(Math.round(max ? dx/max*100 : 0))); };
+  const done = () => { tr.classList.add("ok"); set(max); setTimeout(onDone, 120); };
+  kn.addEventListener("pointerdown", e => { max = tr.clientWidth - kn.offsetWidth - 8; x0 = e.clientX - dx; kn.setPointerCapture(e.pointerId); tr.classList.add("drag"); e.preventDefault(); });
+  kn.addEventListener("pointermove", e => { if(x0 != null) set(e.clientX - x0); });
+  const up = () => { if(x0 == null) return; x0 = null; tr.classList.remove("drag"); if(dx >= max * 0.9) done(); else set(0); };
+  kn.addEventListener("pointerup", up); kn.addEventListener("pointercancel", up);
+  tr.addEventListener("keydown", e => { if(e.key !== "ArrowRight" && e.key !== "End") return; max = tr.clientWidth - kn.offsetWidth - 8; e.preventDefault(); set(e.key === "End" ? max : dx + max/4); if(dx >= max * 0.99) done(); });
+}
+
+/* ---------- navegació ---------- */
+function go(v){
+  ["fc","trip","map","log"].forEach(k => { $("view-"+k).hidden = k !== v; });
+  document.querySelectorAll(".tabs button").forEach(b => b.dataset.go === v ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
+  window.scrollTo({top:0});
+  window.dispatchEvent(new CustomEvent("mm-view", {detail:v}));
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if(b) go(b.dataset.go); });
+
+const DAYS_S = ["dg.","dl.","dt.","dc.","dj.","dv.","ds."];
+function tick(){ const d = new Date(); $("clock").textContent = (locKey !== "masnou" ? LOC.name + " · " : "") + DAYS_S[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]+" · "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+tick(); setInterval(tick, 20000);
+
+/* ---------- events ---------- */
+$("actSeg").addEventListener("click", e => { const b = e.target.closest("button[data-act]"); if(!b) return; act = b.dataset.act; store.set("ov2_act", act); if(DATA) applyModel(); render(); if(window.renderWindMap) renderWindMap(); });
+$("week").addEventListener("click", e => { const b = e.target.closest(".wrow"); if(!b) return; openDay = openDay === b.dataset.day ? null : b.dataset.day; renderWeek();
+  if(openDay && (!SEL || SEL.slice(0,10) !== openDay)) selectHour(hourKey(openDay, Math.max(7, Math.min(21, +selKey().slice(11,13)))), "chart"); });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-dayv]"); if(!b || !DATA) return;
+  dayView = b.dataset.dayv; dayViewDate = todayDate(); SEL = null; renderNow(); renderHours(); selectHour(selKey(), "chart"); });
+function setDay(v){ dayView = v; dayViewDate = todayDate(); SEL = null; renderNow(); renderHours(); selectHour(selKey(), "chart"); }
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-daycal]"); if(b && DATA) calOpen(); });
+/* ---------- calendari propi: verd = hi ha previsió, vermell = sense dades ---------- */
+// (el calendari del mòbil no deixa pintar els dies, per això en fem un de propi, amb caselles grans)
+const MONTHS_L = ["gener","febrer","març","abril","maig","juny","juliol","agost","setembre","octubre","novembre","desembre"];
+function dayHasData(d){ if(!DATA || !DATA.daily.time.includes(d)) return false; let n = 0; for(let h = 9; h <= 18; h++){ const p = DATA.hours[hourKey(d, h)]; if(p && p.wind != null) n++; } return n >= 6; }
+function calOpen(){
+  calClose();
+  const td = todayDate(), vd = viewDay(), last = new Date(DATA.daily.time[DATA.daily.time.length-1] + "T12:00:00");
+  const iso = x => `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`;
+  const t0 = new Date(td + "T12:00:00"), months = [[t0.getFullYear(), t0.getMonth()]];
+  if(last.getMonth() !== t0.getMonth() || last.getFullYear() !== t0.getFullYear()) months.push([last.getFullYear(), last.getMonth()]);
+  const month = ([y, m]) => {
+    const first = new Date(y, m, 1, 12), lead = (first.getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate();
+    let cells = "";
+    for(let i = 0; i < lead; i++) cells += `<span></span>`;
+    for(let dd = 1; dd <= n; dd++){ const d = iso(new Date(y, m, dd, 12)), past = d < td, ok = !past && dayHasData(d);
+      const cls = past ? "past" : ok ? "ok" : "no", lbl = `${dd} ${MONTHS_L[m]}: ${past ? "ja ha passat" : ok ? "amb previsió" : "sense dades"}`;
+      cells += `<button type="button" class="cal-d ${cls}${d === vd ? " sel" : ""}${d === td ? " today" : ""}" ${ok ? `data-cald="${d}"` : "disabled"} aria-label="${lbl}">${dd}</button>`; }
+    return `<div class="cal-m"><div class="cal-mt">${MONTHS_L[m]} ${y}</div><div class="cal-g"><b>dl</b><b>dt</b><b>dc</b><b>dj</b><b>dv</b><b>ds</b><b>dg</b>${cells}</div></div>`; };
+  const el = document.createElement("div"); el.className = "cal-pop"; el.id = "calPop";
+  el.innerHTML = `<div class="cal-card" role="dialog" aria-label="Tria un dia"><div class="cal-h"><b>Tria un dia</b><button type="button" class="cal-x" aria-label="Tanca">✕</button></div>
+    ${months.map(month).join("")}
+    <div class="cal-leg"><span><i class="ok"></i>Amb previsió</span><span><i class="no"></i>Sense dades</span></div></div>`;
+  document.body.appendChild(el);
+  el.addEventListener("click", e => { const d = e.target.closest("[data-cald]");
+    if(d){ const v = d.dataset.cald, i = DATA.daily.time.indexOf(td); calClose(); setDay(v === td ? "today" : v === DATA.daily.time[i+1] ? "tom" : v); return; }
+    if(e.target === el || e.target.closest(".cal-x")) calClose(); });
+}
+function calClose(){ const el = document.getElementById("calPop"); if(el) el.remove(); }
+document.addEventListener("keydown", e => { if(e.key === "Escape") calClose(); });
+let rsT = null, rsW = innerWidth;
+addEventListener("resize", () => { if(innerWidth === rsW) return; rsW = innerWidth; clearTimeout(rsT); rsT = setTimeout(() => { if(DATA){ renderNow(); renderWeek(); } }, 200); });
+$("refresh").addEventListener("click", () => { load(); loadStation(); loadObs(); loadInfo(); loadBuoy(); });
+$("src").addEventListener("click", () => { const L = LOC.stations; if(L.length < 2) return; stKey = L[(L.indexOf(stKey) + 1) % L.length]; store.set("ov2_station_v3", stKey); ST = null; renderNow(); loadStation(); loadObs(); });
+$("crit").addEventListener("change", e => { const k = e.target.dataset.k; if(!k) return; const v = parseFloat(e.target.value); if(isNaN(v)) return;
+  crit[act][k] = v; store.set("ov2_crit", crit); renderCrit(); if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); } });
+$("resetCrit").addEventListener("click", () => { crit[act] = JSON.parse(JSON.stringify(DEFAULTS[act])); store.set("ov2_crit", crit); render(); });
+
+renderSeg(); renderCrit();
+load(); loadStation(); loadObs(); loadInfo(); loadBuoy();
+setInterval(() => { if(document.visibilityState === "visible") loadBuoy(); }, 20*60*1000);
+setInterval(() => { if(document.visibilityState === "visible") loadInfo(); }, 15*60*1000);
+setInterval(load, 30*60*1000);
+setInterval(() => { if(document.visibilityState === "visible") loadObs(); }, 10*60*1000);
+setInterval(() => { if(document.visibilityState === "visible") loadStation(); }, 60*1000);
+document.addEventListener("visibilitychange", () => { if(document.visibilityState !== "visible") return; loadStation(); if(Date.now() - OBS.at > 5*60*1000) loadObs(); if(DATA && Date.now()-new Date(DATA.fetchedAt) > 20*60*1000) load(); });
+
+/* ---------- instal·lació ---------- */
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredPrompt = e; $("install").hidden = false; });
+$("install").addEventListener("click", async () => { if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; $("install").hidden = true; });
+window.addEventListener("appinstalled", () => { $("install").hidden = true; });
+if("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+/* ---------- capçalera: s'amaga en fer scroll avall i torna en pujar ---------- */
+(() => {
+  const top = document.querySelector("header.top"); if(!top) return;
+  let lastY = scrollY, acc = 0, ticking = false;
+  const upd = () => { ticking = false; const y = scrollY, d = y - lastY; lastY = y;
+    const vp = document.getElementById("viewPanel");
+    if(y < 60 || (vp && !vp.hidden)){ top.classList.remove("hide"); top.classList.toggle("lift", y > 4); acc = 0; return; }
+    top.classList.add("lift");
+    acc = (d > 0) === (acc > 0) ? acc + d : d;            // compta el recorregut en la mateixa direcció
+    if(acc > 24) top.classList.add("hide"); else if(acc < -16) top.classList.remove("hide"); };
+  addEventListener("scroll", () => { if(!ticking){ ticking = true; requestAnimationFrame(upd); } }, {passive:true});
+  // en canviar de pestanya o obrir un desplegable, que es vegi
+  addEventListener("mm-view", () => top.classList.remove("hide"));
+})();
+
+/* ---------- ubicació (configuració) ---------- */
+// Canviar d'ubicació recarrega l'app: així totes les dades (previsió, onatge, estació, bandera, avisos) són de la nova
+(() => {
+  const seg = $("locSeg"); if(!seg) return;
+  seg.querySelectorAll("[data-loc]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.loc === locKey)));
+  $("peekLoc").textContent = LOC.name;
+  seg.addEventListener("click", e => { const b = e.target.closest("[data-loc]"); if(!b || b.dataset.loc === locKey) return;
+    store.set("ov2_loc", b.dataset.loc); store.set("ov2_station_v3", LOCS[b.dataset.loc].st); location.reload(); });
+})();
