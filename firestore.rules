@@ -1,0 +1,95 @@
+rules_version = '2';
+// Ocata Vent 2 · regles de seguretat de Firestore (Fase 1: comptes i sortides privades)
+// Com publicar-les: consola de Firebase → Firestore Database → Rules → enganxa aquest fitxer → Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- qui és qui ----------
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function isOwner() { return signedIn() && me() == 'aHjoROUH3aQsHh6ksS3Tt1p5soF2'; }   // administrador inicial (Oriol)
+    function isAdmin() { return isOwner() || (signedIn() && exists(/databases/$(database)/documents/admins/$(me()))); }
+    function memberPath() { return /databases/$(database)/documents/members/$(me()); }
+    function isApproved() { return signedIn() && exists(memberPath()) && get(memberPath()).data.estat == 'aprovat'; }
+    function myClub() { return get(memberPath()).data.clubId; }
+    function mySortida(sid) { return signedIn() && sid.matches(me() + '_[0-9]+'); }
+
+    // ---------- administradors ----------
+    // Llista d'administradors addicionals (un document buit per UID). Només l'administrador inicial la gestiona.
+    match /admins/{uid} {
+      allow read: if isAdmin();
+      allow write: if isOwner();
+    }
+
+    // ---------- socis ----------
+    match /members/{uid} {
+      allow read: if signedIn() && (uid == me() || isAdmin());
+
+      // Sol·licitud d'alta: només la pròpia, pendent (un administrador es pot donar d'alta aprovat), amb consentiment
+      allow create: if signedIn() && uid == me()
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'email', 'nom', 'estat', 'consentVersio', 'consentAt', 'creat'])
+        && request.resource.data.keys().hasAll(['userId', 'clubId', 'email', 'nom', 'estat', 'consentVersio', 'consentAt', 'creat'])
+        && request.resource.data.userId == me()
+        && request.resource.data.clubId == 'ocatavent'
+        && request.resource.data.email == request.auth.token.get('email', '')
+        && request.resource.data.nom is string && request.resource.data.nom.size() > 0 && request.resource.data.nom.size() <= 80
+        && (request.resource.data.estat == 'pendent' || (request.resource.data.estat == 'aprovat' && isAdmin()))
+        && request.resource.data.consentVersio is string && request.resource.data.consentVersio.size() <= 20
+        && request.resource.data.consentAt == request.time
+        && request.resource.data.creat == request.time;
+
+      // Aprovar, rebutjar o treure l'accés: només administradors i només aquests camps
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estat', 'revisatPer', 'revisatAt'])
+        && request.resource.data.estat in ['pendent', 'aprovat', 'rebutjat']
+        && request.resource.data.revisatPer == me()
+        && request.resource.data.revisatAt == request.time;
+
+      // Esborrar: el mateix soci (esborrar el compte) o un administrador
+      allow delete: if signedIn() && (uid == me() || isAdmin());
+    }
+
+    // ---------- sortides (Fase 1: sempre privades) ----------
+    // Identificador del document: <uid>_<id de la sortida>. La ruta va trossejada a la subcol·lecció «trams».
+    match /sortides/{sid} {
+      // Llegir: només el propietari. Els administradors NO veuen les sortides privades.
+      allow read: if signedIn() && resource.data.userId == me();
+
+      // Pujar o tornar a pujar: socis aprovats, a nom propi i privada
+      allow create, update: if isApproved() && mySortida(sid)
+        && (resource == null || resource.data.userId == me())
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'visibilitat', 'tripId', 'nom', 'act', 'inici', 'fi', 'distNm', 'trams', 'v', 'pujada'])
+        && request.resource.data.userId == me()
+        && request.resource.data.clubId == myClub()
+        && request.resource.data.visibilitat == 'privat'
+        && request.resource.data.tripId is int
+        && sid == me() + '_' + string(request.resource.data.tripId)
+        && request.resource.data.nom is string && request.resource.data.nom.size() <= 120
+        && request.resource.data.act is string && request.resource.data.act.size() <= 20
+        && request.resource.data.inici is number && request.resource.data.fi is number
+        && request.resource.data.distNm is number
+        && request.resource.data.trams is int && request.resource.data.trams >= 1 && request.resource.data.trams <= 20
+        && request.resource.data.pujada == request.time;
+
+      // Esborrar: sempre el propietari, encara que ja no sigui soci (dret a esborrar les dades)
+      allow delete: if mySortida(sid);
+
+      match /trams/{tid} {
+        allow read: if signedIn() && resource.data.userId == me();
+        allow create, update: if isApproved() && mySortida(sid)
+          && (resource == null || resource.data.userId == me())
+          && request.resource.data.keys().hasOnly(['userId', 'i', 'd'])
+          && request.resource.data.userId == me()
+          && request.resource.data.i is int && request.resource.data.i >= 0 && request.resource.data.i < 20
+          && tid == string(request.resource.data.i)
+          && request.resource.data.d is string && request.resource.data.d.size() <= 500000;
+        allow delete: if mySortida(sid);
+      }
+    }
+
+    // Qualsevol altra cosa: tancada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

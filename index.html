@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=96">
+<link rel="stylesheet" href="app.css?v=97">
 </head>
 <body>
 <div class="app">
@@ -37,6 +37,10 @@
   </button>
 </header>
 <div class="card view-panel" id="viewPanel" hidden>
+  <details class="vp-sec" id="accSec">
+    <summary><h3>Compte</h3><span class="vp-peek" id="peekAcc">Sense compte</span></summary>
+    <div class="vp-body" id="accBody"></div>
+  </details>
   <details class="vp-sec">
     <summary><h3>Ubicació</h3><span class="vp-peek" id="peekLoc"></span></summary>
     <div class="vp-body">
@@ -334,9 +338,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=96"></script>
-<script src="trip.js?v=96"></script>
-<script src="maps.js?v=96"></script>
-<script src="windmap.js?v=96"></script>
+<script src="app.js?v=97"></script>
+<script src="trip.js?v=97"></script>
+<script src="maps.js?v=97"></script>
+<script src="windmap.js?v=97"></script>
+<script src="cloud.js?v=97"></script>
 </body>
 </html>

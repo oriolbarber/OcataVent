@@ -178,6 +178,7 @@ async function stopTrip(){
   await fillStationWind(trip);
   trip.summary = summarize(trip);
   try{ await DB.put(trip); }catch(e){}
+  window.OV_CLOUD?.saved(trip);
   LIVE = null; store.del("ov2_live"); $("tripName").value = "";
   destroyLiveMap(); setRecUI();
   go("log"); showTrip(trip.id);
@@ -420,7 +421,7 @@ async function importGpx(file){
     const trip = {id: Date.now(), name: nm || file.name.replace(/\.gpx$/i,""), act, start: pts[0].t, end: pts[pts.length-1].t, pts, wind: [], imported: true, station: stKey};
     await fillStationWind(trip);
     trip.summary = summarize(trip);
-    await DB.put(trip); msg(""); showTrip(trip.id);
+    await DB.put(trip); window.OV_CLOUD?.saved(trip); msg(""); showTrip(trip.id);
   }catch(e){ msg("No s'ha pogut llegir el fitxer GPX."); }
 }
 
@@ -450,7 +451,7 @@ async function backupIn(file){
     const have = new Set(((await DB.all()) || []).map(t => t.id)); let added = 0;
     for(const t of data.trips){
       if(!t || typeof t.id !== "number" || !Array.isArray(t.pts) || have.has(t.id)) continue;   // no trepitja les que ja hi són
-      t.wind = Array.isArray(t.wind) ? t.wind : []; await DB.put(t); added++;
+      t.wind = Array.isArray(t.wind) ? t.wind : []; delete t.owner; delete t.synced; await DB.put(t); added++;   // entren com a sortides d'aquest mòbil
     }
     if(data.settings) SETTINGS_KEYS.forEach(k => { if(data.settings[k] != null && store.get(k) == null) store.set(k, data.settings[k]); });
     await renderList();
@@ -472,17 +473,19 @@ async function renderList(){
   const persisted = await storagePersisted();
   const bak = `<article class="card"><div class="card-h"><span class="lbl">Còpia de seguretat</span>
       <span class="src ${persisted ? "live" : ""}"><span class="dot"></span>${persisted ? "Dades protegides al mòbil" : "El navegador pot esborrar-les si falta espai"}</span></div>
-    <p class="note">Les sortides només es guarden en aquest mòbil. Desa'n una còpia de tant en tant (per exemple, al Drive) per no perdre-les si canvies de mòbil o esborres l'app.</p>
+    <p class="note">${window.OV_CLOUD?.approved() ? "Les sortides del teu compte també es guarden al núvol. Si vols, en pots desar una còpia en un fitxer." : "Les sortides només es guarden en aquest mòbil. Desa'n una còpia de tant en tant (per exemple, al Drive) per no perdre-les si canvies de mòbil o esborres l'app."}</p>
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" type="button" id="backupOut">Fes una còpia de seguretat</button>
       <label class="btn" for="backupIn" style="display:inline-flex;align-items:center">Recupera una còpia</label>
       <input type="file" id="backupIn" accept=".json,application/json" hidden></div>
     <div class="msg" id="backupMsg" hidden style="margin-top:8px"></div></article>`;
-  if(!trips.length){ $("logList").innerHTML = `<article class="card empty">Encara no hi ha cap sortida desada.<br>Prem «Sortida» per gravar la primera.</article>` + imp + bak; return; }
-  $("logList").innerHTML = imp + `<div class="card-h" style="margin:0"><h2 style="font-size:1.3rem;text-transform:uppercase">Sortides</h2><span class="lbl">${trips.length}</span></div><div class="trips">` + trips.map(t => {
+  const cloud = `<div id="cloudCard"></div>`;
+  if(!trips.length){ $("logList").innerHTML = cloud + `<article class="card empty">Encara no hi ha cap sortida desada.<br>Prem «Sortida» per gravar la primera.</article>` + imp + bak; window.OV_CLOUD?.renderCard(); return; }
+  $("logList").innerHTML = cloud + imp + `<div class="card-h" style="margin:0"><h2 style="font-size:1.3rem;text-transform:uppercase">Sortides</h2><span class="lbl">${trips.length}</span></div><div class="trips">` + trips.map(t => {
     const d = new Date(t.start), s = t.summary || summarize(t);
     return `<button type="button" class="trip" data-trip="${t.id}"><b>${esc(t.name || (DAYS_L[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]))}</b><span class="m">${s.distNm.toFixed(1).replace(".",",")} nm</span>
       <span>${d.toLocaleDateString("ca",{day:"numeric",month:"short",year:"numeric"})} · ${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(DEFAULTS[t.act]?.short||"")}</span><span class="m" style="font-weight:600;color:var(--muted)">${fmtDurShort(s.dur)} · màx ${r1(s.maxKn)} kn</span></button>`; }).join("") + `</div>` + bak;
+  window.OV_CLOUD?.renderCard();
 }
 function seriesChart(trip){
   const seg = segments(trip); if(seg.length < 3) return "";
@@ -540,7 +543,7 @@ async function showTrip(id){
   $("backList").onclick = renderList;
   $("expGpx").onclick = () => download(t, "gpx");
   $("expCsv").onclick = () => download(t, "csv");
-  slideConfirm($("delTrip"), "Llisca per esborrar", async () => { await DB.del(t.id); renderList(); });
+  slideConfirm($("delTrip"), "Llisca per esborrar", async () => { await DB.del(t.id); window.OV_CLOUD?.deleted(t); renderList(); });
   if(detailMap){ detailMap.remove(); detailMap = null; }
   setTimeout(() => { detailMap = tripMap($("tripMap"), t); }, 0);
   window.scrollTo({top:0});

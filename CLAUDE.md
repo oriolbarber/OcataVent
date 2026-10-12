@@ -33,6 +33,13 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - **Tasques programades sense pla Blaze:** GitHub Actions amb `cron`. S'hi fan l'avís «no ha tornat a l'hora» i l'historial d'encerts dels models (desar la previsió a les 7 h i comparar-la a les 22 h).
 - **Android:** APK directe amb Capacitor que carrega la web publicada i hi afegeix el GPS en segon pla (foreground service). L'iPhone es queda com a PWA.
 
+## Núvol (Fase 1, `cloud.js`)
+- Firebase es descarrega des de gstatic només si ja s'havia entrat en aquest mòbil (`ov2_cloud`), si s'obre un enllaç d'accés o si es prem «Entra». Sense compte, l'app és la V1.
+- El mòbil (IndexedDB) continua sent el magatzem principal; el núvol n'és la còpia. Cada sortida local porta `owner` (UID) i `synced`.
+- Col·leccions: `members/{uid}` (nom, correu, `estat`: pendent | aprovat | rebutjat, consentiment), `admins/{uid}`, `sortides/{uid}_{id}` (fitxa) + `sortides/…/trams/{i}` (la sortida sencera en JSON trossejat).
+- Regles: `firestore.rules` (es publiquen a mà a la consola o amb `firebase deploy --only firestore:rules`). Els administradors no veuen les sortides privades.
+- Versió del text de consentiment: `CONSENT_V` a `cloud.js`.
+
 ## Fonts de dades (V1)
 - **Previsió:** Open-Meteo forecast i marine. Ús no comercial.
 - **Estacions:** meteoelmasnou.cat (Meteotemplate). Cal demanar permís per a la V2.
