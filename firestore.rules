@@ -86,13 +86,14 @@ service cloud.firestore {
       allow update: if signedIn() && uid == me()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['privacitat'])
         && request.resource.data.privacitat is map
-        && request.resource.data.privacitat.keys().hasOnly(['mur', 'presencia', 'avisos', 'avisosBase', 'intencions', 'anuncis'])
+        && request.resource.data.privacitat.keys().hasOnly(['mur', 'presencia', 'avisos', 'avisosBase', 'autoBase', 'intencions', 'anuncis'])
         && request.resource.data.privacitat.get('mur', 'club') in ['tothom', 'club', 'amics']
         && request.resource.data.privacitat.get('intencions', 'club') in ['tothom', 'club', 'amics']
         && request.resource.data.privacitat.get('anuncis', 'club') in ['tothom', 'club', 'amics']
         && request.resource.data.privacitat.get('presencia', 'club') in ['tothom', 'club', 'amics', 'ningu']
         && request.resource.data.privacitat.get('avisos', 'club') in ['tothom', 'club', 'amics', 'ningu']
-        && request.resource.data.privacitat.get('avisosBase', true) is bool;
+        && request.resource.data.privacitat.get('avisosBase', true) is bool
+        && request.resource.data.privacitat.get('autoBase', false) is bool;
       // Comissions i responsables: permís «rols»
       allow update: if hasPerm('rols')
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comissions', 'responsable'])

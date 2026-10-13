@@ -51,7 +51,7 @@ const ymd = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDa
 const dayStr = t => new Date(t).toLocaleDateString("ca", {weekday:"short", day:"numeric", month:"short"});
 const ago = t => { const m = Math.max(0, Math.round((now() - t)/MIN)); return m < 1 ? "ara" : m < 60 ? "fa " + m + " min" : "fa " + Math.round(m/60) + " h"; };
 const boatShort = k => DEFAULTS[k]?.short || DEFAULTS[k]?.name || k || "";
-const vis = () => window.OV_PRIV ? OV_PRIV.pref("presencia") : "junta";   // Configuració ▸ Confidencialitat (amics.js)
+const vis = () => window.OV_PRIV ? OV_PRIV.pref("presencia") : "club";   // Configuració ▸ Confidencialitat (amics.js)
 const NIVT = v => (window.OV_PRIV?.NIV || {})[v] || v;
 const canPost = () => C && (C.isAdm ? Object.keys(COMSm()) : (C.member.comissions || []).filter(k => COMSm()[k]));
 const ERRS = {"permission-denied":"El núvol ho ha refusat (permís). Comprova que les regles estan publicades.", "unavailable":"Sense connexió amb el núvol.", "timeout":"El núvol no respon."};
@@ -469,6 +469,31 @@ async function setPres(doc){
 }
 async function delPres(){ await C.F.deleteDoc(ref("presencia", uid())); D.myPres = null; D.pres = D.pres.filter(x => x.id !== uid()); }
 
+/* ---------- arribada i sortida de la base pel GPS (si el soci ho ha activat a Confidencialitat) ---------- */
+// Amb l'app oberta i sense cap sortida en curs: cada 2 minuts mira la posició.
+// A menys de 100 m de la base → «a la base»; a més de 300 m → deixa d'estar-hi. (Marge ample per l'error del GPS.)
+const AUTO_IN = 100, AUTO_OUT = 300;
+let autoBusy = false, autoLast = 0;
+function autoTick(force){
+  if(!C || autoBusy || !navigator.geolocation || !window.OV_PRIV?.autoBase() || vis() === "ningu") return;
+  if(document.visibilityState !== "visible" || (typeof LIVE !== "undefined" && LIVE)) return;   // durant una sortida, ja ho fa avisos.js
+  if(!force && now() - autoLast < 110000) return;
+  autoBusy = true; autoLast = now();
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try{
+      const c = pos.coords; if(c.accuracy > 150) return;
+      const d = hav({lat:HOME[0], lon:HOME[1]}, {lat:c.latitude, lon:c.longitude});
+      if(!D.at.mypres){ const s = await C.F.getDoc(ref("presencia", uid())); D.myPres = s.exists() ? Object.assign({id:s.id}, s.data()) : null; D.at.mypres = now(); }
+      const st = D.myPres && now() - (ms(D.myPres.actualitzat) || 0) < DAY ? D.myPres.estat : null;
+      if(d <= AUTO_IN && !st){ await setPres(presDoc("base")); loadAlerts(); if(visible()) render(); }
+      else if(d >= AUTO_OUT && st === "base"){ await delPres(); loadAlerts(); if(visible()) render(); }
+    }catch(e){}
+    finally{ autoBusy = false; }
+  }, () => { autoBusy = false; }, {enableHighAccuracy:true, maximumAge: force ? 0 : 60000, timeout:30000});   // en obrir l'app, posició nova
+}
+setInterval(() => autoTick(), 120000);
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") autoTick(true); });
+
 document.addEventListener("click", async e => {
   const t = e.target.closest && e.target.closest("#clubView button, #clubView [data-ctab]"); if(!t || !C) return;
   const ds = t.dataset;
@@ -550,7 +575,7 @@ function tabBtn(){
 }
 window.addEventListener("ov-coms", () => { publishEvents(); if(visible()) render(); });
 window.addEventListener("ov-cloud", async () => {
-  await ctx(); tabBtn(); loadAlerts(); if(C) loadEvents(); else { window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
+  await ctx(); tabBtn(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
   if(C && visible()) load(true);
 });
@@ -558,7 +583,7 @@ window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load()
 
 /* ---------- connexió amb trip.js i cloud.js ---------- */
 const OV_CLUB = window.OV_CLUB = {
-  sheet, closeSheet,
+  sheet, closeSheet, autoTick,
   async shareBtn(el, t){
     shareEl = el; shareTrip = t; el.innerHTML = "";
     if(!C || !t || t.owner !== uid()) return;
@@ -595,6 +620,7 @@ const OV_CLUB = window.OV_CLUB = {
   // Confidencialitat: s'ha canviat una preferència (amics.js)
   async privChanged(k){
     if(!C) return;
+    if(k === "autoBase") autoTick(true);
     if(k === "presencia" && D.myPres){ try{ if(vis() === "ningu") await delPres(); else { const o = Object.assign({}, D.myPres); delete o.id; delete o.visib; await setPres(Object.assign(o, await visFields(vis()), {actualitzat:C.F.serverTimestamp()})); } }catch(e){} }
     if(visible()) render();
   },
@@ -621,5 +647,5 @@ const OV_CLUB = window.OV_CLUB = {
     await del("presencia", me);
   }
 };
-ctx().then(() => { tabBtn(); loadAlerts(); loadEvents(); });
+ctx().then(() => { tabBtn(); loadAlerts(); loadEvents(); autoTick(true); });
 })();

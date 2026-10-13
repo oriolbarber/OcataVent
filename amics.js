@@ -36,6 +36,7 @@ const errText = e => ERRS[e && e.code] || "No s'ha pogut fer" + (e && e.code ? "
 async function ctx(){ C = window.OV_CLOUD?.ctx ? await window.OV_CLOUD.ctx().catch(() => null) : null; return C; }
 function pref(k){ const it = ITEMS.find(x => x.k === k), v = C && C.member.privacitat && C.member.privacitat[k]; return v && NIV[v] && (it.ningu || v !== "ningu") ? v : it.d; }
 const avisosBase = () => !(C && C.member.privacitat && C.member.privacitat.avisosBase === false);
+const autoBase = () => !!(C && C.member.privacitat && C.member.privacitat.autoBase === true);   // per defecte, no
 const amicsUids = () => amistats.filter(a => a.estat === "acceptada").map(altre);
 const lectors = v => v === "amics" ? amicsUids() : [];
 
@@ -70,6 +71,7 @@ function render(){
     <p class="note" style="margin:0">Tria qui veu cada cosa. Els avisos de la junta i les comissions sempre els veu tot el club. Els amics s'afegeixen des del botó <b>Afegeix amics</b> del Club.</p>
     ${ITEMS.map(it => { const v = pref(it.k); return `<label class="priv-row" for="pv_${it.k}"><span class="priv-t"><b>${esc(it.t)}</b><small class="note">${esc(it.nota)}</small></span>
       <select class="field" id="pv_${it.k}" data-priv="${it.k}">${Object.keys(NIV).filter(k => it.ningu || k !== "ningu").map(k => `<option value="${k}"${k === v ? " selected" : ""}>${NIV[k]}</option>`).join("")}</select></label>
+      ${it.k === "presencia" ? `<label class="cl-sw priv-base"><span><b>Marca'm a la base automàticament</b><small class="note">Amb l'app oberta, el GPS detecta quan arribes a la base nàutica i quan te'n vas. Amb la pantalla apagada no funciona (caldrà l'app Android).</small></span><input type="checkbox" class="switch" id="pvAuto"${autoBase() ? " checked" : ""}${pref("presencia") === "ningu" ? " disabled" : ""}></label>` : ""}
       ${it.k === "avisos" ? `<label class="cl-sw priv-base"><span><b>+ Gent a la base nàutica</b><small class="note">Els socis que en aquell moment són a la base també veuen els teus avisos, encara que no siguin del grup triat.</small></span><input type="checkbox" class="switch" id="pvBase"${avisosBase() ? " checked" : ""}></label>` : ""}`; }).join("")}
     <div class="vp-more"><button class="ib-i" type="button" data-info="iPriv" aria-label="Què vol dir cada opció" aria-expanded="false">i</button>
       <div class="vp-info" id="iPriv" hidden>${Object.keys(NIV).map(k => `<p><b>${NIV[k]}:</b> ${esc(NIV_LLARG[k])}</p>`).join("")}<p><b>Gent a la base:</b> els socis que han marcat «Soc a la base» o hi han tornat amb el GPS. Els avisos de seguretat els poden marcar com a resolts la junta, els responsables i qui és a la base.</p><p>El que ja has compartit amb «Amics» ho veuen els amics que tenies en aquell moment; quan acceptes o treus un amic, l'app ho actualitza.</p></div></div>`;
@@ -127,7 +129,10 @@ async function remove(id){
   try{ await C.F.deleteDoc(ref("amistats", id)); amistats = amistats.filter(x => x.id !== id); renderFriends(); window.OV_CLUB?.refreshLectors(); }
   catch(e){ say(errText(e)); }
 }
-document.addEventListener("change", e => { const k = e.target.dataset && e.target.dataset.priv; if(k && C) setPref(k, e.target.value); if(e.target.id === "pvBase" && C) setPref("avisosBase", e.target.checked); });
+document.addEventListener("change", e => { const k = e.target.dataset && e.target.dataset.priv; if(k && C) setPref(k, e.target.value); if(e.target.id === "pvBase" && C) setPref("avisosBase", e.target.checked);
+  if(e.target.id === "pvAuto" && C){ const on = e.target.checked;
+    if(on && navigator.geolocation) navigator.geolocation.getCurrentPosition(() => {}, () => say("Sense permís d'ubicació, no es pot detectar l'arribada a la base."), {timeout:20000});   // demana el permís ara
+    setPref("autoBase", on); } });
 document.addEventListener("input", e => { if(e.target.id !== "privCerca") return; cerca = e.target.value; const pos = e.target.selectionStart; renderFriends(); const i = $("privCerca"); if(i){ i.focus(); try{ i.setSelectionRange(pos, pos); }catch(err){} } });
 window.addEventListener("mm-view", renderFab);
 document.addEventListener("click", e => {
@@ -143,7 +148,7 @@ window.addEventListener("ov-cloud", async () => { await ctx(); render(); if(C) l
 setInterval(() => { if(C && document.visibilityState === "visible" && !$("view-club").hidden) load(); }, 120000);   // sol·licituds noves
 
 window.OV_PRIV = {
-  NIV, ITEMS, pref, lectors, amicsUids, avisosBase, openFriends,
+  NIV, ITEMS, pref, lectors, amicsUids, avisosBase, autoBase, openFriends,
   async ready(){ if(C && !loadedAt) await load(true); },
   options(k){ const it = ITEMS.find(x => x.k === k); return Object.keys(NIV).filter(v => it.ningu || v !== "ningu"); },
   open(){ const p = $("viewPanel"); if(!p) return; p.hidden = false; $("themeBtn").setAttribute("aria-expanded", "true"); const s = $("privSec"); if(s){ s.open = true; render(); setTimeout(() => s.scrollIntoView({behavior:"smooth", block:"start"}), 50); } },
