@@ -22,7 +22,7 @@ const MAX_TRAMS = 20;
 
 let A = null, F = null, app = null, auth = null, db = null, loading = null, fsLoading = null;
 let user = null, member = null, isAdm = false, ready = false, offline = false;
-let pendingLink = null, syncing = false, syncAgain = false, syncErr = "", lastSync = 0, lastRefresh = 0, members = [], delStep = false;
+let pendingLink = null, syncing = false, syncAgain = false, syncErr = "", lastSync = 0, lastRefresh = 0, delStep = false;
 let flash = {t:"", err:false};
 
 const approved = () => !!(user && member && member.estat === "aprovat");
@@ -73,8 +73,8 @@ function fs(){
 /* ---------- sessió i fitxa de soci ---------- */
 const emit = () => window.dispatchEvent(new CustomEvent("ov-cloud"));   // club.js escolta els canvis de sessió i de soci
 async function onUser(u){
-  user = u; member = null; isAdm = false; members = []; delStep = false;
-  if(!u){ store.del("ov2_cloud"); ready = true; render(); badge(); refreshList(); emit(); return; }
+  user = u; member = null; isAdm = false; delStep = false;
+  if(!u){ store.del("ov2_cloud"); ready = true; render(); refreshList(); emit(); return; }
   store.set("ov2_cloud", 1);
   try{
     await readMember();
@@ -83,7 +83,6 @@ async function onUser(u){
   ready = true; render(); emit();
   await flushDeletes();
   if(approved()) sync(); else refreshList();
-  if(isAdm) loadMembers();
 }
 async function readMember(){
   const f = await fs();
@@ -140,7 +139,7 @@ async function logout(){ try{ await A.signOut(auth); say("Has tancat la sessió.
 async function requestJoin(){
   if(!consentFromForm()) return;
   say("Enviant la sol·licitud…");
-  try{ await createMember(store.get("ov2_consent")?.nom); say(member ? (member.estat === "aprovat" ? "Alta feta: ets administrador i ja estàs aprovat." : "Sol·licitud enviada.") : "No s'ha pogut comprovar l'alta.", !member); render(); emit(); if(approved()) sync(); if(isAdm) loadMembers(); }
+  try{ await createMember(store.get("ov2_consent")?.nom); say(member ? (member.estat === "aprovat" ? "Alta feta: ets administrador i ja estàs aprovat." : "Sol·licitud enviada.") : "No s'ha pogut comprovar l'alta.", !member); render(); emit(); if(approved()) sync(); }
   catch(e){ say(errText(e), true); }
 }
 
@@ -209,29 +208,6 @@ async function adopt(){   // passa al compte les sortides que només eren en aqu
 function refreshList(){   // torna a pintar l'historial si s'està mirant la llista (no el detall)
   if(!$("view-log").hidden && !$("logList").hidden && typeof renderList === "function") renderList(); else renderCard();
 }
-
-/* ---------- administració d'altes ---------- */
-async function loadMembers(){
-  if(!isAdm) return;
-  try{ const f = await fs(); const qs = await f.getDocs(f.query(f.collection(db, "members"), f.where("clubId", "==", CLUB_ID)));
-    members = qs.docs.map(d => d.data()).sort((a, b) => String(a.nom).localeCompare(String(b.nom), "ca")); }
-  catch(e){ members = []; }
-  badge(); render();
-}
-async function setEstat(uid, estat){
-  try{ const f = await fs(); await T(f.updateDoc(f.doc(db, "members", uid), {estat, revisatPer:user.uid, revisatAt:f.serverTimestamp()})); await loadMembers(); }
-  catch(e){ say(errText(e), true); }
-}
-const ROLES = {junta:"Junta", manteniment:"Manteniment", economica:"Econòmica"};
-async function setRole(uid, role){
-  const m = members.find(x => x.userId === uid); if(!m) return;
-  const patch = role === "responsable" ? {responsable: !m.responsable}
-    : {comissions: (m.comissions || []).includes(role) ? (m.comissions || []).filter(k => k !== role) : (m.comissions || []).concat([role])};
-  try{ const f = await fs(); await T(f.updateDoc(f.doc(db, "members", uid), patch)); Object.assign(m, patch); render();
-    if(uid === user.uid){ await readMember(); emit(); } }
-  catch(e){ say(errText(e), true); }
-}
-function badge(){ const n = isAdm ? members.filter(m => m.estat === "pendent").length : 0; $("themeBtn").classList.toggle("has-dot", n > 0); }
 
 /* ---------- esborrar el compte ---------- */
 async function deleteAccount(){
@@ -323,27 +299,12 @@ function render(){
       h = who + `<div class="warnbox">L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta del club.</div>`;
     } else {
       peek.textContent = (isAdm ? "Administrador" : "Soci") + " · " + (member.nom || user.email || "");
-      h = who + `<p class="note">Soci aprovat. Les sortides es desen al núvol, privades: només les veus tu.</p>` + (isAdm ? adminBlock() : "");
+      h = who + `<p class="note">Soci aprovat. Les sortides es desen al núvol, privades: només les veus tu.</p>`;
     }
     h += `<button class="btn" type="button" id="accOut">Tanca la sessió</button>` + delBlock();
   }
   body.innerHTML = `<div class="msg${flash.err ? " err" : ""}" id="accMsg"${flash.t ? "" : " hidden"}>${esc(flash.t)}</div>` + h;
   const d = $("accDel"); if(d) slideConfirm(d, "Llisca per esborrar el compte", deleteAccount);
-  document.querySelectorAll("#accBody [data-revoke]").forEach(el => slideConfirm(el, "Llisca per treure l'accés", () => setEstat(el.dataset.revoke, "rebutjat")));
-}
-function adminBlock(){
-  const pend = members.filter(m => m.estat === "pendent"), ok = members.filter(m => m.estat === "aprovat"), no = members.filter(m => m.estat === "rebutjat");
-  const row = (m, btns) => `<div class="acc-row"><div class="acc-who"><b>${esc(m.nom)}</b><span>${esc(m.email)}</span></div><div class="acc-btns">${btns}</div></div>`;
-  return `<div class="acc-adm"><span class="lbl">Altes pendents · ${pend.length}</span>
-    ${pend.length ? pend.map(m => row(m, `<button class="btn sm" type="button" data-estat="aprovat" data-uid="${esc(m.userId)}">Aprova</button><button class="btn sm danger" type="button" data-estat="rebutjat" data-uid="${esc(m.userId)}">Rebutja</button>`)).join("") : `<p class="note">No n'hi ha cap.</p>`}
-    <details class="acc-del"><summary>Socis aprovats · ${ok.length}</summary>
-      <p class="note">Toca una comissió o «Responsable» per donar-la o treure-la. Els responsables veuen la presència de tothom a la Base.</p>
-      ${ok.map(m => row(m, m.userId === user.uid ? "" : `<button class="btn sm" type="button" data-ask-revoke="${esc(m.userId)}">Treu l'accés</button>`)
-        + `<div class="acc-roles" role="group" aria-label="Rols de ${esc(m.nom)}">${Object.entries(ROLES).concat([["responsable", "Responsable"]]).map(([k, t]) => { const on = k === "responsable" ? !!m.responsable : (m.comissions || []).includes(k);
-            return `<button class="btn sm" type="button" data-role="${k}" data-uid="${esc(m.userId)}" aria-pressed="${on}">${t}</button>`; }).join("")}</div>`
-        + `<div data-revoke-box="${esc(m.userId)}"></div>`).join("")}</details>
-    ${no.length ? `<details class="acc-del"><summary>No aprovats · ${no.length}</summary>${no.map(m => row(m, `<button class="btn sm" type="button" data-estat="aprovat" data-uid="${esc(m.userId)}">Aprova</button>`)).join("")}</details>` : ""}
-    <button class="btn sm" type="button" id="accReload">Actualitza la llista</button></div>`;
 }
 function openPanel(){
   const p = $("viewPanel"); if(!p) return;
@@ -358,7 +319,6 @@ async function refresh(){   // en obrir la configuració: comprova si ja t'han a
   try{ await readMember(); }catch(e){ return; }
   render(); emit();
   if(member?.estat !== was && approved()) sync();
-  if(isAdm) loadMembers();
 }
 
 document.addEventListener("click", e => {
@@ -371,10 +331,6 @@ document.addEventListener("click", e => {
   else if(t.id === "accOut") logout();
   else if(t.id === "accJoin") requestJoin();
   else if(t.id === "accRelink") relink();
-  else if(t.id === "accReload"){ lastRefresh = 0; refresh(); }
-  else if(t.dataset.estat) setEstat(t.dataset.uid, t.dataset.estat);
-  else if(t.dataset.role) setRole(t.dataset.uid, t.dataset.role);
-  else if(t.dataset.askRevoke){ const box = document.querySelector(`[data-revoke-box="${CSS.escape(t.dataset.askRevoke)}"]`); if(box){ box.dataset.revoke = t.dataset.askRevoke; slideConfirm(box, "Llisca per treure l'accés", () => setEstat(box.dataset.revoke, "rebutjat")); } }
 });
 $("themeBtn").addEventListener("click", () => { if(!$("viewPanel").hidden){ render(); refresh(); } });
 
@@ -400,7 +356,9 @@ document.addEventListener("click", e => {
 /* ---------- connexió amb trip.js ---------- */
 window.OV_CLOUD = {
   approved,
-  async ctx(){ if(!approved()) return null; const f = await fs(); return {F:f, db, user, member, isAdm, isResp: isAdm || !!member.responsable || (member.comissions || []).includes("junta")}; },
+  async ctx(){ if(!approved()) return null; const f = await fs(); const perms = isAdm ? ["altes", "rols", "permisos", "moderar"] : (member.permisos || []);
+    return {F:f, db, user, member, isAdm, perms, isResp: isAdm || !!member.responsable || (member.comissions || []).includes("junta")}; },
+  async reread(){ if(!user) return; try{ await readMember(); }catch(e){} render(); emit(); },
   renderCard,
   async saved(t){ if(!approved()) return; t.owner = user.uid; t.synced = false; try{ await DB.put(t); }catch(e){} sync(); },
   deleted(t){ if(!t || !t.owner) return; const q = store.get("ov2_cloud_del") || []; q.push({uid:t.owner, id:t.id}); store.set("ov2_cloud_del", q);

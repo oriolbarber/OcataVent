@@ -1016,3 +1016,21 @@ footer #iSrc{text-align:left;margin:8px 0}
 :root[data-size="big"] .priv-t b{font-size:1.15rem}
 .cl-privrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .cl-privrow b{font-size:1.15rem}
+/* ---------- botó d'afegir amics (amics.js) i administració (admin.js) ---------- */
+.friend-fab{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:1100;width:64px;height:64px;border-radius:50%;border:0;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;box-shadow:0 6px 18px #0006;cursor:pointer}
+.friend-fab svg path[stroke]{stroke:var(--accent)}
+.friend-fab[hidden]{display:none}
+.ff-dot{position:absolute;top:2px;right:2px;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--no);color:#fff;font-family:var(--f-mono);font-size:.78rem;display:grid;place-items:center;border:2px solid var(--surface)}
+#view-club{padding-bottom:84px}
+.priv-base{border-top:0;padding-top:0}
+.adm-row{align-items:center}
+.adm-open{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;background:none;border:0;padding:6px 0;color:var(--ink);cursor:pointer;font:inherit}
+.adm-open b{font-size:1rem}.adm-open span,.adm-open small{font-size:.8rem;color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.adm-list{display:flex;flex-direction:column}
+.adm-grp{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.adm-perms{display:flex;flex-direction:column;gap:4px}
+.adm-coms{display:flex;flex-direction:column;gap:6px}
+.adm-com{display:flex;align-items:center;gap:8px}
+.adm-com .field{flex:1;min-height:44px}
+:root[data-size="big"] .adm-open b{font-size:1.15rem}
+:root[data-size="big"] .friend-fab{width:72px;height:72px}
