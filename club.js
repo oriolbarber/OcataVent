@@ -201,10 +201,6 @@ function card(p){
   const st = (l, val, u, sub, hot) => `<div class="stat cl-st"><span class="lbl">${l}</span><span class="v"${hot ? ' style="color:var(--accent-2)"' : ""}>${val}<small> ${u}</small></span><span class="cl-sub">${esc(sub)}</span></div>`;
   const durM = Math.round((p.durS || 0)/60);
   return `<article class="card cl-card" aria-label="Sortida publicada: ${esc(p.titol || "")}">
-    <div class="cl-head"><span class="cl-av" aria-hidden="true">${esc(initials(p.nom))}</span>
-      <div class="cl-who"><b>${esc(p.nom)}</b><span>${esc(boatShort(p.act))} · ${esc(dayStr(p.inici))} · ${hm(p.inici)}–${hm(p.fi)}${p.editada ? " · editada" : ""}${mine ? " · " + esc(NIVT(p.visibilitat || "club")) : ""}</span></div>
-      <span class="cl-boat">${typeof boatIcon === "function" ? boatIcon(p.act) : ""}</span></div>
-    <h3 class="cl-title">${esc(p.titol || "Sortida")}</h3>
     <div class="cl-stats">
       ${st("Distància", (p.distNm || 0).toFixed(1).replace(".", ","), "nm", durM >= 60 ? Math.floor(durM/60) + " h " + (durM % 60) + " min" : durM + " min")}
       ${st("Vel. màx.", r1(p.maxKn), "kn", "Mitjana " + r1(p.avgKn))}
@@ -212,7 +208,10 @@ function card(p){
     ${p.onada != null ? `<div class="cl-sub">Onada màxima: ${r1(p.onada)} m</div>` : ""}
     ${p.ruta ? routeSvg(p.ruta) : `<div class="cl-noroute">${LOCK}Ruta no publicada</div>`}
     ${p.comentari ? `<p class="cl-text">${esc(p.comentari)}</p>` : ""}
-    <div class="cl-reacts" role="group" aria-label="Reaccions">${REACTS.map(r => `<button type="button" class="cl-r" data-react="${r.k}" data-pub="${esc(p.id)}" aria-pressed="${my === r.k}" aria-label="${r.l}">${svgI(r.p, 22, r.rot)}<span>${cnt(r.k)}</span></button>`).join("")}
+    <div class="cl-head cl-foot"><span class="cl-av" aria-hidden="true">${esc(initials(p.nom))}</span>
+      <div class="cl-who"><b>${esc(p.nom)}</b><span>${esc(boatShort(p.act))} · ${esc(dayStr(p.inici))}</span></div>
+      <span class="cl-boat">${typeof boatIcon === "function" ? boatIcon(p.act) : ""}</span></div>
+    <div class="cl-reacts" role="group" aria-label="Reaccions">${REACTS.map(r => `<button type="button" class="cl-r" data-react="${r.k}" data-pub="${esc(p.id)}" aria-pressed="${my === r.k}" aria-label="${r.l}">${svgI(r.p, 22, r.rot)}${cnt(r.k) ? `<span>${cnt(r.k)}</span>` : ""}</button>`).join("")}
       ${mine ? `<button type="button" class="btn sm cl-edit" data-editpub="${esc(p.id)}">Edita</button>` : ""}</div>
     ${!mine && canMod() ? modBtn("publicacions", p.id) + `<div data-delbox="${esc(p.id)}"></div>` : ""}
   </article>`;
@@ -222,7 +221,7 @@ function routePts(s){ return String(s).split(";").map(x => x.split(",").map(Numb
 function routeSvg(s){
   const P = routePts(s);
   if(P.length < 2) return "";
-  return `<figure class="cl-route"><div class="map short cl-rmap" data-route="${esc(String(s))}" role="img" aria-label="Mapa de la ruta">${routeLine(P)}</div><figcaption>Ruta simplificada, sense l'inici ni el final.</figcaption></figure>`;
+  return `<figure class="cl-route"><div class="map short cl-rmap" data-route="${esc(String(s))}" role="img" aria-label="Mapa de la ruta">${routeLine(P)}</div></figure>`;
 }
 // traçat sense fons de mapa: es veu mentre carrega el mapa i si no hi ha Leaflet
 function routeLine(P){
@@ -364,7 +363,6 @@ function verdictFor(a, Wd, onada){
 async function pubSheet(t, p){
   const def = p ? p.titol : (t && t.name) || "Sortida de " + (t ? dayStr(t.start) : "");
   sheet(p ? "La meva publicació" : "Comparteix amb el club", `
-    ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="60" value="${esc(def)}" style="font-family:var(--f-body)">`)}
     ${field("shText", "Comentari <small>(opcional)</small>", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="280" placeholder="Què ha de saber qui surti un dia com aquest?">${esc(p ? p.comentari || "" : "")}</textarea>`)}
     <label class="cl-sw"><span><b>${p ? "Mostra la ruta" : "Inclou la ruta"}</b><small class="note">Simplificada i sense els primers ni els últims 200 m. Ho pots canviar després.</small></span><input type="checkbox" class="switch" id="shRoute"${p && p.ruta ? " checked" : ""}></label>
     ${visSelect("mur", p ? (p.visibilitat || "club") : prefOf("mur"))}
@@ -373,7 +371,7 @@ async function pubSheet(t, p){
     ${p ? `<div class="cl-retire"><span class="lbl">Retira del mur</span><p class="note">Desapareix del mur amb les reaccions; la sortida es queda al teu historial.</p><div id="shDel"></div></div>` : ""}`, d => {
     if(p) slideConfirm($("shDel"), "Llisca per retirar", async () => { try{ await TO(C.F.deleteDoc(ref("publicacions", p.id))); D.pubs = D.pubs.filter(x => x.id !== p.id); closeSheet(); render(); refreshShare(); }catch(e){ sheetSay(errText(e)); } });
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
-      const titol = $("shTitle").value.trim().slice(0, 60) || "Sortida", comentari = $("shText").value.trim().slice(0, 280), wantRoute = $("shRoute").checked;
+      const titol = String(def || "Sortida").slice(0, 60), comentari = $("shText").value.trim().slice(0, 280), wantRoute = $("shRoute").checked;
       if(p){
         let ruta = p.ruta || null;
         if(wantRoute && !ruta){ const lt = t || await DB.get(p.tripId); if(!lt){ sheetSay("Per afegir la ruta, fes-ho des del mòbil on tens aquesta sortida."); return; } ruta = routeOf(lt);

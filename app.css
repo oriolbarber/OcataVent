@@ -1107,3 +1107,4 @@ footer #iSrc{text-align:left;margin:8px 0}
 :root[data-size="big"] .pn-h{flex-basis:50px;font-size:.9rem}
 :root[data-size="big"] .pn-h b{font-size:1.2rem}
 :root[data-size="big"] .prep-ly button,:root[data-size="big"] .prep-more button{font-size:1.05rem;min-height:50px}
+.cl-foot{padding-top:10px;border-top:1px solid var(--line)}
