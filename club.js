@@ -42,7 +42,8 @@ const ymd = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDa
 const dayStr = t => new Date(t).toLocaleDateString("ca", {weekday:"short", day:"numeric", month:"short"});
 const ago = t => { const m = Math.max(0, Math.round((now() - t)/MIN)); return m < 1 ? "ara" : m < 60 ? "fa " + m + " min" : "fa " + Math.round(m/60) + " h"; };
 const boatShort = k => DEFAULTS[k]?.short || DEFAULTS[k]?.name || k || "";
-const vis = () => store.get("ov2_pres_vis") || "resp";
+const vis = () => window.OV_PRIV ? OV_PRIV.pref("presencia") : "junta";   // Configuració ▸ Confidencialitat (amics.js)
+const NIVT = v => (window.OV_PRIV?.NIV || {})[v] || v;
 const canPost = () => C && (C.isAdm ? Object.keys(COMS) : (C.member.comissions || []).filter(k => COMS[k]));
 const ERRS = {"permission-denied":"El núvol ho ha refusat (permís). Comprova que les regles estan publicades.", "unavailable":"Sense connexió amb el núvol.", "timeout":"El núvol no respon."};
 const errText = e => ERRS[e && e.code] || "No s'ha pogut fer" + (e && e.code ? " (" + e.code + ")." : ".");
@@ -54,21 +55,34 @@ async function ctx(){ C = window.OV_CLOUD?.ctx ? await window.OV_CLOUD.ctx().cat
 const visible = () => !$("view-club").hidden;
 
 /* ---------- càrrega ---------- */
+// Tot el que aquest soci pot veure d'una col·lecció, segons la confidencialitat de cada document: una consulta per nivell
+async function getVisible(n){
+  const club = C.member.clubId, qs = [[W("clubId", "==", club), W("visibilitat", "==", "club")], [W("visibilitat", "==", "tothom")],
+    [W("lectors", "array-contains", uid())], [W("userId", "==", uid())]];
+  if(C.isResp) qs.push([W("clubId", "==", club), W("visibilitat", "==", "junta")]);
+  const out = new Map();
+  (await Promise.all(qs.map(w => getAll(n, ...w).catch(e => { if(e && e.code === "permission-denied") return []; throw e; })))).flat().forEach(x => out.set(x.id, x));
+  return [...out.values()];
+}
+// Qui ho veu: el selector dels formularis i els camps que es desen
+const visSelect = (k, cur) => field("shVis", "Qui ho veu", `<select class="field" id="shVis">${(window.OV_PRIV ? OV_PRIV.options(k) : ["club"]).map(v => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(NIVT(v))}</option>`).join("")}</select>`);
+async function visFields(v){ if(window.OV_PRIV) await OV_PRIV.ready(); return {visibilitat:v, lectors: window.OV_PRIV ? OV_PRIV.lectors(v) : []}; }
+const prefOf = k => window.OV_PRIV ? OV_PRIV.pref(k) : "club";
 const NEED = {mur:["pubs", "intents", "avisos"], avisos:["avisos"], anuncis:["anuncis", "avisos"], base:["pres", "avisos"]};
 async function fetchK(k){
   const club = C.member.clubId;
-  if(k === "pubs") D.pubs = await getAll("publicacions", W("clubId", "==", club));
-  if(k === "intents") D.intents = await getAll("intencions", W("clubId", "==", club));
+  if(k === "pubs") D.pubs = await getVisible("publicacions");
+  if(k === "intents") D.intents = await getVisible("intencions");
   if(k === "avisos") D.avisos = await getAll("avisos", W("clubId", "==", club));
   if(k === "anuncis"){
-    D.anuncis = await getAll("anuncis", W("clubId", "==", club));
+    D.anuncis = await getVisible("anuncis");
     await Promise.all(D.anuncis.filter(alive).map(async a => {
       if(a.userId === uid()) ui.interested[a.id] = (await getAll("anuncis/" + a.id + "/interessats")).map(x => x.nom);
       else ui.interest[a.id] = (await C.F.getDoc(ref("anuncis", a.id, "interessats", uid()))).exists();
     }));
   }
   if(k === "pres"){
-    D.pres = C.isResp ? await getAll("presencia", W("clubId", "==", club)) : await getAll("presencia", W("clubId", "==", club), W("visib", "==", "club"));
+    D.pres = await getVisible("presencia");
     const mine = await C.F.getDoc(ref("presencia", uid()));
     D.myPres = mine.exists() ? Object.assign({id:mine.id}, mine.data()) : null;
     if(D.myPres && !D.pres.some(p => p.id === uid())) D.pres.push(D.myPres);
@@ -151,7 +165,7 @@ function card(p){
   const durM = Math.round((p.durS || 0)/60);
   return `<article class="card cl-card" aria-label="Sortida publicada: ${esc(p.titol || "")}">
     <div class="cl-head"><span class="cl-av" aria-hidden="true">${esc(initials(p.nom))}</span>
-      <div class="cl-who"><b>${esc(p.nom)}</b><span>${esc(boatShort(p.act))} · ${esc(dayStr(p.inici))} · ${hm(p.inici)}–${hm(p.fi)}${p.editada ? " · editada" : ""}</span></div>
+      <div class="cl-who"><b>${esc(p.nom)}</b><span>${esc(boatShort(p.act))} · ${esc(dayStr(p.inici))} · ${hm(p.inici)}–${hm(p.fi)}${p.editada ? " · editada" : ""}${mine ? " · " + esc(NIVT(p.visibilitat || "club")) : ""}</span></div>
       <span class="cl-boat">${typeof boatIcon === "function" ? boatIcon(p.act) : ""}</span></div>
     <h3 class="cl-title">${esc(p.titol || "Sortida")}</h3>
     ${v.k ? `<div class="cl-verd k-${esc(v.k)}"><b>${esc(v.t)}</b>${v.why ? `<span>${esc(v.why)}</span>` : ""}</div>` : ""}
@@ -226,9 +240,9 @@ function renderBase(){
     <section class="card"><div class="card-h"><span class="lbl">A l'aigua</span></div>${ai.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}</section>
     <section class="card"><div class="card-h"><span class="lbl">A la base</span></div>${ba.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}
       ${v === "ningu" ? `<p class="note" style="margin-top:8px">Tens la presència desactivada (a sota).</p>` : me && me.estat === "base" ? `<button type="button" class="btn cl-wide" id="clLeave" style="margin-top:10px">Marxo de la base</button>` : me ? "" : `<button type="button" class="btn cl-wide cl-ok" id="clHere" style="margin-top:10px">Soc a la base</button>`}</section>
-    <section class="card"><div class="card-h"><span class="lbl">Qui em pot veure aquí</span><button class="ib-i" type="button" data-info="iPres" aria-label="Com funciona la presència" aria-expanded="false">i</button></div>
-      <div class="cl-seg" role="group" aria-label="Qui em pot veure">${[["ningu", "Ningú"], ["resp", "Responsables"], ["club", "Tot el club"]].map(([k, t]) => `<button type="button" data-pvis="${k}" aria-pressed="${v === k}">${t}</button>`).join("")}</div>
-      <p class="note" style="margin-top:8px">${({ningu:"Ningú et veu. Si surts a navegar, els responsables tampoc ho sabran.", resp:"Només els responsables del club veuen si ets a la base o a l'aigua, i on.", club:"Tots els socis veuen si ets a la base o a l'aigua, i on navegues."})[v]}</p>
+    <section class="card"><div class="card-h"><span class="lbl">Qui et veu aquí</span><button class="ib-i" type="button" data-info="iPres" aria-label="Com funciona la presència" aria-expanded="false">i</button></div>
+      <div class="cl-privrow"><b>${esc(NIVT(v))}</b><button type="button" class="btn" id="clPriv">Canvia-ho</button></div>
+      <p class="note" style="margin-top:8px">Es tria a Configuració ▸ Confidencialitat, junt amb qui veu les teves publicacions i els avisos de seguretat.</p>
       <div class="vp-info" id="iPres" hidden><p>Només mentre ets a la base (amb el botó) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, la web no la pot enviar: caldrà l'app Android.</p></div></section>`;
 }
 function drawMap(){
@@ -288,7 +302,8 @@ async function pubSheet(t, p){
     ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="60" value="${esc(def)}" style="font-family:var(--f-body)">`)}
     ${field("shText", "Comentari <small>(opcional)</small>", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="280" placeholder="Què ha de saber qui surti un dia com aquest?">${esc(p ? p.comentari || "" : "")}</textarea>`)}
     <label class="cl-sw"><span><b>${p ? "Mostra la ruta" : "Inclou la ruta"}</b><small class="note">Simplificada i sense els primers i últims 200 m. Ho pots canviar després.</small></span><input type="checkbox" class="switch" id="shRoute"${p && p.ruta ? " checked" : ""}></label>
-    <p class="note">Ho veuran només els socis aprovats del club. Les xifres de la sortida no es poden retocar.</p>
+    ${visSelect("mur", p ? (p.visibilitat || "club") : prefOf("mur"))}
+    <p class="note">Les xifres de la sortida no es poden retocar.</p>
     <button type="button" class="btn cl-pri cl-wide" id="shSave">${p ? "Desa els canvis" : "Publica al mur"}</button>
     ${p ? `<div class="cl-retire"><span class="lbl">Retira del mur</span><p class="note">Desapareix del mur amb les reaccions. La sortida es queda al teu historial.</p><div id="shDel"></div></div>` : ""}`, d => {
     if(p) slideConfirm($("shDel"), "Llisca per retirar", async () => { try{ await TO(C.F.deleteDoc(ref("publicacions", p.id))); D.pubs = D.pubs.filter(x => x.id !== p.id); closeSheet(); render(); refreshShare(); }catch(e){ sheetSay(errText(e)); } });
@@ -298,16 +313,17 @@ async function pubSheet(t, p){
         let ruta = p.ruta || null;
         if(wantRoute && !ruta){ const lt = t || await DB.get(p.tripId); if(!lt){ sheetSay("Per afegir la ruta, fes-ho des del mòbil on tens aquesta sortida."); return; } ruta = routeOf(lt); }
         if(!wantRoute) ruta = null;
-        await C.F.updateDoc(ref("publicacions", p.id), {titol, comentari, ruta, editada:true});
-        Object.assign(p, {titol, comentari, ruta, editada:true});
+        const vf = await visFields($("shVis").value);
+        await C.F.updateDoc(ref("publicacions", p.id), Object.assign({titol, comentari, ruta, editada:true}, vf));
+        Object.assign(p, {titol, comentari, ruta, editada:true}, vf);
       } else {
         const s = t.summary || summarize(t), Wd = s.wind || {};
         let onada = null; try{ onada = await waveFor(t); }catch(e){}
-        const doc = {userId:uid(), clubId:C.member.clubId, visibilitat:"club", tripId:t.id, nom:C.member.nom, act:String(t.act || ""),
+        const doc = Object.assign({userId:uid(), clubId:C.member.clubId, tripId:t.id, nom:C.member.nom, act:String(t.act || ""),
           inici:t.start, fi:t.end || t.start, titol, comentari, ruta: wantRoute ? routeOf(t) : null,
           distNm:num(s.distNm) || 0, durS:Math.round((s.dur || 0)/1000), maxKn:num(s.maxKn), avgKn:num(s.avgKn),
           vent:{avg:num(Wd.avg), gust:num(Wd.gust), dir:num(Wd.dir)}, onada, veredicte:verdictFor(t.act, Wd, onada),
-          reaccions:{}, editada:false, creat:C.F.serverTimestamp()};
+          reaccions:{}, editada:false, creat:C.F.serverTimestamp()}, await visFields($("shVis").value));
         await C.F.setDoc(ref("publicacions", uid() + "_" + t.id), doc);
         D.pubs = D.pubs.filter(x => x.id !== uid() + "_" + t.id).concat([Object.assign({id:uid() + "_" + t.id}, doc, {creat:now()})]);
       }
@@ -325,11 +341,12 @@ function intentSheet(){
     ${field("shDay", "Dia", `<select class="field" id="shDay"><option value="0">Avui</option><option value="1">Demà</option><option value="2">Demà passat</option></select>`)}
     ${field("shHour", "Hora", `<input class="field" id="shHour" type="time" value="${h}">`)}
     ${field("shAct", "Embarcació", `<select class="field" id="shAct">${Object.keys(DEFAULTS).map(k => `<option value="${k}"${k === act ? " selected" : ""}>${esc(DEFAULTS[k].name)}</option>`).join("")}</select>`)}
-    <p class="note">Els altres socis s'hi poden apuntar. S'esborra l'endemà.</p>
+    ${visSelect("intencions", prefOf("intencions"))}
+    <p class="note">Qui ho veu s'hi pot apuntar. S'esborra l'endemà.</p>
     <button type="button" class="btn cl-pri cl-wide" id="shSave">Publica</button>`, () => {
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
       const day = new Date(); day.setDate(day.getDate() + (+$("shDay").value)); day.setHours(23, 59, 59, 0);
-      const doc = {userId:uid(), clubId:C.member.clubId, nom:C.member.nom, act:$("shAct").value, dia:ymd(day), hora:$("shHour").value || "12:00", apuntats:{}, caduca:TS(day.getTime()), creat:C.F.serverTimestamp()};
+      const doc = Object.assign({userId:uid(), clubId:C.member.clubId, nom:C.member.nom, act:$("shAct").value, dia:ymd(day), hora:$("shHour").value || "12:00", apuntats:{}, caduca:TS(day.getTime()), creat:C.F.serverTimestamp()}, await visFields($("shVis").value));
       const r = await C.F.addDoc(col("intencions"), doc);
       D.intents.push(Object.assign({id:r.id}, doc, {caduca:day.getTime()})); closeSheet(); render();
     });
@@ -361,12 +378,13 @@ function anunciSheet(){
     ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="80" style="font-family:var(--f-body)">`)}
     ${field("shText", "Text", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="400"></textarea>`)}
     ${field("shDur", "Durada", `<select class="field" id="shDur"><option value="7">7 dies</option><option value="14" selected>14 dies</option><option value="30">30 dies</option></select>`)}
+    ${visSelect("anuncis", prefOf("anuncis"))}
     <button type="button" class="btn cl-pri cl-wide" id="shSave">Publica l'anunci</button>`, () => {
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
       const titol = $("shTitle").value.trim(), text = $("shText").value.trim();
       if(!titol){ sheetSay("Cal un títol."); return; }
       const cad = now() + (+$("shDur").value)*DAY;
-      const doc = {userId:uid(), clubId:C.member.clubId, cat:$("shCat").value, titol:titol.slice(0, 80), text:text.slice(0, 400), caduca:TS(cad), creat:C.F.serverTimestamp(), autorNom:C.member.nom};
+      const doc = Object.assign({userId:uid(), clubId:C.member.clubId, cat:$("shCat").value, titol:titol.slice(0, 80), text:text.slice(0, 400), caduca:TS(cad), creat:C.F.serverTimestamp(), autorNom:C.member.nom}, await visFields($("shVis").value));
       const r = await C.F.addDoc(col("anuncis"), doc);
       D.anuncis.push(Object.assign({id:r.id}, doc, {caduca:cad, creat:now()})); ui.interested[r.id] = []; closeSheet(); render();
     });
@@ -402,8 +420,9 @@ async function removeDoc(n, id){
   }catch(e){ say(errText(e)); }
 }
 function presDoc(estat, o){
+  const v = vis();
   return Object.assign({userId:uid(), clubId:C.member.clubId, nom:C.member.nom, estat, act:String(act), lat:HOME[0], lon:HOME[1],
-    desde:now(), visib:vis(), actualitzat:C.F.serverTimestamp()}, o || {});
+    desde:now(), visibilitat:v, lectors: window.OV_PRIV ? OV_PRIV.lectors(v) : [], actualitzat:C.F.serverTimestamp()}, o || {});
 }
 async function setPres(doc){
   await TO(C.F.setDoc(ref("presencia", uid()), doc));
@@ -430,9 +449,7 @@ document.addEventListener("click", async e => {
   if(ds.interest){ interest(ds.interest); return; }
   if(ds.editpub){ const p = D.pubs.find(x => x.id === ds.editpub); if(p) pubSheet(null, p); return; }
   if(ds.askdel){ const box = document.querySelector(`[data-delbox="${CSS.escape(ds.id)}"]`); if(box) slideConfirm(box, "Llisca per retirar", () => removeDoc(ds.askdel, ds.id)); return; }
-  if(ds.pvis){ const old = vis(); store.set("ov2_pres_vis", ds.pvis); render();
-    try{ if(D.myPres){ if(ds.pvis === "ningu") await delPres(); else await setPres(Object.assign({}, D.myPres, {visib:ds.pvis, actualitzat:C.F.serverTimestamp()}, {id:undefined})); } render(); }
-    catch(err){ store.set("ov2_pres_vis", old); render(); say(errText(err)); } return; }
+  if(t.id === "clPriv"){ window.OV_PRIV?.open(); return; }
   if(t.id === "clHere"){ try{ await setPres(presDoc("base")); render(); }catch(err){ say(errText(err)); } return; }
   if(t.id === "clLeave"){ try{ await delPres(); render(); }catch(err){ say(errText(err)); } return; }
   if(ds.resolve){ resolveAlert(ds.resolve); return; }
@@ -447,7 +464,7 @@ $("actSeg").addEventListener("click", () => { if(visible() && tab === "mur") set
 const ALERT_T = {"sense-vent":"Sense vent i lluny", "vent-fort":"Vent massa fort", "onades":"Onades perilloses"};
 async function loadAlerts(){
   if(!C) return;
-  try{ D.alertes = C.isResp ? (await getAll("alertes", W("clubId", "==", C.member.clubId), W("resolta", "==", false))).filter(a => ALERT_T[a.tipus]) : []; }
+  try{ D.alertes = (await getVisible("alertes")).filter(a => ALERT_T[a.tipus] && !a.resolta && a.userId !== uid()); }
   catch(e){ D.alertes = []; }
   alertDot(); if(visible()) render();
 }
@@ -516,22 +533,38 @@ const OV_CLUB = window.OV_CLUB = {
   async arrived(){ if(!C || vis() === "ningu") return; try{ await setPres(presDoc("base")); }catch(e){} },   // tornada a la base detectada pel GPS
   // Avisos de seguretat de la sortida en curs: es desen perquè els vegin els responsables (només si es comparteix la presència)
   async raiseAlert(tipus, valor, p, Lv){
-    if(!C || vis() === "ningu" || !Lv) return;
-    try{ await C.F.setDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus), {clubId:C.member.clubId, tipus, userId:uid(), nom:C.member.nom,
-      act:String(D.myPres?.act || act), desde:Lv.start, lat:p ? p.lat : HOME[0], lon:p ? p.lon : HOME[1], posAt:now(), valor:num(valor), resolta:false, creat:C.F.serverTimestamp()}); }catch(e){}
+    const v = prefOf("avisos");
+    if(!C || v === "ningu" || !Lv) return;
+    try{ await C.F.setDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus), Object.assign({clubId:C.member.clubId, tipus, userId:uid(), nom:C.member.nom,
+      act:String(D.myPres?.act || act), desde:Lv.start, lat:p ? p.lat : HOME[0], lon:p ? p.lon : HOME[1], posAt:now(), valor:num(valor), resolta:false, creat:C.F.serverTimestamp()}, await visFields(v))); }catch(e){}
   },
-  async clearAlert(tipus, Lv){
+  async clearAlert(tipus, Lv){   // la sortida ja no té aquest avís: s'esborra (no cal guardar on era ningú)
     if(!C || !Lv) return;
-    C.F.updateDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus), {resolta:true, resoltaPer:uid(), resoltaAt:C.F.serverTimestamp()}).catch(() => {});
+    C.F.deleteDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus)).catch(() => {});
+  },
+  // Confidencialitat: s'ha canviat una preferència (amics.js)
+  async privChanged(k){
+    if(!C) return;
+    if(k === "presencia" && D.myPres){ try{ if(vis() === "ningu") await delPres(); else { const o = Object.assign({}, D.myPres); delete o.id; delete o.visib; await setPres(Object.assign(o, await visFields(vis()), {actualitzat:C.F.serverTimestamp()})); } }catch(e){} }
+    if(visible()) render();
+  },
+  // Amics nous o retirats: actualitza qui pot llegir el que ja havies compartit amb «Amics»
+  async refreshLectors(){
+    if(!C || !window.OV_PRIV) return;
+    const L = OV_PRIV.lectors("amics");
+    for(const n of ["publicacions", "intencions", "anuncis", "presencia", "alertes"]){
+      try{ for(const x of await getAll(n, W("userId", "==", uid()))) if(x.visibilitat === "amics") await C.F.updateDoc(ref(n, x.id), {lectors:L}); }catch(e){}
+    }
+    if(D.myPres && D.myPres.visibilitat === "amics") D.myPres.lectors = L;
   },
   async purge(){   // en esborrar el compte: treu tot el que el soci ha publicat o marcat al club
     await ctx(); if(!C) return;
     const me = uid(), club = C.member.clubId, del = (n, id) => C.F.deleteDoc(ref(n, id)).catch(() => {});
     const drop = (n, id, f) => C.F.updateDoc(ref(n, id), {[f + "." + me]: C.F.deleteField()}).catch(() => {});
-    for(const p of await getAll("publicacions", W("clubId", "==", club))) p.userId === me ? await del("publicacions", p.id) : (p.reaccions || {})[me] && await drop("publicacions", p.id, "reaccions");
-    for(const x of await getAll("intencions", W("clubId", "==", club))) x.userId === me ? await del("intencions", x.id) : (x.apuntats || {})[me] && await drop("intencions", x.id, "apuntats");
+    for(const p of await getVisible("publicacions")) p.userId === me ? await del("publicacions", p.id) : (p.reaccions || {})[me] && await drop("publicacions", p.id, "reaccions");
+    for(const x of await getVisible("intencions")) x.userId === me ? await del("intencions", x.id) : (x.apuntats || {})[me] && await drop("intencions", x.id, "apuntats");
     for(const x of await getAll("avisos", W("clubId", "==", club))) x.userId === me ? await del("avisos", x.id) : (x.vist || {})[me] && await drop("avisos", x.id, "vist");
-    for(const x of await getAll("anuncis", W("clubId", "==", club))){
+    for(const x of await getVisible("anuncis")){
       if(x.userId === me){ for(const i of await getAll("anuncis/" + x.id + "/interessats")) await C.F.deleteDoc(ref("anuncis", x.id, "interessats", i.id)).catch(() => {}); await del("anuncis", x.id); }
       else await C.F.deleteDoc(ref("anuncis", x.id, "interessats", me)).catch(() => {});
     }

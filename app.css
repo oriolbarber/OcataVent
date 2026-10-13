@@ -1008,3 +1008,11 @@ footer #iSrc{text-align:left;margin:8px 0}
 .la-item b{font-family:var(--f-head);font-size:1.6rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.05}
 .la-item p{margin:0;font-size:1.1rem;font-weight:600;line-height:1.35}
 .la-item .btn{align-self:flex-end;min-height:48px;background:#fff;color:#000;border:0;font-size:1.05rem}
+/* ---------- confidencialitat (amics.js) ---------- */
+.priv-row{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--line)}
+.priv-t{display:flex;flex-direction:column;gap:2px}
+.priv-t b{font-size:1rem}
+.priv-amics{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+:root[data-size="big"] .priv-t b{font-size:1.15rem}
+.cl-privrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cl-privrow b{font-size:1.15rem}

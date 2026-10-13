@@ -6,8 +6,8 @@
    · Vent massa fort: l'estació marca ratxes per sobre del màxim de l'embarcació (o vent per sobre del màxim).
    · Onades perilloses: la previsió dona onades per sobre del màxim de l'embarcació les properes 3 h.
    · Tornada a la base: dins del radi de la base i aturat 2 min, després d'haver-ne sortit → desa la sortida sola.
-   Els tres primers es mostren a dalt de tot, amb vibració i so, i (si el soci comparteix la presència)
-   es desen a «alertes» perquè els vegin els responsables. Fa servir els criteris de cada embarcació (crit).
+   Els tres primers es mostren a dalt de tot, amb vibració i so, i es desen a «alertes» perquè els vegi
+   qui el soci tria a Confidencialitat (per defecte, la junta i els responsables; «Ningú» = no es desen). Fa servir els criteris de cada embarcació (crit).
    No hi ha avís per no tornar a l'hora prevista: decisió de l'Oriol (13/10/2026). */
 (() => {
 const BASE_R = 50;            // m: radi de la base nàutica (pendent de la junta)

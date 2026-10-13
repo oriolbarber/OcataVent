@@ -247,6 +247,7 @@ async function deleteAccount(){
     const qs = await f.getDocs(f.query(f.collection(db, "sortides"), f.where("userId", "==", uid)));
     for(const d of qs.docs) await delRemote(d.data().tripId);
     try{ await window.OV_CLUB?.purge(); }catch(e){}   // publicacions, reaccions, avisos, anuncis i presència del club
+    try{ await window.OV_PRIV?.purge(); }catch(e){}   // amistats i perfil
     await f.deleteDoc(f.doc(db, "members", uid));
     await A.deleteUser(user);
     for(const t of ((await DB.all()) || [])) if(t.owner === uid){ delete t.owner; delete t.synced; await DB.put(t); }
@@ -265,7 +266,7 @@ async function relink(){
 const CONSENT_HTML = `
   <p><b>Responsable:</b> Club Ocata Vent (El Masnou).</p>
   <p><b>Què es desa:</b> el teu nom, el correu del compte i la data d'aquesta acceptació, perquè els administradors del club et reconeguin i aprovin l'alta. I les sortides que hi pugis: ruta GPS, hores, velocitats i vent.</p>
-  <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. Si en publiques una al mur del club, els socis veuen el resum, el comentari i, si ho tries, la ruta simplificada. Els avisos, els anuncis i les reaccions els veuen els socis. Els administradors veuen el nom i el correu dels socis.</p>
+  <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. El que publiques al club (sortides, «qui surt», anuncis), on ets i els avisos de seguretat ho veu qui triïs a Configuració ▸ Confidencialitat: tothom, el club, la junta, els teus amics o ningú. Els socis veuen el teu nom per poder-te afegir com a amic. Els administradors veuen el nom i el correu dels socis.</p>
   <p><b>Presència a la base:</b> només si l'actives. Mentre ets a la base o navegant, els responsables (o tot el club, si ho tries) veuen on ets. S'esborra en acabar o al cap de 24 h.</p>
   <p><b>On:</b> Google Firebase. El compte el gestiona Firebase Authentication; les sortides es guarden a Cloud Firestore, en servidors de la Unió Europea.</p>
   <p><b>Per a què:</b> només perquè l'app funcioni. No es ven ni es cedeix a ningú, i el correu no s'envia a cap altre servei.</p>
@@ -399,7 +400,7 @@ document.addEventListener("click", e => {
 /* ---------- connexió amb trip.js ---------- */
 window.OV_CLOUD = {
   approved,
-  async ctx(){ if(!approved()) return null; const f = await fs(); return {F:f, db, user, member, isAdm, isResp: isAdm || !!member.responsable}; },
+  async ctx(){ if(!approved()) return null; const f = await fs(); return {F:f, db, user, member, isAdm, isResp: isAdm || !!member.responsable || (member.comissions || []).includes("junta")}; },
   renderCard,
   async saved(t){ if(!approved()) return; t.owner = user.uid; t.synced = false; try{ await DB.put(t); }catch(e){} sync(); },
   deleted(t){ if(!t || !t.owner) return; const q = store.get("ov2_cloud_del") || []; q.push({uid:t.owner, id:t.id}); store.set("ov2_cloud_del", q);

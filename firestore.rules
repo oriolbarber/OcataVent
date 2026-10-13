@@ -1,5 +1,5 @@
 rules_version = '2';
-// Ocata Vent 2 · regles de seguretat de Firestore (Fase 1: comptes i sortides privades)
+// Ocata Vent 2 · regles de seguretat de Firestore (comptes, sortides privades, club, confidencialitat i amics)
 // Com publicar-les: consola de Firebase → Firestore Database → Rules → enganxa aquest fitxer → Publish.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -14,7 +14,6 @@ service cloud.firestore {
     function myClub() { return get(memberPath()).data.clubId; }
     function mySortida(sid) { return signedIn() && sid.matches(me() + '_[0-9]+'); }
     function memberData() { return get(memberPath()).data; }
-    function isResp() { return isAdmin() || (isApproved() && memberData().get('responsable', false) == true); }
     function inComissio(c) { return isAdmin() || (isApproved() && c in memberData().get('comissions', [])); }
     function clubOk() { return isApproved() && resource.data.clubId == myClub(); }
     function newClubOk() { return isApproved() && request.resource.data.clubId == myClub() && request.resource.data.userId == me(); }
@@ -25,6 +24,21 @@ service cloud.firestore {
         && request.resource.data[f].diff(resource.data[f]).affectedKeys().hasOnly([me()]);
     }
     function nomOk(v, n) { return v is string && v.size() > 0 && v.size() <= n; }
+
+    // ---------- confidencialitat ----------
+    // Nivells: tothom (qualsevol soci aprovat de l'app), club, junta (comissió de Junta, responsables i administradors),
+    // amics (els que el propietari ha posat a «lectors»: els seus amics en el moment de desar-ho). «Ningú» = no es desa.
+    function isJunta() { return isAdmin() || (isApproved() && ('junta' in memberData().get('comissions', []) || memberData().get('responsable', false) == true)); }
+    function nivellOk(v) { return v in ['tothom', 'club', 'junta', 'amics']; }
+    function lectorsOk(d) { return d.get('lectors', []) is list && d.get('lectors', []).size() <= 300; }
+    function veu(d) {
+      let v = d.get('visibilitat', 'club');
+      return signedIn() && (d.userId == me() || (isApproved() && (v == 'tothom'
+        || (v == 'club' && d.clubId == myClub())
+        || (v == 'junta' && d.clubId == myClub() && isJunta())
+        || me() in d.get('lectors', []))));   // «lectors» només s'omple quan és «amics» (l'app el buida si no)
+    }
+    function parell(a, b) { return a < b ? a + '_' + b : b + '_' + a; }
 
     // ---------- administradors ----------
     // Llista d'administradors addicionals (un document buit per UID). Només l'administrador inicial la gestiona.
@@ -56,6 +70,16 @@ service cloud.firestore {
         && request.resource.data.estat in ['pendent', 'aprovat', 'rebutjat']
         && request.resource.data.revisatPer == me()
         && request.resource.data.revisatAt == request.time;
+      // El mateix soci tria la seva confidencialitat
+      allow update: if signedIn() && uid == me()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['privacitat'])
+        && request.resource.data.privacitat is map
+        && request.resource.data.privacitat.keys().hasOnly(['mur', 'presencia', 'avisos', 'intencions', 'anuncis'])
+        && request.resource.data.privacitat.get('mur', 'club') in ['tothom', 'club', 'junta', 'amics']
+        && request.resource.data.privacitat.get('intencions', 'club') in ['tothom', 'club', 'junta', 'amics']
+        && request.resource.data.privacitat.get('anuncis', 'club') in ['tothom', 'club', 'junta', 'amics']
+        && request.resource.data.privacitat.get('presencia', 'junta') in ['tothom', 'club', 'junta', 'amics', 'ningu']
+        && request.resource.data.privacitat.get('avisos', 'junta') in ['tothom', 'club', 'junta', 'amics', 'ningu'];
       // Comissions i responsables: només administradors
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comissions', 'responsable'])
@@ -108,42 +132,47 @@ service cloud.firestore {
     // ---------- club (Fase 2): només socis aprovats del mateix club ----------
     // Publicacions al mur: <uid>_<id de la sortida>
     match /publicacions/{pid} {
-      allow read: if (signedIn() && pid.matches(me() + '_[0-9]+')) || clubOk();
+      allow read: if (signedIn() && pid.matches(me() + '_[0-9]+')) || veu(resource.data);
       allow create: if newClubOk() && pid == me() + '_' + string(request.resource.data.tripId)
         && request.resource.data.keys().hasOnly(['userId', 'clubId', 'visibilitat', 'tripId', 'nom', 'act', 'inici', 'fi', 'titol', 'comentari', 'ruta',
-             'distNm', 'durS', 'maxKn', 'avgKn', 'vent', 'onada', 'veredicte', 'reaccions', 'editada', 'creat'])
-        && request.resource.data.visibilitat == 'club'
+             'distNm', 'durS', 'maxKn', 'avgKn', 'vent', 'onada', 'veredicte', 'reaccions', 'editada', 'creat', 'lectors'])
+        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data)
         && request.resource.data.tripId is int
         && nomOk(request.resource.data.nom, 80) && nomOk(request.resource.data.titol, 60)
         && request.resource.data.comentari is string && request.resource.data.comentari.size() <= 280
         && (request.resource.data.ruta == null || (request.resource.data.ruta is string && request.resource.data.ruta.size() <= 6000))
         && request.resource.data.reaccions == {}
         && request.resource.data.creat == request.time;
-      // El propietari edita el títol, el comentari i la ruta
+      // El propietari edita el títol, el comentari, la ruta i qui ho veu
       allow update: if signedIn() && resource.data.userId == me()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['titol', 'comentari', 'ruta', 'editada'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['titol', 'comentari', 'ruta', 'editada', 'visibilitat', 'lectors'])
+        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data)
         && nomOk(request.resource.data.titol, 60)
         && request.resource.data.comentari is string && request.resource.data.comentari.size() <= 280
         && (request.resource.data.ruta == null || (request.resource.data.ruta is string && request.resource.data.ruta.size() <= 6000));
       // Reaccionar: cada soci només la seva
-      allow update: if clubOk() && onlyMyKey('reaccions')
+      allow update: if veu(resource.data) && onlyMyKey('reaccions')
         && (!(me() in request.resource.data.reaccions) || request.resource.data.reaccions[me()] in ['up', 'clap', 'wow', 'down']);
       allow delete: if signedIn() && (resource.data.userId == me() || isAdmin());
     }
 
     // «Qui surt»: intencions de sortida, caduquen l'endemà
     match /intencions/{id} {
-      allow read: if clubOk();
+      allow read: if veu(resource.data);
       allow create: if newClubOk()
-        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'nom', 'act', 'dia', 'hora', 'apuntats', 'caduca', 'creat'])
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'nom', 'act', 'dia', 'hora', 'apuntats', 'caduca', 'creat', 'visibilitat', 'lectors'])
+        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data)
         && nomOk(request.resource.data.nom, 80) && request.resource.data.act is string && request.resource.data.act.size() <= 20
         && request.resource.data.dia is string && request.resource.data.dia.size() == 10
         && request.resource.data.hora is string && request.resource.data.hora.size() <= 5
         && request.resource.data.apuntats == {} && request.resource.data.caduca is timestamp
         && request.resource.data.caduca < request.time + duration.value(4, 'd')
         && request.resource.data.creat == request.time;
-      allow update: if clubOk() && onlyMyKey('apuntats')
+      allow update: if veu(resource.data) && onlyMyKey('apuntats')
         && (!(me() in request.resource.data.apuntats) || nomOk(request.resource.data.apuntats[me()], 80));
+      allow update: if signedIn() && resource.data.userId == me()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visibilitat', 'lectors'])
+        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data);
       allow delete: if signedIn() && (resource.data.userId == me() || isAdmin() || expired());
     }
 
@@ -164,9 +193,10 @@ service cloud.firestore {
 
     // Anuncis dels socis
     match /anuncis/{id} {
-      allow read: if clubOk();
+      allow read: if veu(resource.data);
       allow create: if newClubOk()
-        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'cat', 'titol', 'text', 'caduca', 'creat', 'autorNom'])
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'cat', 'titol', 'text', 'caduca', 'creat', 'autorNom', 'visibilitat', 'lectors'])
+        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data)
         && request.resource.data.cat in ['tripulacio', 'material', 'altres']
         && nomOk(request.resource.data.titol, 80)
         && request.resource.data.text is string && request.resource.data.text.size() <= 400
@@ -174,6 +204,9 @@ service cloud.firestore {
         && request.resource.data.caduca < request.time + duration.value(31, 'd')
         && nomOk(request.resource.data.autorNom, 80)
         && request.resource.data.creat == request.time;
+      allow update: if signedIn() && resource.data.userId == me()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visibilitat', 'lectors'])
+        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data);
       allow delete: if signedIn() && (resource.data.userId == me() || isAdmin() || expired());
 
       // Qui s'hi ha interessat: només ho veuen l'autor de l'anunci i el mateix soci
@@ -186,38 +219,65 @@ service cloud.firestore {
       }
     }
 
-    // Presència a la base o a l'aigua: la veuen els responsables, o tot el club si el soci ho tria
+    // Presència a la base o a l'aigua: la veu qui el soci tria a Confidencialitat
     match /presencia/{uid} {
-      allow read: if signedIn() && (uid == me() || (clubOk() && (resource.data.visib == 'club' || isResp())));
+      allow read: if signedIn() && (uid == me() || veu(resource.data));
       allow create, update: if isApproved() && uid == me()
-        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'nom', 'estat', 'act', 'lat', 'lon', 'sog', 'desde', 'visib', 'actualitzat'])
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'nom', 'estat', 'act', 'lat', 'lon', 'sog', 'desde', 'visibilitat', 'lectors', 'actualitzat'])
         && request.resource.data.userId == me() && request.resource.data.clubId == myClub()
         && nomOk(request.resource.data.nom, 80)
-        && request.resource.data.estat in ['base', 'aigua'] && request.resource.data.visib in ['resp', 'club']
+        && request.resource.data.estat in ['base', 'aigua'] && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data)
         && request.resource.data.lat is number && request.resource.data.lon is number
         && request.resource.data.actualitzat == request.time;
       allow delete: if signedIn() && (uid == me() || isAdmin());
     }
 
     // Avisos de seguretat en ruta (sense vent i lluny, vent massa fort, onades perilloses).
-    // Els crea el mòbil de qui navega, només si comparteix la presència.
-    // Identificador: <uid>_<inici de la sortida>_<tipus>. Els veuen els responsables i la mateixa persona.
+    // Els crea el mòbil de qui navega; els veu qui el soci tria a Confidencialitat (per defecte, la junta i els responsables).
+    // Identificador: <uid>_<inici de la sortida>_<tipus>.
     function alertaOk(id) {
-      return request.resource.data.keys().hasOnly(['clubId', 'tipus', 'userId', 'nom', 'act', 'desde', 'lat', 'lon', 'posAt', 'valor', 'resolta', 'creat', 'resoltaPer', 'resoltaAt'])
+      return request.resource.data.keys().hasOnly(['clubId', 'tipus', 'userId', 'nom', 'act', 'desde', 'lat', 'lon', 'posAt', 'valor', 'resolta', 'creat', 'resoltaPer', 'resoltaAt', 'visibilitat', 'lectors'])
+        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data)
         && request.resource.data.userId == me() && request.resource.data.clubId == myClub()
         && request.resource.data.tipus in ['sense-vent', 'vent-fort', 'onades']
         && id == me() + '_' + string(request.resource.data.desde) + '_' + request.resource.data.tipus
         && nomOk(request.resource.data.nom, 80) && request.resource.data.lat is number && request.resource.data.lon is number;
     }
     match /alertes/{id} {
-      allow read: if signedIn() && (resource.data.userId == me() || (clubOk() && isResp()));
+      allow read: if veu(resource.data);
       allow create: if isApproved() && alertaOk(id) && request.resource.data.resolta == false && request.resource.data.creat == request.time;
       allow update: if isApproved() && resource.data.userId == me() && alertaOk(id);
-      allow update: if clubOk() && isResp()
+      allow update: if veu(resource.data) && isJunta()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolta', 'resoltaPer', 'resoltaAt'])
         && request.resource.data.resolta == true && request.resource.data.resoltaPer == me()
         && request.resource.data.resoltaAt == request.time;
-      allow delete: if false;
+      allow delete: if signedIn() && resource.data.userId == me();
+    }
+
+    // ---------- amics (mutus) i perfils ----------
+    // Perfil mínim per trobar socis i afegir-los com a amics: només el nom i el club.
+    match /perfils/{uid} {
+      allow read: if isApproved();
+      allow create, update: if isApproved() && uid == me()
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'nom'])
+        && request.resource.data.userId == me() && request.resource.data.clubId == myClub() && nomOk(request.resource.data.nom, 80);
+      allow delete: if signedIn() && (uid == me() || isAdmin());
+    }
+    // Amistat: <uid menor>_<uid major>. L'envia «de», l'accepta «a»; qualsevol dels dos l'esborra.
+    match /amistats/{id} {
+      allow read: if signedIn() && me() in resource.data.uids;
+      allow create: if isApproved()
+        && request.resource.data.keys().hasOnly(['uids', 'de', 'a', 'noms', 'estat', 'creat'])
+        && request.resource.data.de == me() && request.resource.data.a != me()
+        && request.resource.data.uids is list && request.resource.data.uids.size() == 2
+        && me() in request.resource.data.uids && request.resource.data.a in request.resource.data.uids
+        && id == parell(request.resource.data.de, request.resource.data.a)
+        && request.resource.data.noms is map && request.resource.data.estat == 'pendent'
+        && request.resource.data.creat == request.time;
+      allow update: if signedIn() && resource.data.a == me() && resource.data.estat == 'pendent'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estat', 'acceptadaAt'])
+        && request.resource.data.estat == 'acceptada' && request.resource.data.acceptadaAt == request.time;
+      allow delete: if signedIn() && me() in resource.data.uids;
     }
 
     // Qualsevol altra cosa: tancada
