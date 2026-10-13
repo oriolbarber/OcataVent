@@ -43,7 +43,8 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 ## Club (Fase 2, `club.js`)
 - Pestanya «Club» (5a), només visible per a socis aprovats: Mur · Avisos · Anuncis · Base. Fa servir `window.OV_CLOUD.ctx()` i l'esdeveniment `ov-cloud`.
 - `publicacions/{uid}_{tripId}`: còpia del resum (no enllaç a la sortida privada), ruta opcional simplificada i sense els 200 m inicials i finals, `reaccions` = mapa {uid: up|clap|wow|down}.
-- `intencions` (s'apunten amb el mapa `apuntats`), `avisos` (només hi publiquen membres de la comissió; mapa `vist`), `anuncis` (+ subcol·lecció `interessats`, només la veu l'autor), `presencia/{uid}` (base o aigua; visible per a responsables o tot el club).
+- `intencions` (avui, demà o fins a 15 dies vista; s'apunten amb el mapa `apuntats`), `avisos` (només hi publiquen membres de la comissió; l'autor els edita; `data` opcional de l'activitat: amb data caduquen l'endemà i surten amb una icona a la previsió de 7 dies via `window.OV_EVENTS`; sense data no caduquen; mapa `vist`), `anuncis` (data de caducitat, per defecte +15 dies, màxim 60; + subcol·lecció `interessats`, només la veu l'autor), `presencia/{uid}` (base o aigua).
+- Base nàutica del Club Ocata Vent: 41.479804, 2.324024 (`LOCS.masnou.home` a `app.js`).
 - Rols al document del soci: `comissions` (ids de `clubs/{clubId}.comissions`) i `responsable`; s'assignen a Configuració ▸ Administració (`admin.js`).
 
 ## Administració (`admin.js`)

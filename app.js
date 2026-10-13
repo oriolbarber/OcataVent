@@ -3,7 +3,7 @@
 // Ubicacions: cada una té el punt de previsió, el d'onatge (mar endins), les seves estacions, les platges per a la bandera i el punt del mapa.
 // Les dues platges miren al SE, així que el terral (COAST) és el mateix.
 const LOCS = {
-  masnou:   {name:"El Masnou", lat:41.4766, lon:2.3185, mlat:41.465, mlon:2.33, home:[41.4766, 2.3185], wm:[41.4795, 2.3265],
+  masnou:   {name:"El Masnou", lat:41.4766, lon:2.3185, mlat:41.465, mlon:2.33, home:[41.479804, 2.324024], wm:[41.4795, 2.3265],
              stations:["masnou","ocata"], st:"masnou", smp:[21, 96], beaches:{"081189-p1":"Platja d'Ocata", "081189-p0":"Platja del Masnou"}, flag:"081189-p1"},
   badalona: {name:"Badalona", lat:41.4461, lon:2.2506, mlat:41.435, mlon:2.262, home:[41.4461, 2.2506], wm:[41.4461, 2.2506],
              stations:["badalona"], st:"badalona", smp:[13, 95], beaches:{"080155-p5":"Platja dels Patins de Vela", "080155-p6":"Platja dels Pescadors"}, flag:"080155-p5"}
@@ -876,6 +876,8 @@ function renderModelBox(errs, bestE){
         + (byT.length ? `<p class="note">Millor per tipus de vent (90 dies): ${byT.map(([t, x]) => `${TIPUS_VENT[t]}: <b>${esc(MODELS[x.k].label)}</b>`).join(" · ")}</p>` : ""); })()}`;
 }
 function dayName(date, i){ const d = new Date(date+"T12:00:00"); return {name: i===0 ? "Avui" : i===1 ? "Demà" : DAYS_L[d.getDay()], dm: d.getDate()+" "+MONTHS[d.getMonth()]}; }
+const EV_IC = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
+window.addEventListener("ov-events", () => { if(DATA) renderWeek(); });   // avisos del club amb data (club.js)
 function renderWeek(){
   const c = crit[act], D = DATA.daily; let html = "", good = 0;
   D.time.forEach((date, i) => { if(i >= 7) return;   // la llista setmanal: 7 dies (la resta, al calendari)
@@ -884,13 +886,13 @@ function renderWeek(){
       return `<span class="pill k-${vv.k}" title="${SLOTS[j].label}: ${vv.t}"${a.past?' style="opacity:.45"':""}>${SLOTS[j].ab}</span>`; }).join("");
     const ws = aggs.filter(Boolean).map(a=>a.wind), wv = aggs.filter(Boolean).map(a=>a.wave).filter(x=>x!=null);
     const domDir = aggs.filter(Boolean).sort((a,b)=>b.wind-a.wind)[0]?.dir;
-    const open = openDay === date;
-    html += `<button type="button" class="wrow" data-day="${date}" aria-expanded="${open}" aria-label="${dn.name} ${dn.dm}: mostra les hores">
-      <span class="d"><b><span class="dn">${dn.name}</span>${wxIcon(D.weather_code[i],20)}</b><span>${dn.dm} · <i>${r0(D.temperature_2m_min[i])}–${r0(D.temperature_2m_max[i])}°</i></span></span>
+    const open = openDay === date, ev = (window.OV_EVENTS || []).filter(e => e.data === date);
+    html += `<button type="button" class="wrow" data-day="${date}" aria-expanded="${open}" aria-label="${dn.name} ${dn.dm}: mostra les hores${ev.length ? " · " + ev.length + (ev.length === 1 ? " activitat del club" : " activitats del club") : ""}">
+      <span class="d"><b><span class="dn">${dn.name}</span>${wxIcon(D.weather_code[i],20)}${ev.length ? `<span class="wev" title="Activitat del club">${EV_IC}</span>` : ""}</b><span>${dn.dm} · <i>${r0(D.temperature_2m_min[i])}–${r0(D.temperature_2m_max[i])}°</i></span></span>
 <span class="pills">${pills}</span>
       <span class="wr"><span class="wr-w"><em>${windAbbr(domDir)}</em>${arrow(domDir,13)}<b>${ws.length?r0(Math.min(...ws))+"–"+r0(Math.max(...ws)):"–"}</b><small>kn</small></span><span class="wr-o">${waveIc(14)}<b>${wv.length?Math.max(...wv).toFixed(1).replace(".",","):"–"}</b><small>m</small></span></span>
       <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`;
-    if(open) html += `<div class="wdetail"><div class="hc-read"></div><div class="chart">${hourChart(date, 7, 21, true, chartW($("week")) - 8)}</div>${chartLegend(true)}</div>`;
+    if(open) html += `<div class="wdetail">${ev.map(e => `<div class="wev-card">${EV_IC}<div><b>${esc(e.titol)}</b><span>${esc(e.comissio)}</span><p>${esc(e.text)}</p></div></div>`).join("")}<div class="hc-read"></div><div class="chart">${hourChart(date, 7, 21, true, chartW($("week")) - 8)}</div>${chartLegend(true)}</div>`;
   });
   const end = DATA.modelEnd && model !== "auto" ? (() => { const d = new Date(DATA.modelEnd); return `Previsió ${MODELS[model].label} fins ${DAYS_L[d.getDay()].toLowerCase()} a les ${pad(d.getHours())} h; després, Open-Meteo.`; })() : "";
   $("week").innerHTML = (end ? `<p class="note" style="margin-bottom:6px">${esc(end)}</p>` : "") + html;

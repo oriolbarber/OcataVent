@@ -1034,3 +1034,14 @@ footer #iSrc{text-align:left;margin:8px 0}
 .adm-com .field{flex:1;min-height:44px}
 :root[data-size="big"] .adm-open b{font-size:1.15rem}
 :root[data-size="big"] .friend-fab{width:72px;height:72px}
+/* ---------- activitats del club a la previsió i als avisos ---------- */
+.wev{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:4px;border-radius:6px;background:var(--accent-2);color:#03121c;vertical-align:-4px}
+.wev svg{width:14px;height:14px}
+.wev-card{display:flex;gap:10px;align-items:flex-start;margin:4px 0 10px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--accent-2);background:color-mix(in srgb,var(--accent-2) 12%,var(--surface))}
+.wev-card>svg{color:var(--accent-2);flex:none;margin-top:2px}
+.wev-card b{display:block;font-size:1rem}.wev-card span{font-size:.8rem;font-weight:600;color:var(--muted)}
+.wev-card p{margin:4px 0 0;font-size:.9rem;line-height:1.4;white-space:pre-line}
+.cl-event{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent-2) 14%,var(--surface-2));color:var(--ink);font-size:.95rem}
+.cl-event svg{color:var(--accent-2);flex:none}
+.cl-event b::first-letter{text-transform:uppercase}
+:root[data-size="big"] .wev-card b,:root[data-size="big"] .cl-event{font-size:1.15rem}

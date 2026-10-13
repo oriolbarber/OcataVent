@@ -25,7 +25,7 @@ service cloud.firestore {
     }
     function clubOk() { return isApproved() && resource.data.clubId == myClub(); }
     function newClubOk() { return isApproved() && request.resource.data.clubId == myClub() && request.resource.data.userId == me(); }
-    function expired() { return isApproved() && resource.data.caduca < request.time; }
+    function expired() { return isApproved() && resource.data.get('caduca', null) != null && resource.data.caduca < request.time; }
     // Un soci només pot afegir, canviar o treure la seva pròpia clau d'un mapa (reaccions, apuntats, vist)
     function onlyMyKey(f) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([f])
@@ -195,18 +195,27 @@ service cloud.firestore {
     }
 
     // Avisos de la junta i les comissions
+    function avisOk(d) {
+      return nomOk(d.titol, 80) && nomOk(d.text, 600) && d.fixat is bool
+        && (d.get('data', null) == null || (d.data is string && d.data.size() == 10))
+        && (d.get('caduca', null) == null || (d.caduca is timestamp && d.caduca < request.time + duration.value(400, 'd')));
+    }
     match /avisos/{id} {
       allow read: if clubOk();
+      // Data opcional de l'activitat (AAAA-MM-DD): amb data, caduca l'endemà; sense data, no caduca (caduca = null)
       allow create: if newClubOk() && inComissio(request.resource.data.comissio)
-        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'comissio', 'titol', 'text', 'fixat', 'caduca', 'creat', 'autorNom', 'vist'])
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'comissio', 'titol', 'text', 'fixat', 'data', 'caduca', 'creat', 'autorNom', 'vist'])
         && request.resource.data.comissio in comsClub()
-        && nomOk(request.resource.data.titol, 80) && nomOk(request.resource.data.text, 600)
-        && request.resource.data.fixat is bool && request.resource.data.caduca is timestamp
+        && avisOk(request.resource.data)
         && nomOk(request.resource.data.autorNom, 80) && request.resource.data.vist == {}
         && request.resource.data.creat == request.time;
+      // L'autor el pot editar (títol, text, fixat i data)
+      allow update: if signedIn() && resource.data.userId == me()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['titol', 'text', 'fixat', 'data', 'caduca', 'editat'])
+        && avisOk(request.resource.data);
       allow update: if clubOk() && onlyMyKey('vist')
         && (!(me() in request.resource.data.vist) || request.resource.data.vist[me()] == true);
-      allow delete: if signedIn() && (resource.data.userId == me() || inComissio(resource.data.comissio) || expired());
+      allow delete: if signedIn() && (resource.data.userId == me() || inComissio(resource.data.comissio) || hasPerm('moderar') || expired());
     }
 
     // Anuncis dels socis
@@ -219,7 +228,7 @@ service cloud.firestore {
         && nomOk(request.resource.data.titol, 80)
         && request.resource.data.text is string && request.resource.data.text.size() <= 400
         && request.resource.data.caduca is timestamp
-        && request.resource.data.caduca < request.time + duration.value(31, 'd')
+        && request.resource.data.caduca < request.time + duration.value(61, 'd')
         && nomOk(request.resource.data.autorNom, 80)
         && request.resource.data.creat == request.time;
       allow update: if signedIn() && resource.data.userId == me()

@@ -18,7 +18,7 @@ const svgI = (p, z, rot) => `<svg width="${z||22}" height="${z||22}" viewBox="0 
 const LOCK = svgI('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', 18);
 const PIN = svgI('<path d="M9 4h6l-1 6 4 4H6l4-4z"/><path d="M12 14v6"/>', 15);
 const XI = svgI('<path d="M6 6l12 12M18 6L6 18"/>', 20);
-const DAY = 864e5, MIN = 6e4, INT_DIES = 15;   // «Qui surt»: fins a 15 dies vista
+const DAY = 864e5, MIN = 6e4, INT_DIES = 15, AN_MAX = 60;   // «Qui surt»: fins a 15 dies vista
 const now = () => Date.now();
 
 let C = null, tab = store.get("ov2_club_tab") || "mur", mapObj = null, lastPos = 0;
@@ -26,7 +26,14 @@ const D = {pubs:[], intents:[], avisos:[], anuncis:[], pres:[], myPres:null, ale
 const WARN = svgI('<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>', 22);
 const F0 = {open:false, date:"mes", person:"tots", order:"recents", vent:false, onada:false, all:false};
 let filt = Object.assign({}, F0, store.get("ov2_club_filt") || {}, {open:false});
-const ui = {avisCom:"totes", anCat:"tots", interest:{}, interested:{}};
+const ui = {avisCom:"totes", anCat:"tots", avisOpen:false, anOpen:false, interest:{}, interested:{}};
+const CAL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+const dayLong = d => new Date(d + "T12:00").toLocaleDateString("ca", {weekday:"long", day:"numeric", month:"long"});
+// Filtres plegats (avisos i anuncis): botó «Filtres» + resum; en obrir-lo, les opcions
+function foldFilters(key, label, open, chips){
+  return `<div class="cl-fbar"><button type="button" class="btn cl-fbtn" data-fold="${key}" aria-expanded="${open}">${svgI('<path d="M4 6h16M7 12h10M10 18h4"/>', 20)}Filtres${label ? `<span class="cl-n">1</span>` : ""}</button>
+    <span class="cl-sum">${esc(label || "Tots")}</span></div>${open ? `<div class="card cl-panel"><div class="cl-chips">${chips}</div></div>` : ""}`;
+}
 
 /* ---------- utilitats ---------- */
 const uid = () => C.user.uid;
@@ -36,7 +43,7 @@ const W = (f, op, v) => C.F.where(f, op, v);
 const getAll = async (n, ...w) => (await C.F.getDocs(C.F.query(col(n), ...w))).docs.map(d => Object.assign({id:d.id}, d.data()));
 const ms = v => v == null ? null : typeof v === "number" ? v : v.toMillis ? v.toMillis() : +new Date(v);
 const TS = m => C.F.Timestamp.fromMillis(m);
-const alive = x => (ms(x.caduca) || 0) > now();
+const alive = x => x.caduca == null || ms(x.caduca) > now();   // sense «caduca» (avisos sense data): no caduca mai
 const num = v => typeof v === "number" && isFinite(v) ? Math.round(v*100)/100 : null;
 const initials = s => String(s || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
 const hm = t => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
@@ -55,6 +62,13 @@ const TO = (p, n = 15000) => Promise.race([p, new Promise((_, r) => setTimeout((
 
 async function ctx(){ C = window.OV_CLOUD?.ctx ? await window.OV_CLOUD.ctx().catch(() => null) : null; return C; }
 const visible = () => !$("view-club").hidden;
+
+/* ---------- avisos amb data: es mostren a la previsió de 7 dies (app.js, renderWeek) ---------- */
+function publishEvents(){
+  window.OV_EVENTS = D.avisos.filter(a => a.data && alive(a)).map(a => ({data:a.data, titol:a.titol, text:a.text, comissio:COMSm()[a.comissio] || a.comissio}));
+  window.dispatchEvent(new CustomEvent("ov-events"));
+}
+async function loadEvents(){ if(!C) return; try{ D.avisos = await getAll("avisos", W("clubId", "==", C.member.clubId)); D.at.avisos = now(); publishEvents(); }catch(e){} }
 
 /* ---------- càrrega ---------- */
 // Tot el que aquest soci pot veure d'una col·lecció, segons la confidencialitat de cada document: una consulta per nivell
@@ -76,7 +90,7 @@ async function fetchK(k){
   const club = C.member.clubId;
   if(k === "pubs") D.pubs = await getVisible("publicacions");
   if(k === "intents") D.intents = await getVisible("intencions");
-  if(k === "avisos") D.avisos = await getAll("avisos", W("clubId", "==", club));
+  if(k === "avisos"){ D.avisos = await getAll("avisos", W("clubId", "==", club)); publishEvents(); }
   if(k === "anuncis"){
     D.anuncis = await getVisible("anuncis");
     await Promise.all(D.anuncis.filter(alive).map(async a => {
@@ -197,16 +211,18 @@ function routeSvg(s){
 /* ---------- AVISOS ---------- */
 function renderAvisos(){
   const L = D.avisos.filter(a => alive(a) && (ui.avisCom === "totes" || a.comissio === ui.avisCom))
-    .sort((a, b) => (b.fixat ? 1 : 0) - (a.fixat ? 1 : 0) || ms(b.creat) - ms(a.creat));
+    .sort((a, b) => (b.fixat ? 1 : 0) - (a.fixat ? 1 : 0) || (a.data && b.data ? a.data.localeCompare(b.data) : (a.data ? -1 : b.data ? 1 : 0)) || ms(b.creat) - ms(a.creat));
   const coms = canPost(), mine = C.member.comissions || [];
-  return `<div class="cl-chips" role="group" aria-label="Filtra per comissió">${[["totes", "Totes"]].concat(Object.entries(COMSm())).map(([k, t]) => chip("data-acom", k, ui.avisCom === k, t)).join("")}</div>
-    ${L.map(a => { const seen = !!(a.vist || {})[uid()], n = Object.keys(a.vist || {}).length, del = a.userId === uid() || C.isAdm || mine.includes(a.comissio);
+  return foldFilters("avis", ui.avisCom === "totes" ? "" : COMSm()[ui.avisCom], ui.avisOpen, [["totes", "Totes"]].concat(Object.entries(COMSm())).map(([k, t]) => chip("data-acom", k, ui.avisCom === k, t)).join(""))
+    + `${L.map(a => { const seen = !!(a.vist || {})[uid()], n = Object.keys(a.vist || {}).length, own = a.userId === uid(), del = own || C.isAdm || mine.includes(a.comissio) || canMod();
       return `<article class="card cl-avis c-${esc(a.comissio)}${seen ? "" : " unread"}">
         <div class="cl-avh"><span class="cl-badge">${esc(COMSm()[a.comissio] || a.comissio)}</span>${a.fixat ? `<span class="cl-pin">${PIN}Fixat</span>` : ""}<span class="cl-date">${esc(dayStr(ms(a.creat) || now()))}</span></div>
-        <h3 class="cl-atitle">${esc(a.titol)}</h3><p class="cl-text">${esc(a.text)}</p>
-        <div class="cl-afoot"><div class="cl-who"><span>${esc(a.autorNom || "")} · ${esc(COMSm()[a.comissio] || "")}</span><span>Caduca ${esc(dayStr(ms(a.caduca)))} · vist per ${n}</span></div>
+        <h3 class="cl-atitle">${esc(a.titol)}</h3>
+        ${a.data ? `<div class="cl-event">${CAL}<b>${esc(dayLong(a.data))}</b></div>` : ""}
+        <p class="cl-text">${esc(a.text)}</p>
+        <div class="cl-afoot"><div class="cl-who"><span>${esc(a.autorNom || "")} · ${esc(COMSm()[a.comissio] || "")}${a.editat ? " · editat" : ""}</span><span>${a.data ? "Desapareix l'endemà" : "Fins que es retiri"} · vist per ${n}</span></div>
           <button type="button" class="btn cl-go" data-seen="${esc(a.id)}" aria-pressed="${seen}">${seen ? "Vist ✓" : "Marca com a vist"}</button></div>
-        ${del ? `<button type="button" class="btn sm" data-askdel="avisos" data-id="${esc(a.id)}">Retira l'avís</button><div data-delbox="${esc(a.id)}"></div>` : ""}</article>`; }).join("")
+        ${own || del ? `<div class="cl-row2">${own ? `<button type="button" class="btn sm" data-editavis="${esc(a.id)}">Edita</button>` : "<span></span>"}${del ? `<button type="button" class="btn sm" data-askdel="avisos" data-id="${esc(a.id)}">Retira l'avís</button>` : ""}</div><div data-delbox="${esc(a.id)}"></div>` : ""}</article>`; }).join("")
       || `<article class="card empty">${D.at.avisos ? "No hi ha cap avís." : "Carregant…"}</article>`}
     ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Només ho veuen els socis d'una comissió${mine.length ? " (" + esc(mine.map(k => COMSm()[k]).join(", ")) + ")" : ""}.</p>` : ""}`;
 }
@@ -214,9 +230,9 @@ function renderAvisos(){
 /* ---------- ANUNCIS ---------- */
 function renderAnuncis(){
   const L = D.anuncis.filter(a => alive(a) && (ui.anCat === "tots" || a.cat === ui.anCat)).sort((a, b) => ms(b.creat) - ms(a.creat));
-  return `<div class="cl-chips" role="group" aria-label="Filtra per categoria">${[["tots", "Tots"]].concat(Object.entries(CATS)).map(([k, t]) => chip("data-acat", k, ui.anCat === k, t)).join("")}</div>
-    ${L.map(a => { const mine = a.userId === uid(), on = !!ui.interest[a.id], left = Math.max(1, Math.ceil((ms(a.caduca) - now())/DAY)), names = ui.interested[a.id] || [];
-      return `<article class="card cl-an"><div class="cl-avh"><span class="cl-tag">${esc(CATS[a.cat] || a.cat)}</span><span class="cl-date">Caduca en ${left} ${left === 1 ? "dia" : "dies"}</span></div>
+  return foldFilters("an", ui.anCat === "tots" ? "" : CATS[ui.anCat], ui.anOpen, [["tots", "Tots"]].concat(Object.entries(CATS)).map(([k, t]) => chip("data-acat", k, ui.anCat === k, t)).join(""))
+    + `${L.map(a => { const mine = a.userId === uid(), on = !!ui.interest[a.id], names = ui.interested[a.id] || [];
+      return `<article class="card cl-an"><div class="cl-avh"><span class="cl-tag">${esc(CATS[a.cat] || a.cat)}</span><span class="cl-date">Fins al ${esc(dayStr(ms(a.caduca)))}</span></div>
         <h3 class="cl-atitle">${esc(a.titol)}</h3><p class="cl-text">${esc(a.text)}</p>
         <div class="cl-afoot"><div class="cl-who"><b>${esc(mine ? "Tu" : a.autorNom)}</b>${mine ? `<span>${names.length === 1 ? "1 interessat" : names.length + " interessats"}</span>` : ""}</div>
           ${mine ? `<button type="button" class="btn sm" data-askdel="anuncis" data-id="${esc(a.id)}">Retira</button>` : `<button type="button" class="btn cl-go" data-interest="${esc(a.id)}" aria-pressed="${on}">${on ? "T'interessa ✓" : "M'interessa"}</button>`}</div>
@@ -365,23 +381,31 @@ function intentSheet(){
     });
   });
 }
-function avisSheet(){
-  const coms = canPost(), cad = ymd(new Date(now() + 14*DAY));
-  sheet("Nou avís", `
-    ${field("shCom", "Comissió", `<select class="field" id="shCom">${coms.map(k => `<option value="${k}">${esc(COMSm()[k])}</option>`).join("")}</select>`)}
-    ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="80" style="font-family:var(--f-body)">`)}
-    ${field("shText", "Text", `<textarea class="field cl-ta" id="shText" rows="5" maxlength="600"></textarea>`)}
-    ${field("shCad", "Caduca", `<input class="field" id="shCad" type="date" value="${cad}" min="${ymd(new Date())}">`)}
-    <label class="cl-sw"><span><b>Fixa'l a dalt</b></span><input type="checkbox" class="switch" id="shPin"></label>
-    <button type="button" class="btn cl-pri cl-wide" id="shSave">Publica l'avís</button>`, () => {
+function avisSheet(a){
+  const coms = canPost(), today = ymd(new Date());
+  sheet(a ? "Edita l'avís" : "Nou avís", `
+    ${a ? `<p class="note" style="margin:0">${esc(COMSm()[a.comissio] || a.comissio)}</p>` : field("shCom", "Comissió", `<select class="field" id="shCom">${coms.map(k => `<option value="${k}">${esc(COMSm()[k])}</option>`).join("")}</select>`)}
+    ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="80" value="${esc(a ? a.titol : "")}" style="font-family:var(--f-body)">`)}
+    ${field("shText", "Text", `<textarea class="field cl-ta" id="shText" rows="5" maxlength="600">${esc(a ? a.text : "")}</textarea>`)}
+    ${field("shData", "Data de l'activitat <small>(opcional)</small>", `<input class="field" id="shData" type="date" value="${esc(a && a.data || "")}" min="${today}">`)}
+    <p class="note">Amb data: surt també a la previsió de 7 dies i desapareix l'endemà. Sense data: es queda fins que algú amb permís el retiri.</p>
+    <label class="cl-sw"><span><b>Fixa'l a dalt</b></span><input type="checkbox" class="switch" id="shPin"${a && a.fixat ? " checked" : ""}></label>
+    <button type="button" class="btn cl-pri cl-wide" id="shSave">${a ? "Desa els canvis" : "Publica l'avís"}</button>`, () => {
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
-      const titol = $("shTitle").value.trim(), text = $("shText").value.trim();
+      const titol = $("shTitle").value.trim().slice(0, 80), text = $("shText").value.trim().slice(0, 600), data = $("shData").value || null;
       if(!titol || !text){ sheetSay("Cal un títol i un text."); return; }
-      const c = new Date(($("shCad").value || cad) + "T23:59:59");
-      const doc = {userId:uid(), clubId:C.member.clubId, comissio:$("shCom").value, titol:titol.slice(0, 80), text:text.slice(0, 600), fixat:$("shPin").checked,
-        caduca:TS(c.getTime()), creat:C.F.serverTimestamp(), autorNom:C.member.nom, vist:{}};
-      const r = await C.F.addDoc(col("avisos"), doc);
-      D.avisos.push(Object.assign({id:r.id}, doc, {caduca:c.getTime(), creat:now()})); closeSheet(); render();
+      if(data && data < today){ sheetSay("La data no pot ser d'abans d'avui."); return; }
+      const cadMs = data ? new Date(data + "T23:59:59").getTime() + DAY : null;   // caduca l'endemà de l'activitat
+      const f = {titol, text, fixat:$("shPin").checked, data, caduca: cadMs ? TS(cadMs) : null};
+      if(a){
+        await C.F.updateDoc(ref("avisos", a.id), Object.assign({}, f, {editat:true}));
+        Object.assign(a, f, {caduca:cadMs, editat:true});
+      } else {
+        const doc = Object.assign({userId:uid(), clubId:C.member.clubId, comissio:$("shCom").value, creat:C.F.serverTimestamp(), autorNom:C.member.nom, vist:{}}, f);
+        const r = await C.F.addDoc(col("avisos"), doc);
+        D.avisos.push(Object.assign({id:r.id}, doc, {caduca:cadMs, creat:now()}));
+      }
+      publishEvents(); closeSheet(); render();
     });
   });
 }
@@ -390,13 +414,15 @@ function anunciSheet(){
     ${field("shCat", "Categoria", `<select class="field" id="shCat">${Object.entries(CATS).map(([k, t]) => `<option value="${k}">${esc(t)}</option>`).join("")}</select>`)}
     ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="80" style="font-family:var(--f-body)">`)}
     ${field("shText", "Text", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="400"></textarea>`)}
-    ${field("shDur", "Durada", `<select class="field" id="shDur"><option value="7">7 dies</option><option value="14" selected>14 dies</option><option value="30">30 dies</option></select>`)}
+    ${field("shCad", "Caduca el dia", `<input class="field" id="shCad" type="date" value="${ymd(new Date(now() + 15*DAY))}" min="${ymd(new Date())}" max="${ymd(new Date(now() + AN_MAX*DAY))}">`)}
     ${visSelect("anuncis", prefOf("anuncis"))}
     <button type="button" class="btn cl-pri cl-wide" id="shSave">Publica l'anunci</button>`, () => {
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
       const titol = $("shTitle").value.trim(), text = $("shText").value.trim();
       if(!titol){ sheetSay("Cal un títol."); return; }
-      const cad = now() + (+$("shDur").value)*DAY;
+      const v = $("shCad").value, max = ymd(new Date(now() + AN_MAX*DAY));
+      if(!v || v < ymd(new Date()) || v > max){ sheetSay(`Tria una data d'avui a ${AN_MAX} dies vista.`); return; }
+      const cad = new Date(v + "T23:59:59").getTime();
       const doc = Object.assign({userId:uid(), clubId:C.member.clubId, cat:$("shCat").value, titol:titol.slice(0, 80), text:text.slice(0, 400), caduca:TS(cad), creat:C.F.serverTimestamp(), autorNom:C.member.nom}, await visFields($("shVis").value));
       const r = await C.F.addDoc(col("anuncis"), doc);
       D.anuncis.push(Object.assign({id:r.id}, doc, {caduca:cad, creat:now()})); ui.interested[r.id] = []; closeSheet(); render();
@@ -429,7 +455,7 @@ async function removeDoc(n, id){
   try{
     if(n === "anuncis") for(const x of await getAll("anuncis/" + id + "/interessats")) await C.F.deleteDoc(ref("anuncis", id, "interessats", x.id));
     await TO(C.F.deleteDoc(ref(n, id)));
-    const k = {intencions:"intents", avisos:"avisos", anuncis:"anuncis", publicacions:"pubs"}[n]; D[k] = D[k].filter(x => x.id !== id); render();
+    const k = {intencions:"intents", avisos:"avisos", anuncis:"anuncis", publicacions:"pubs"}[n]; D[k] = D[k].filter(x => x.id !== id); if(n === "avisos") publishEvents(); render();
   }catch(e){ say(errText(e)); }
 }
 function presDoc(estat, o){
@@ -454,8 +480,10 @@ document.addEventListener("click", async e => {
   if(ds.fperson){ filt.person = ds.fperson; saveF(); return; }
   if(ds.forder){ filt.order = ds.forder; saveF(); return; }
   if(ds.fflag){ filt[ds.fflag] = !filt[ds.fflag]; saveF(); return; }
-  if(ds.acom){ ui.avisCom = ds.acom; render(); return; }
-  if(ds.acat){ ui.anCat = ds.acat; render(); return; }
+  if(ds.acom){ ui.avisCom = ds.acom; ui.avisOpen = false; render(); return; }
+  if(ds.acat){ ui.anCat = ds.acat; ui.anOpen = false; render(); return; }
+  if(ds.fold){ const k = ds.fold + "Open"; ui[k] = !ui[k]; render(); return; }
+  if(ds.editavis){ const a = D.avisos.find(x => x.id === ds.editavis); if(a) avisSheet(a); return; }
   if(ds.react){ react(ds.pub, ds.react); return; }
   if(ds.join){ mapToggle("intencions", D.intents, ds.join, "apuntats", C.member.nom); return; }
   if(ds.seen){ mapToggle("avisos", D.avisos, ds.seen, "vist", true); return; }
@@ -467,7 +495,7 @@ document.addEventListener("click", async e => {
   if(t.id === "clLeave"){ try{ await delPres(); render(); loadAlerts(); }catch(err){ say(errText(err)); } return; }
   if(ds.resolve){ resolveAlert(ds.resolve); return; }
   if(t.id === "clNewIntent") intentSheet();
-  if(t.id === "clNewAvis") avisSheet();
+  if(t.id === "clNewAvis") avisSheet(null);
   if(t.id === "clNewAn") anunciSheet();
 });
 document.addEventListener("change", e => { if(e.target.id === "clAll"){ filt.all = e.target.checked; store.set("ov2_club_filt", Object.assign({}, filt, {open:false})); render(); } });
@@ -520,9 +548,9 @@ function tabBtn(){
   b.hidden = !on; document.querySelector(".tabs .in").classList.toggle("n5", on);
   if(!on && visible()) go("fc");
 }
-window.addEventListener("ov-coms", () => { if(visible()) render(); });
+window.addEventListener("ov-coms", () => { publishEvents(); if(visible()) render(); });
 window.addEventListener("ov-cloud", async () => {
-  await ctx(); tabBtn(); loadAlerts();
+  await ctx(); tabBtn(); loadAlerts(); if(C) loadEvents(); else { window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
   if(C && visible()) load(true);
 });
@@ -593,5 +621,5 @@ const OV_CLUB = window.OV_CLUB = {
     await del("presencia", me);
   }
 };
-ctx().then(() => { tabBtn(); loadAlerts(); });
+ctx().then(() => { tabBtn(); loadAlerts(); loadEvents(); });
 })();
