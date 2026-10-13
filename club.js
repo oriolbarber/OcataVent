@@ -198,6 +198,7 @@ function card(p){
     ${!mine && canMod() ? modBtn("publicacions", p.id) + `<div data-delbox="${esc(p.id)}"></div>` : ""}
   </article>`;
 }
+const NO_ROUTE = "Aquesta sortida no té prou recorregut GPS per mostrar-ne la ruta (cal haver-se allunyat almenys 100 m). Treu «Inclou la ruta» per publicar-la sense.";
 function routeSvg(s){
   const P = String(s).split(";").map(x => x.split(",").map(Number)).filter(a => a.length === 2 && isFinite(a[0]) && isFinite(a[1]));
   if(P.length < 2) return "";
@@ -298,11 +299,15 @@ const field = (id, label, input) => `<label class="cl-field" for="${id}"><span c
 async function busy(btn, fn){ if(btn.disabled) return; btn.disabled = true; sheetSay(""); try{ await TO(fn()); }catch(e){ sheetSay(errText(e)); } finally{ btn.disabled = false; } }
 
 /* Publicar o editar una sortida */
+// Ruta per al mur: sense el tram inicial i final (fins a 200 m; menys si la sortida és curta) i simplificada a ~150 punts
 function routeOf(t){
-  const P = (t.pts || []).filter(p => p && isFinite(p.lat) && isFinite(p.lon));
+  const P = (t.pts || []).map(p => p && {lat:+p.lat, lon:+p.lon}).filter(p => p && isFinite(p.lat) && isFinite(p.lon));
   if(P.length < 4) return null;
-  let i = 0; while(i < P.length && hav(P[0], P[i]) < 200) i++;
-  let j = P.length - 1; while(j > i && hav(P[P.length-1], P[j]) < 200) j--;
+  const far = Math.max(...P.map(p => hav(P[0], p)));
+  if(far < 100) return null;   // no s'ha allunyat ni 100 m: no hi ha ruta per ensenyar
+  const cut = Math.min(200, far * 0.25);
+  let i = 0; while(i < P.length && hav(P[0], P[i]) < cut) i++;
+  let j = P.length - 1; while(j > i && hav(P[P.length-1], P[j]) < cut) j--;
   const Q = P.slice(i, j + 1); if(Q.length < 2) return null;
   const step = Math.max(1, Math.ceil(Q.length/150)), R = Q.filter((_, k) => k % step === 0);
   if(R[R.length-1] !== Q[Q.length-1]) R.push(Q[Q.length-1]);
@@ -324,7 +329,7 @@ async function pubSheet(t, p){
   sheet(p ? "La meva publicació" : "Comparteix amb el club", `
     ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="60" value="${esc(def)}" style="font-family:var(--f-body)">`)}
     ${field("shText", "Comentari <small>(opcional)</small>", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="280" placeholder="Què ha de saber qui surti un dia com aquest?">${esc(p ? p.comentari || "" : "")}</textarea>`)}
-    <label class="cl-sw"><span><b>${p ? "Mostra la ruta" : "Inclou la ruta"}</b><small class="note">Simplificada i sense els primers i últims 200 m. Ho pots canviar després.</small></span><input type="checkbox" class="switch" id="shRoute"${p && p.ruta ? " checked" : ""}></label>
+    <label class="cl-sw"><span><b>${p ? "Mostra la ruta" : "Inclou la ruta"}</b><small class="note">Simplificada i sense el tram inicial i final (fins a 200 m). Ho pots canviar després.</small></span><input type="checkbox" class="switch" id="shRoute"${p && p.ruta ? " checked" : ""}></label>
     ${visSelect("mur", p ? (p.visibilitat || "club") : prefOf("mur"))}
     <p class="note">Les xifres de la sortida no es poden retocar.</p>
     <button type="button" class="btn cl-pri cl-wide" id="shSave">${p ? "Desa els canvis" : "Publica al mur"}</button>
@@ -334,16 +339,18 @@ async function pubSheet(t, p){
       const titol = $("shTitle").value.trim().slice(0, 60) || "Sortida", comentari = $("shText").value.trim().slice(0, 280), wantRoute = $("shRoute").checked;
       if(p){
         let ruta = p.ruta || null;
-        if(wantRoute && !ruta){ const lt = t || await DB.get(p.tripId); if(!lt){ sheetSay("Per afegir la ruta, fes-ho des del mòbil on tens aquesta sortida."); return; } ruta = routeOf(lt); }
+        if(wantRoute && !ruta){ const lt = t || await DB.get(p.tripId); if(!lt){ sheetSay("Per afegir la ruta, fes-ho des del mòbil on tens aquesta sortida."); return; } ruta = routeOf(lt);
+          if(!ruta){ sheetSay(NO_ROUTE); return; } }
         if(!wantRoute) ruta = null;
         const vf = await visFields($("shVis").value);
         await C.F.updateDoc(ref("publicacions", p.id), Object.assign({titol, comentari, ruta, editada:true}, vf));
         Object.assign(p, {titol, comentari, ruta, editada:true}, vf);
       } else {
-        const s = t.summary || summarize(t), Wd = s.wind || {};
+        const s = t.summary || summarize(t), Wd = s.wind || {}, ruta = wantRoute ? routeOf(t) : null;
+        if(wantRoute && !ruta){ sheetSay(NO_ROUTE); return; }
         let onada = null; try{ onada = await waveFor(t); }catch(e){}
         const doc = Object.assign({userId:uid(), clubId:C.member.clubId, tripId:t.id, nom:C.member.nom, act:String(t.act || ""),
-          inici:t.start, fi:t.end || t.start, titol, comentari, ruta: wantRoute ? routeOf(t) : null,
+          inici:t.start, fi:t.end || t.start, titol, comentari, ruta,
           distNm:num(s.distNm) || 0, durS:Math.round((s.dur || 0)/1000), maxKn:num(s.maxKn), avgKn:num(s.avgKn),
           vent:{avg:num(Wd.avg), gust:num(Wd.gust), dir:num(Wd.dir)}, onada, veredicte:verdictFor(t.act, Wd, onada),
           reaccions:{}, editada:false, creat:C.F.serverTimestamp()}, await visFields($("shVis").value));
