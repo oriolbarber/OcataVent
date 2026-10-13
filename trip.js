@@ -365,8 +365,18 @@ function renderLive(){
 let rideVisible = false, ridePage = "data";
 const dirArrow = (deg, sz) => deg == null ? "" : `<svg class="rarw" width="${sz}" height="${sz}" viewBox="0 0 20 20" aria-hidden="true"><g transform="rotate(${Math.round(deg)} 10 10)"><path d="M10 1.5 L15.5 16 L10 12.5 L4.5 16 Z" fill="currentColor"/></g></svg>`;
 function setEco(){ $("ride").classList.toggle("eco", !!(LIVE && LIVE.eco)); if(LIVE) $("rideEco").setAttribute("aria-pressed", String(!!LIVE.eco)); if(LIVE && LIVE.eco && ridePage === "map") rideShowPage("data"); }
+// Web: la pantalla de ruta ocupa tota la pantalla (sense barres del navegador ni d'Android). A l'app ja ho fa MainActivity.
+function rideFull(on){
+  if(window.OV_NATIVE) return;
+  try{
+    const d = document;
+    if(on && !d.fullscreenElement && d.documentElement.requestFullscreen) d.documentElement.requestFullscreen({navigationUI:"hide"}).catch(() => {});
+    else if(!on && d.fullscreenElement === d.documentElement) d.exitFullscreen().catch(() => {});
+  }catch(e){}
+}
 function showRide(on){
   rideVisible = !!on && !!LIVE; $("ride").hidden = !rideVisible; document.body.classList.toggle("riding", rideVisible);
+  rideFull(rideVisible);
   if(!rideVisible){ if(liveMapEl === "rideMap") destroyLiveMap(); window.rideCmpOn = false; cmpListen(); fcSlot(false); return; }
   setEco(); rideShowPage(ridePage); rideConfirm(false); renderLive();
 }
