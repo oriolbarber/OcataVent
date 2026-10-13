@@ -47,6 +47,11 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Rols al document del soci: `comissions` (junta, manteniment, economica) i `responsable`; els assigna l'administrador des de Compte.
 - El que caduca (`caduca`) ho esborra qualsevol soci que ho vegi. En esborrar el compte, `OV_CLUB.purge()` treu tot el que el soci ha publicat o marcat.
 
+## Tasques programades (Fase 3, part 1: `.github/workflows`, `scripts/`)
+- **No ha tornat a l'hora** (`no-ha-tornat.yml`, cada 10 min): `scripts/no-ha-tornat.mjs` llegeix `presencia` amb firebase-admin; si algú és a l'aigua i passa la tornada prevista + `MARGE_MIN` (30), crea `alertes/{uid}_{desde}`, que el Club mostra als responsables i a l'afectat. Es resol sola quan torna; esborra presències de més de 24 h i alertes resoltes de més de 7 dies. Secrets: `FIREBASE_SERVICE_ACCOUNT` (obligatori) i `NOTIFY_URL` (opcional, ntfy.sh: només nom i hores, mai posició ni correu).
+- **Encerts dels models** (`encerts.yml`, 4 crons UTC per cobrir horari d'estiu i d'hivern): `scripts/encerts.mjs` desa la previsió de cada model al matí (`data/previsio-avui.json`) i al vespre la compara amb l'estació de 8 a 20 h → `data/encerts.json` (error per model, vent mitjà, tipus: terral, marinada, llevant, garbí, calma). L'app ho mostra al panell de models i ho fa servir quan avui encara no hi ha 3 hores mesurades.
+- `scripts/llocs.mjs` duplica LOCS/STATIONS/MODELS d'`app.js`: si canvien, cal canviar-los als dos llocs.
+
 ## Fonts de dades (V1)
 - **Previsió:** Open-Meteo forecast i marine. Ús no comercial.
 - **Estacions:** meteoelmasnou.cat (Meteotemplate). Cal demanar permís per a la V2.

@@ -997,3 +997,8 @@ footer #iSrc{text-align:left;margin:8px 0}
 :root[data-size="big"] .cl-text{font-size:1.15rem}
 :root[data-size="big"] .cl-chip,:root[data-size="big"] .cl-tabs button{font-size:1.1rem}
 :root[data-size="big"] .cl-stats{grid-template-columns:1fr}
+.cl-alert{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;background:var(--no-t);border:2px solid var(--no);color:var(--ink)}
+.cl-alert>svg{color:var(--no);flex:none}
+.cl-alert .cl-who span{color:var(--ink)}
+.cl-abtns{display:flex;flex-direction:column;gap:6px;flex:none}
+.cl-adot{position:absolute;top:4px;right:calc(50% - 22px);min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--no);color:#fff;font-family:var(--f-mono);font-size:.7rem;display:grid;place-items:center}

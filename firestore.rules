@@ -199,6 +199,17 @@ service cloud.firestore {
       allow delete: if signedIn() && (uid == me() || isAdmin());
     }
 
+    // Alertes «no ha tornat a l'hora»: les crea GitHub Actions (compte de servei, fora d'aquestes regles).
+    // Les veuen els responsables del club i la mateixa persona; un responsable la pot marcar com a resolta.
+    match /alertes/{id} {
+      allow read: if signedIn() && (resource.data.userId == me() || (clubOk() && isResp()));
+      allow update: if clubOk() && isResp()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolta', 'resoltaPer', 'resoltaAt'])
+        && request.resource.data.resolta == true && request.resource.data.resoltaPer == me()
+        && request.resource.data.resoltaAt == request.time;
+      allow create, delete: if false;
+    }
+
     // Qualsevol altra cosa: tancada
     match /{document=**} {
       allow read, write: if false;

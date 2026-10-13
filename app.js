@@ -207,7 +207,10 @@ let model = "auto";
 function pickModel(){
   if(modelPref !== "best") return modelPref;
   const errs = modelErrors().filter(e => e.n >= 3);
-  if(!errs.length) return store.get("ov2_model_best") || "auto";   // encara no hi ha prou hores mesurades: el millor de l'últim cop
+  if(!errs.length){   // encara no hi ha prou hores mesurades avui: el que més ha encertat els últims 30 dies, o el millor de l'últim cop
+    const h = encertsResum(30).filter(x => x.dies >= 5);
+    return h.length ? h[0].k : (store.get("ov2_model_best") || "auto");
+  }
   const best = errs.sort((a, b) => a.mae - b.mae)[0].k; store.set("ov2_model_best", best); return best;
 }
 const URL_ALT = `https://api.open-meteo.com/v1/forecast?latitude=${LOC.lat}&longitude=${LOC.lon}`+
@@ -285,6 +288,21 @@ async function loadBuoy(){
     if(Object.keys(hours).length){ BU = {at:Date.now(), hours}; store.set("ov2_buoy", BU); }
   }catch(e){}
   if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); }
+}
+/* ---------- historial d'encerts dels models (el desa GitHub Actions a data/encerts.json) ---------- */
+let ENC = null;
+const TIPUS_VENT = {terral:"Terral", marinada:"Marinada", llevant:"Llevant", garbi:"Garbí"};
+async function loadEncerts(){
+  try{ ENC = await getJSON("data/encerts.json?t=" + Date.now()); }catch(e){ ENC = null; }
+  if(DATA){ applyModel(); render(); }
+}
+// Error mitjà de cada model (mitjana dels errors diaris) a la ubicació actual, dels últims «dies» dies i, si es vol, d'un tipus de vent
+function encertsResum(dies, tipus){
+  if(!ENC || !Array.isArray(ENC.dies)) return [];
+  const d0 = new Date(Date.now() - dies*864e5), since = `${d0.getFullYear()}-${pad(d0.getMonth()+1)}-${pad(d0.getDate())}`, acc = {};
+  ENC.dies.filter(d => d.loc === locKey && d.data >= since && (!tipus || d.tipus === tipus)).forEach(d => {
+    for(const k in d.models){ const a = acc[k] = acc[k] || {s:0, dies:0}; a.s += d.models[k].mae; a.dies++; } });
+  return Object.entries(acc).filter(([k]) => MODELS[k]).map(([k, a]) => ({k, mae:a.s/a.dies, dies:a.dies})).sort((a, b) => a.mae - b.mae);
 }
 // Error mitjà del vent previst respecte l'estació en les hores ja passades d'avui
 function modelErrors(){
@@ -851,7 +869,11 @@ function renderModelBox(errs, bestE){
   const opt = (v, t) => `<option value="${v}"${modelPref === v ? " selected" : ""}>${t}</option>`;
   $("modelBox").innerHTML = `<label class="model-pick"><span class="sr">Model</span>
       <select id="modelSel">${opt("best", "El que més encerta avui" + (modelPref === "best" ? ` (${MODELS[model].label})` : ""))}${opt("opt","Optimista (el model més favorable)")}${opt("pes","Pessimista (el model més desfavorable)")}${opt("arome","AROME")}${opt("icon","ICON")}${opt("ecmwf","ECMWF")}${opt("ukmo","UKMO")}${opt("auto","Open-Meteo (barreja de models)")}</select></label>
-    ${errs.length ? `<div class="model-err-row"><span class="lbl">Error d'avui vs. estació ${esc(STATIONS[stKey].name)}</span>${[...errs].sort((x, y) => x.mae - y.mae).map(e => `<span class="${e.mae === bestE ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>` : `<p class="note">Encara no hi ha prou hores mesurades avui per comparar els models.</p>`}`;
+    ${errs.length ? `<div class="model-err-row"><span class="lbl">Error d'avui vs. estació ${esc(STATIONS[stKey].name)}</span>${[...errs].sort((x, y) => x.mae - y.mae).map(e => `<span class="${e.mae === bestE ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>` : `<p class="note">Encara no hi ha prou hores mesurades avui per comparar els models.</p>`}
+    ${(() => { const h = encertsResum(30); if(!h.length) return `<p class="note">L'historial d'encerts dels models es va omplint cada dia.</p>`;
+      const byT = Object.keys(TIPUS_VENT).map(t => [t, encertsResum(90, t)[0]]).filter(([, x]) => x && x.dies >= 3);
+      return `<div class="model-err-row"><span class="lbl">Últims 30 dies · ${h[0].dies} ${h[0].dies === 1 ? "dia" : "dies"} comparats</span>${h.map((e, i) => `<span class="${i === 0 ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>`
+        + (byT.length ? `<p class="note">Millor per tipus de vent (90 dies): ${byT.map(([t, x]) => `${TIPUS_VENT[t]}: <b>${esc(MODELS[x.k].label)}</b>`).join(" · ")}</p>` : ""); })()}`;
 }
 function dayName(date, i){ const d = new Date(date+"T12:00:00"); return {name: i===0 ? "Avui" : i===1 ? "Demà" : DAYS_L[d.getDay()], dm: d.getDate()+" "+MONTHS[d.getMonth()]}; }
 function renderWeek(){
@@ -998,7 +1020,7 @@ $("crit").addEventListener("change", e => { const k = e.target.dataset.k; if(!k)
 $("resetCrit").addEventListener("click", () => { crit[act] = JSON.parse(JSON.stringify(DEFAULTS[act])); store.set("ov2_crit", crit); render(); });
 
 renderSeg(); renderCrit();
-load(); loadStation(); loadObs(); loadInfo(); loadBuoy();
+load(); loadStation(); loadObs(); loadInfo(); loadBuoy(); loadEncerts();
 setInterval(() => { if(document.visibilityState === "visible") loadBuoy(); }, 20*60*1000);
 setInterval(() => { if(document.visibilityState === "visible") loadInfo(); }, 15*60*1000);
 setInterval(load, 30*60*1000);

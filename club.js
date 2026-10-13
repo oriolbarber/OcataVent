@@ -20,7 +20,8 @@ const DAY = 864e5, MIN = 6e4;
 const now = () => Date.now();
 
 let C = null, tab = store.get("ov2_club_tab") || "mur", mapObj = null, lastPos = 0;
-const D = {pubs:[], intents:[], avisos:[], anuncis:[], pres:[], myPres:null, at:{}};
+const D = {pubs:[], intents:[], avisos:[], anuncis:[], pres:[], myPres:null, alertes:[], at:{}};
+const WARN = svgI('<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>', 22);
 const F0 = {open:false, date:"mes", person:"tots", order:"recents", vent:false, onada:false, all:false};
 let filt = Object.assign({}, F0, store.get("ov2_club_filt") || {}, {open:false});
 const ui = {avisCom:"totes", anCat:"tots", interest:{}, interested:{}};
@@ -95,6 +96,7 @@ function render(){
   const tabs = [["mur", "Mur"], ["avisos", "Avisos"], ["anuncis", "Anuncis"], ["base", "Base"]];
   el.innerHTML = `<nav class="cl-tabs" aria-label="Seccions del club">${tabs.map(([k, t]) => `<button type="button" data-ctab="${k}"${k === tab ? ' aria-current="page"' : ""}>${t}${k === "avisos" && unread ? `<span class="cl-dot" aria-label="${unread} sense llegir">${unread}</span>` : ""}</button>`).join("")}</nav>
     <div class="msg err" id="clubMsg" hidden></div>
+    ${alertBanner()}
     ${({mur:renderMur, avisos:renderAvisos, anuncis:renderAnuncis, base:renderBase})[tab]()}`;
   if(tab === "base") setTimeout(drawMap, 0);
 }
@@ -432,12 +434,45 @@ document.addEventListener("click", async e => {
     catch(err){ store.set("ov2_pres_vis", old); render(); say(errText(err)); } return; }
   if(t.id === "clHere"){ try{ await setPres(presDoc("base")); render(); }catch(err){ say(errText(err)); } return; }
   if(t.id === "clLeave"){ try{ await delPres(); render(); }catch(err){ say(errText(err)); } return; }
+  if(ds.resolve){ resolveAlert(ds.resolve); return; }
   if(t.id === "clNewIntent") intentSheet();
   if(t.id === "clNewAvis") avisSheet();
   if(t.id === "clNewAn") anunciSheet();
 });
 document.addEventListener("change", e => { if(e.target.id === "clAll"){ filt.all = e.target.checked; store.set("ov2_club_filt", Object.assign({}, filt, {open:false})); render(); } });
 $("actSeg").addEventListener("click", () => { if(visible() && tab === "mur") setTimeout(render, 0); });
+
+/* ---------- alertes «no ha tornat a l'hora» (les crea GitHub Actions; scripts/no-ha-tornat.mjs) ---------- */
+async function loadAlerts(){
+  if(!C) return;
+  try{
+    const club = C.member.clubId;
+    D.alertes = C.isResp ? await getAll("alertes", W("clubId", "==", club), W("resolta", "==", false))
+      : await getAll("alertes", W("userId", "==", uid()), W("resolta", "==", false));
+  }catch(e){ D.alertes = []; }
+  alertDot(); if(visible()) render();
+}
+function alertDot(){
+  const b = $("tabClub"); if(!b) return;
+  let s = b.querySelector(".cl-adot"); const n = D.alertes.length;
+  if(!n){ if(s) s.remove(); return; }
+  if(!s){ s = document.createElement("span"); s.className = "cl-adot"; b.appendChild(s); }
+  s.textContent = n; s.setAttribute("aria-label", n === 1 ? "1 alerta" : n + " alertes");
+}
+function alertBanner(){
+  if(!D.alertes.length) return "";
+  return D.alertes.slice().sort((a, b) => a.retorn - b.retorn).map(a => { const mine = a.userId === uid();
+    return `<div class="cl-alert" role="alert">${WARN}<div class="cl-who">
+      <b>${mine ? "Has passat l'hora de tornada" : esc(a.nom) + " no ha tornat a l'hora"}</b>
+      <span>${mine ? "Si ja ets a terra, tanca la sortida. Si no, avisa algú del club." : esc(boatShort(a.act)) + " · havia de tornar a les " + hm(a.retorn) + " (" + ago(a.retorn) + ") · última posició " + ago(ms(a.posAt) || now())}</span></div>
+      <div class="cl-abtns">${mine ? "" : `<button type="button" class="btn sm" data-ctab="base">Base</button>`}${C.isResp && !mine ? `<button type="button" class="btn sm" data-resolve="${esc(a.id)}">Resolta</button>` : ""}</div></div>`; }).join("");
+}
+async function resolveAlert(id){
+  try{ await TO(C.F.updateDoc(ref("alertes", id), {resolta:true, resoltaPer:uid(), resoltaAt:C.F.serverTimestamp()})); D.alertes = D.alertes.filter(a => a.id !== id); alertDot(); render(); }
+  catch(e){ say(errText(e)); }
+}
+setInterval(() => { if(C && document.visibilityState === "visible") loadAlerts(); }, 120000);
+document.addEventListener("visibilitychange", () => { if(C && document.visibilityState === "visible") loadAlerts(); });
 
 /* ---------- pestanya i sessió ---------- */
 function tabBtn(){
@@ -446,11 +481,11 @@ function tabBtn(){
   if(!on && visible()) go("fc");
 }
 window.addEventListener("ov-cloud", async () => {
-  await ctx(); tabBtn();
+  await ctx(); tabBtn(); loadAlerts();
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
   if(C && visible()) load(true);
 });
-window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C) load(); else go("fc"); } else if(mapObj){ mapObj.remove(); mapObj = null; } });
+window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load(); loadAlerts(); } else go("fc"); } else if(mapObj){ mapObj.remove(); mapObj = null; } });
 
 /* ---------- connexió amb trip.js i cloud.js ---------- */
 const OV_CLUB = window.OV_CLUB = {
@@ -487,5 +522,5 @@ const OV_CLUB = window.OV_CLUB = {
     await del("presencia", me);
   }
 };
-ctx().then(tabBtn);
+ctx().then(() => { tabBtn(); loadAlerts(); });
 })();

@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=99">
+<link rel="stylesheet" href="app.css?v=100">
 </head>
 <body>
 <div class="app">
@@ -73,7 +73,8 @@
       <div id="modelBox"></div>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iModel" aria-label="Més informació sobre els models" aria-expanded="false">i</button>
       <div class="vp-info" id="iModel" hidden>
-        <p><b>El que més encerta avui</b>: compara les hores ja passades d'avui amb el vent mesurat a l'estació i fa servir el model que s'hi ha acostat més. Calen 3 hores mesurades; abans, fa servir el guanyador de l'últim cop.</p>
+        <p><b>El que més encerta avui</b>: compara les hores ja passades d'avui amb el vent mesurat a l'estació i fa servir el model que s'hi ha acostat més. Calen 3 hores mesurades; abans, fa servir el model que més ha encertat els últims 30 dies (si n'hi ha prou dies) o el guanyador de l'últim cop.</p>
+        <p><b>Historial d'encerts</b>: cada dia es desa la previsió de cada model a les 7 h i, a les 22 h, es compara amb el vent mesurat a l'estació entre les 8 i les 20 h. També es classifica el dia segons el vent dominant (terral, marinada, llevant o garbí).</p>
         <p><b>Optimista</b> i <b>Pessimista</b>: per a cada hora, agafa el model que dona les condicions més favorables o més desfavorables per a l'embarcació triada. Si tots dos diuen el mateix, la previsió és fiable; si són molt diferents, hi ha dubte.</p>
         <p><b>AROME</b>: model de Météo-France d'alta resolució (≈1,3 km), molt detallat a la costa; arriba a 2–4 dies. <b>ICON</b>: model europeu del servei alemany (DWD, ≈7 km), molt bo amb el vent; arriba a 5 dies. <b>ECMWF</b>: model del centre europeu (9 km), el més fiable a mitjà termini. <b>UKMO</b>: model global del Met Office britànic (10 km). <b>Open-Meteo</b>: no és un model sinó la barreja que fa el servei Open-Meteo dels models que funcionen millor a cada zona i termini.</p>
         <p>L'<b>error d'avui</b> és la diferència mitjana entre el vent previst i el mesurat, en nusos: com més baix, millor.</p>
@@ -347,11 +348,11 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=99"></script>
-<script src="trip.js?v=99"></script>
-<script src="maps.js?v=99"></script>
-<script src="windmap.js?v=99"></script>
-<script src="cloud.js?v=99"></script>
-<script src="club.js?v=99"></script>
+<script src="app.js?v=100"></script>
+<script src="trip.js?v=100"></script>
+<script src="maps.js?v=100"></script>
+<script src="windmap.js?v=100"></script>
+<script src="cloud.js?v=100"></script>
+<script src="club.js?v=100"></script>
 </body>
 </html>
