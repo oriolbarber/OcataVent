@@ -1130,12 +1130,14 @@ footer #iSrc{text-align:left;margin:8px 0}
 .gear-i{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:14px;background:var(--surface-2);color:var(--accent)}
 .gear-i b{color:var(--ink);font-size:.95rem;line-height:1.15}
 .gear-n{margin:14px 0 0;font-size:.9rem;color:var(--muted);font-weight:600}
-.gear-bar{position:absolute;left:0;bottom:0;height:5px;width:100%;background:var(--accent);transform-origin:left;animation:gearBar 5s linear forwards}
-@keyframes gearBar{to{transform:scaleX(0)}}
+.gear-i{animation:gearTick .35s ease-out both}
+@keyframes gearTick{from{background:var(--surface-2);color:var(--accent)}to{background:var(--marg);color:var(--on-k)}}
+.gear-i b{animation:gearTickB .35s ease-out both;animation-delay:inherit}
+@keyframes gearTickB{to{color:var(--on-k)}}
 @keyframes gearIn{from{opacity:0}}
 :root[data-size="big"] .gear-i b{font-size:1.1rem}
 :root[data-size="big"] .gear-box h2{font-size:1.9rem}
-@media (prefers-reduced-motion: reduce){.gear,.gear-bar{animation:none}}
+@media (prefers-reduced-motion: reduce){.gear{animation:none}.gear-i{animation-duration:.01s}}
 /* Pantalla negra per inactivitat durant la gravació (trip.js): sota els avisos (4000), sobre la pantalla de ruta (3000) */
 .ride-sleep{position:fixed;inset:0;z-index:3500;background:#000;display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));touch-action:none;cursor:pointer}
 .ride-sleep .rs-hint{color:#6b7a90;font:600 1rem var(--f-body);transition:opacity .6s}

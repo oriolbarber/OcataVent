@@ -188,7 +188,7 @@ function startTrip(){
   window.OV_CLUB?.tripStart(LIVE);   // presència «a l'aigua» (només si el soci ho té activat)
   gearCheck();
 }
-/* ---------- recordatori de material en començar (es tanca sol als 5 s o tocant-lo; la gravació ja ha començat) ---------- */
+/* ---------- recordatori de material en començar (els objectes es tornen taronja un rere l'altre com a compte enrere; es tanca sol als 5 s o tocant-lo; la gravació ja ha començat) ---------- */
 const KIT_IC = {
   armilla:`<path d="M8 3 5 5v15h5v-6h4v6h5V5l-3-2-2 3h-4z"/><path d="M10 14V9h4v5"/>`,
   emissora:`<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V2M10 11h4M10 14h4M10 17h4"/>`,
@@ -205,8 +205,8 @@ function gearCheck(){
   else if(air != null && air >= 24) items.push(["sol", "Gorra i crema"]);
   const el = document.createElement("div"); el.className = "gear"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Abans de sortir, porta");
   el.innerHTML = `<div class="gear-box"><h2>Ho portes tot?</h2>
-    <div class="gear-grid">${items.map(([k, t]) => `<div class="gear-i"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KIT_IC[k]}</svg><b>${t}</b></div>`).join("")}</div>
-    <p class="gear-n">Bona navegada! · toca per tancar</p><i class="gear-bar"></i></div>`;
+    <div class="gear-grid">${items.map(([k, t], i) => `<div class="gear-i" style="animation-delay:${Math.round(i * 5000 / items.length)}ms"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KIT_IC[k]}</svg><b>${t}</b></div>`).join("")}</div>
+    <p class="gear-n">Bona navegada! · toca per tancar</p></div>`;
   const close = () => { if(!el.isConnected) return; el.classList.add("out"); setTimeout(() => el.remove(), 250); };
   el.addEventListener("click", close);
   document.body.appendChild(el);
