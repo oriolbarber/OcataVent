@@ -66,7 +66,8 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew --no-daemon "$APK_TASK"
+          set -o pipefail
+          ./gradlew --no-daemon --console=plain "$APK_TASK" 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
           f=$(find app/build/outputs/apk -name "*.apk" | head -1)
           echo "APK: $f"
           cp "$f" "$GITHUB_WORKSPACE/ocata-vent.apk"
@@ -83,6 +84,16 @@ jobs:
             gh release create apk --title "Ocata Vent per a Android (2.0.${{ github.run_number }})" --notes "$notes" --target "$GITHUB_SHA"
           fi
           gh release upload apk ocata-vent.apk --clobber
+      - name: Si falla, desa el registre a la Release «apk-log» (per poder-lo llegir des de fora)
+        if: failure()
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f build.log ] || echo "Sense registre de Gradle" > build.log
+          { grep -n -i -E "error|what went wrong|exception|failed" build.log | head -60; echo "-----"; tail -c 40000 build.log; } > build-tail.txt
+          gh release view apk-log >/dev/null 2>&1 || gh release create apk-log --title "Registre de compilació" --notes "Error" --target "$GITHUB_SHA" --prerelease
+          gh release upload apk-log build-tail.txt --clobber
       - uses: actions/upload-artifact@v4
         with:
           name: ocata-vent-apk
