@@ -498,14 +498,14 @@ async function renderList(){
       <input type="file" id="backupIn" accept=".json,application/json" hidden></div>
     <div class="msg" id="backupMsg" hidden style="margin-top:8px"></div></article>`;
   const cloud = `<div id="cloudCard"></div>`;
-  if(!trips.length){ $("logList").innerHTML = cloud + `<article class="card empty">Encara no hi ha cap sortida desada.<br>Prem «Sortida» per gravar la primera.</article>` + imp + bak; window.OV_CLOUD?.renderCard(); return; }
-  $("logList").innerHTML = cloud + imp + `<div class="card-h" style="margin:0"><h2 style="font-size:1.3rem;text-transform:uppercase">Sortides</h2><span class="lbl">${trips.length}</span></div><div class="trips">` + trips.map(t => {
+  if(!trips.length){ $("logList").innerHTML = `<article class="card empty">Encara no hi ha cap sortida desada.<br>Prem «Sortida» per gravar la primera.</article>` + cloud + imp + bak; window.OV_CLOUD?.renderCard(); return; }
+  $("logList").innerHTML = `<div class="card-h" style="margin:0"><h2 style="font-size:1.3rem;text-transform:uppercase">Sortides</h2><span class="lbl">${trips.length}</span></div><div class="trips">` + trips.map(t => {
     const d = new Date(t.start), s = t.summary || summarize(t);
     const dShort = DAYS_S[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : "");
     const hhmm = pad(d.getHours()) + ":" + pad(d.getMinutes());
     return `<button type="button" class="trip" data-trip="${t.id}"><b class="tr-n">${esc(t.name || dShort)}</b>
       <span class="tr-d">${t.name ? esc(dShort) + " · " : ""}${hhmm}</span>${tripShape(t.pts)}
-      <span class="m tr-dist">${typeof boatIcon === "function" ? boatIcon(t.act, 18) : ""}${s.distNm.toFixed(1).replace(".",",")} nm</span><span class="m tr-x">${fmtDurShort(s.dur)} · màx ${r0(s.maxKn)} kn</span></button>`; }).join("") + `</div>` + bak;
+      <span class="m tr-dist">${typeof boatIcon === "function" ? boatIcon(t.act, 18) : ""}${s.distNm.toFixed(1).replace(".",",")} nm</span><span class="m tr-x">${fmtDurShort(s.dur)} · màx ${r0(s.maxKn)} kn</span></button>`; }).join("") + `</div>` + cloud + imp + bak;
   window.OV_CLOUD?.renderCard();
 }
 // Silueta del recorregut per a la llista (sense mapa): polilínia escalada dins un requadre petit
