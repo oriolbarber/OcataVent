@@ -35,6 +35,7 @@ const ERR = {
   "auth/popup-blocked": "El mòbil no ha deixat obrir la finestra de Google. Prova-ho amb l'enllaç per correu.",
   "auth/operation-not-supported-in-this-environment": "Aquí no es pot obrir la finestra de Google. Prova-ho amb l'enllaç per correu.",
   "auth/network-request-failed": "Sense connexió. Torna-ho a provar quan en tinguis.",
+  "auth/operation-not-allowed": "L'entrada per correu encara no està activada al club. Avisa l'administrador.",
   "auth/unauthorized-domain": "Aquest domini no està autoritzat a Firebase (Authentication → Settings → Authorized domains).",
   "auth/unauthorized-continue-uri": "Aquest domini no està autoritzat a Firebase (Authentication → Settings → Authorized domains).",
   "auth/invalid-email": "El correu no és vàlid.",
