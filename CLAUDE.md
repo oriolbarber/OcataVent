@@ -27,7 +27,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - **Publicació:** GitHub Pages.
 - **Configurable des del principi, per a la V3 multiclub:** club, platja, coordenades, estacions i orientació de la costa (càlcul del terral). A la V1 això ja és l'objecte `LOCS` d'`app.js`.
 - **Backend V2:** Firebase, pla Spark gratuït, regió `eur3`.
-  - Auth: Google i enllaç per correu. Socis aprovats per administradors.
+  - Auth: Google (només navegador), correu i contrasenya (Email/Password, amb «He oblidat la contrasenya»), i enllaç per correu. Pantalla d'entrada amb «Ja soc soci» / «Alta nova». Socis aprovats per administradors.
   - Administrador inicial (UID de Firebase de l'Oriol): `aHjoROUH3aQsHh6ksS3Tt1p5soF2`.
   - Firestore: cada registre amb `userId`, `clubId` i `visibilitat` (`privat` | `club` | `public`).
 - **Tasques programades sense pla Blaze:** GitHub Actions amb `cron`. S'hi fa l'historial d'encerts dels models (desar la previsió a les 7 h i comparar-la a les 22 h).

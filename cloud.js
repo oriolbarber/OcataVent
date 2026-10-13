@@ -41,6 +41,12 @@ const ERR = {
   "auth/invalid-email": "El correu no és vàlid.",
   "auth/invalid-action-code": "L'enllaç ja s'ha fet servir o ha caducat. Demana'n un de nou.",
   "auth/expired-action-code": "L'enllaç ha caducat. Demana'n un de nou.",
+  "auth/invalid-credential": "Correu o contrasenya incorrectes. Si entraves amb Google o amb enllaç, prem «He oblidat la contrasenya» per posar-ne una.",
+  "auth/wrong-password": "Contrasenya incorrecta.",
+  "auth/user-not-found": "No hi ha cap compte amb aquest correu. Fes-te'n un a «Alta nova».",
+  "auth/email-already-in-use": "Aquest correu ja té compte (potser amb Google). Ves a «Ja soc soci» i prem «He oblidat la contrasenya» per posar-ne una.",
+  "auth/weak-password": "La contrasenya ha de tenir almenys 6 caràcters.",
+  "auth/missing-password": "Escriu la contrasenya.",
   "auth/too-many-requests": "Massa intents seguits. Espera uns minuts.",
   "auth/requires-recent-login": "Per seguretat, torna a entrar i repeteix-ho de seguida.",
   "permission-denied": "La base de dades ho ha refusat (permission-denied). Comprova que les regles de firestore.rules estan publicades a la consola de Firebase.",
@@ -115,6 +121,36 @@ async function google(){
   if(!consentFromForm()) return;
   say("Obrint Google…");
   try{ await load(); await A.signInWithPopup(auth, new A.GoogleAuthProvider()); say(""); }
+  catch(e){ say(errText(e), true); }
+}
+/* ---------- correu i contrasenya ---------- */
+const mailOk = m => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m);
+const formMail = () => ($("accMail")?.value || "").trim().toLowerCase();
+async function passLogin(){
+  const mail = formMail(), pw = $("accPass")?.value || "";
+  if(!mailOk(mail)){ say("Escriu un correu vàlid.", true); return; }
+  if(!pw){ say("Escriu la contrasenya.", true); return; }
+  say("Entrant…");
+  try{ await load(); await A.signInWithEmailAndPassword(auth, mail, pw); say(""); }
+  catch(e){ say(errText(e), true); }
+}
+async function passCreate(){
+  const mail = formMail(), pw = $("accPass")?.value || "", pw2 = $("accPass2")?.value || "";
+  if(!($("accName")?.value || "").trim()){ say("Escriu el nom i cognoms.", true); return; }
+  if(!mailOk(mail)){ say("Escriu un correu vàlid.", true); return; }
+  if(pw.length < 6){ say("La contrasenya ha de tenir almenys 6 caràcters.", true); return; }
+  if(pw !== pw2){ say("Les dues contrasenyes no coincideixen.", true); return; }
+  if(!consentFromForm()) return;
+  say("Creant el compte…");
+  try{ await load(); await A.createUserWithEmailAndPassword(auth, mail, pw); say(""); }
+  catch(e){ store.del("ov2_consent"); say(errText(e), true); }
+}
+async function passReset(){
+  const mail = formMail();
+  if(!mailOk(mail)){ say("Escriu primer el teu correu a dalt.", true); return; }
+  say("Enviant…");
+  try{ await load(); await A.sendPasswordResetEmail(auth, mail);
+    say(`Si ${mail} té compte, t'hi arribarà un correu per posar una contrasenya nova. Mira també el correu brossa.`); }
   catch(e){ say(errText(e), true); }
 }
 async function sendLink(){
@@ -286,16 +322,22 @@ function render(){
   } else if(!user){
     peek.textContent = "Sense compte";
     const alta = accMode === "alta";
+    const google = (window.OV_NATIVE ? "" : `<button class="btn acc-wide" type="button" id="accGoogle">${alta ? "Alta amb Google" : "Entra amb Google"}</button>
+      <div class="acc-or">o amb correu i contrasenya</div>`)
+      + (window.OV_NATIVE && !alta ? `<p class="note">Si fins ara entraves amb Google, prem «He oblidat la contrasenya» per posar-ne una al mateix compte.</p>` : "");
     h = `<div class="seg acc-mode" role="group" aria-label="Tipus d'entrada">
         <button type="button" id="accModeEntra" aria-pressed="${!alta}">Ja soc soci</button>
         <button type="button" id="accModeAlta" aria-pressed="${alta}">Alta nova</button></div>
       ${alta ? `<p class="note">Opcional. Amb un compte de soci aprovat, les sortides es desen al núvol i les recuperes en qualsevol mòbil. Sense compte, l'app funciona igual.</p>
-      ${consentBlock(true)}` : `<p class="note">Entra amb el mateix compte que ja fas servir.</p>`}
-      ${window.OV_NATIVE ? `<p class="note">A l'app s'entra amb un enllaç al correu (Google no deixa entrar des de dins d'una app). Si ja tens compte amb Google, fes servir el mateix correu: és el mateix compte.</p>`
-        : `<button class="btn acc-wide" type="button" id="accGoogle">Entra amb Google</button>
-      <div class="acc-or">o amb un enllaç al correu, sense contrasenya</div>`}
-      <input class="field" id="accMail" type="email" autocomplete="email" placeholder="correu@exemple.cat">
-      <button class="btn acc-wide" type="button" id="accLink">Envia'm l'enllaç</button>`;
+      ${consentBlock(true)}` : ""}
+      ${google}
+      <label class="acc-f"><span class="lbl">Correu</span><input class="field" id="accMail" type="email" autocomplete="${alta ? "email" : "username"}" placeholder="correu@exemple.cat"></label>
+      <label class="acc-f"><span class="lbl">Contrasenya</span><input class="field" id="accPass" type="password" autocomplete="${alta ? "new-password" : "current-password"}" minlength="6"></label>
+      ${alta ? `<label class="acc-f"><span class="lbl">Repeteix la contrasenya</span><input class="field" id="accPass2" type="password" autocomplete="new-password" minlength="6"></label>
+      <button class="btn acc-wide acc-main" type="button" id="accCreate">Crea el compte</button>`
+      : `<button class="btn acc-wide acc-main" type="button" id="accLogin">Entra</button>
+      <div class="acc-alt"><button class="lnk" type="button" id="accReset">He oblidat la contrasenya</button>
+        <button class="lnk" type="button" id="accLink">Envia'm un enllaç d'accés</button></div>`}`;
   } else {
     const who = `<div class="vp-row"><div class="acc-who"><b>${esc(member?.nom || user.displayName || "")}</b><span>${esc(user.email || "")}${isAdm ? " · administrador" : ""}</span></div>
         <button class="ib-i" type="button" data-info="iUid" aria-label="Identificador del compte" aria-expanded="false">i</button></div>
@@ -339,6 +381,9 @@ document.addEventListener("click", e => {
   if(t.disabled) return; t.disabled = true; setTimeout(() => { t.disabled = false; }, 1500);
   if(t.id === "accModeEntra" || t.id === "accModeAlta"){ accMode = t.id === "accModeAlta" ? "alta" : "entra"; flash = {t:"", err:false}; render(); t.disabled = false; return; }
   if(t.id === "accGoogle") google();
+  else if(t.id === "accLogin") passLogin();
+  else if(t.id === "accCreate") passCreate();
+  else if(t.id === "accReset") passReset();
   else if(t.id === "accLink") sendLink();
   else if(t.id === "accFinish"){ const m = ($("accLinkMail")?.value || "").trim().toLowerCase(); if(m && pendingLink) finishLink(m, pendingLink); }
   else if(t.id === "accRetry") load().catch(() => say("Encara no hi ha connexió.", true));

@@ -1053,3 +1053,8 @@ footer #iSrc{text-align:left;margin:8px 0}
 .native-handoff a.cta{text-decoration:none}
 .acc-mode{display:flex;width:100%;margin-bottom:10px}
 .acc-mode button{flex:1;min-height:46px;font-size:1rem}
+.acc-f{display:flex;flex-direction:column;gap:4px}
+.acc-f .field{font-family:var(--f-body)}
+.acc-main{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.acc-alt{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.acc-alt .lnk{background:none;border:0;padding:10px 0;font:inherit;font-weight:600;color:var(--accent);text-decoration:underline;cursor:pointer;min-height:44px}
