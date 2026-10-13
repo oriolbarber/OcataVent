@@ -501,9 +501,23 @@ async function renderList(){
   if(!trips.length){ $("logList").innerHTML = cloud + `<article class="card empty">Encara no hi ha cap sortida desada.<br>Prem «Sortida» per gravar la primera.</article>` + imp + bak; window.OV_CLOUD?.renderCard(); return; }
   $("logList").innerHTML = cloud + imp + `<div class="card-h" style="margin:0"><h2 style="font-size:1.3rem;text-transform:uppercase">Sortides</h2><span class="lbl">${trips.length}</span></div><div class="trips">` + trips.map(t => {
     const d = new Date(t.start), s = t.summary || summarize(t);
-    return `<button type="button" class="trip" data-trip="${t.id}"><b>${esc(t.name || (DAYS_L[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]))}</b><span class="m">${s.distNm.toFixed(1).replace(".",",")} nm</span>
-      <span>${d.toLocaleDateString("ca",{day:"numeric",month:"short",year:"numeric"})} · ${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(DEFAULTS[t.act]?.short||"")}</span><span class="m" style="font-weight:600;color:var(--muted)">${fmtDurShort(s.dur)} · màx ${r1(s.maxKn)} kn</span></button>`; }).join("") + `</div>` + bak;
+    const dShort = DAYS_S[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : "");
+    const hhmm = pad(d.getHours()) + ":" + pad(d.getMinutes());
+    return `<button type="button" class="trip" data-trip="${t.id}"><b class="tr-n">${esc(t.name || dShort)}</b>
+      <span class="tr-d">${t.name ? esc(dShort) + " · " : ""}${hhmm}</span>${tripShape(t.pts)}
+      <span class="m tr-dist">${typeof boatIcon === "function" ? boatIcon(t.act, 18) : ""}${s.distNm.toFixed(1).replace(".",",")} nm</span><span class="m tr-x">${fmtDurShort(s.dur)} · màx ${r0(s.maxKn)} kn</span></button>`; }).join("") + `</div>` + bak;
   window.OV_CLOUD?.renderCard();
+}
+// Silueta del recorregut per a la llista (sense mapa): polilínia escalada dins un requadre petit
+function tripShape(pts){
+  const P = (pts || []).filter(p => p && p.lat != null && p.lon != null);
+  if(P.length < 2) return `<span class="tr-shape"></span>`;
+  const step = Math.max(1, Math.floor(P.length / 80)), Q = P.filter((p, i) => i % step === 0 || i === P.length - 1);
+  const k = Math.cos(rad(Q[0].lat)), xs = Q.map(p => p.lon * k), ys = Q.map(p => p.lat);
+  const W = 64, H = 40, pd = 3, x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const sc = Math.min((W - 2*pd) / ((x1 - x0) || 1e-9), (H - 2*pd) / ((y1 - y0) || 1e-9)), ox = (W - (x1 - x0) * sc) / 2, oy = (H - (y1 - y0) * sc) / 2;
+  const pl = Q.map((p, i) => (ox + (xs[i] - x0) * sc).toFixed(1) + "," + (oy + (y1 - ys[i]) * sc).toFixed(1)).join(" ");
+  return `<svg class="tr-shape" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${pl}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 function seriesChart(trip){
   const seg = segments(trip); if(seg.length < 3) return "";
