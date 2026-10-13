@@ -1119,3 +1119,5 @@ footer #iSrc{text-align:left;margin:8px 0}
 .trip .tr-dist{white-space:nowrap}
 :root[data-size="big"] .trip{grid-template-columns:minmax(0,1fr) 56px auto}
 :root[data-size="big"] .trip .tr-shape{width:56px}
+.prep-hr{display:inline-flex;align-items:center;gap:8px}
+.prep-card .vp-info{margin-bottom:8px}

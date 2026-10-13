@@ -62,7 +62,8 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 ## Pantalla «Nova sortida» (`prep.js`)
 - Condicions d'ara per a l'embarcació (mateix càlcul que la portada, `scoreWindow`), hores fins a la posta, millor franja, llum que queda (fins a posta − 30 min), avisos de Meteocat d'avui i bandera.
 - Mapa «On ets»: GPS propi només mentre la pantalla és visible i no es grava (per comprovar-lo), base nàutica, distància i rumb fins a la base. Estàtic al dit (zoom amb botons).
-- Capes (es desen a `ov2_prep_ly`): Vent (partícules en un canvas a la capa `prepWind` + etiquetes de vent i onada com al mapa de la portada, ancorades a la posició), Pluja (últim fotograma de RainViewer) i Carta (OpenSeaMap). «Més mapes» obre la pestanya Mapes amb `mapKind`.
+- Capes (es desen a `ov2_prep_ly`): Vent (ratlles en un canvas a la capa `prepWind` + etiqueta), Onades (crestes + etiqueta, només sobre el mar) i Pluja (últim fotograma de RainViewer). Les etiquetes s'ancoren a la posició. El (i) explica els colors.
+- Màscara del mar: les rajoles d'OSM es carreguen amb `crossOrigin` i es marquen els píxels del color d'aigua (#aad3df). Serveix per a qualsevol platja (V3) sense dibuixar la costa a mà. Si canvia el mapa base, cal revisar aquest color.
 - L'app crida `window.renderPrep()` quan arriben dades noves.
 
 ## Avisos de seguretat i tasques programades (Fase 3, part 1)
