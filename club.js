@@ -141,6 +141,7 @@ function render(){
   const el = $("clubView"); if(!el) return;
   if(!C){ if(accSt()) renderWait(); return; }
   if(mapObj){ mapObj.remove(); mapObj = null; }
+  clearRouteMaps();
   const unread = D.avisos.filter(a => alive(a) && !(a.vist || {})[uid()]).length;
   const tabs = [["mur", "Mur"], ["avisos", "Avisos"], ["anuncis", "Anuncis"], ["base", "Base"]];
   el.innerHTML = `<nav class="cl-tabs" aria-label="Seccions del club">${tabs.map(([k, t]) => `<button type="button" data-ctab="${k}"${k === tab ? ' aria-current="page"' : ""}>${t}${k === "avisos" && unread ? `<span class="cl-dot" aria-label="${unread} sense llegir">${unread}</span>` : ""}</button>`).join("")}</nav>
@@ -148,6 +149,7 @@ function render(){
     ${alertBanner()}
     ${({mur:renderMur, avisos:renderAvisos, anuncis:renderAnuncis, base:renderBase})[tab]()}`;
   if(tab === "base") setTimeout(drawMap, 0);
+  if(tab === "mur") setTimeout(drawRouteMaps, 0);
 }
 
 /* ---------- MUR ---------- */
@@ -195,7 +197,7 @@ function intentsCard(){
     <button type="button" class="btn cl-dash" id="clNewIntent">+ Anuncia que surts</button></section>`;
 }
 function card(p){
-  const mine = p.userId === uid(), rc = p.reaccions || {}, my = rc[uid()], v = p.veredicte || {}, cnt = k => Object.values(rc).filter(x => x === k).length;
+  const mine = p.userId === uid(), rc = p.reaccions || {}, my = rc[uid()], cnt = k => Object.values(rc).filter(x => x === k).length;
   const st = (l, val, u, sub, hot) => `<div class="stat cl-st"><span class="lbl">${l}</span><span class="v"${hot ? ' style="color:var(--accent-2)"' : ""}>${val}<small> ${u}</small></span><span class="cl-sub">${esc(sub)}</span></div>`;
   const durM = Math.round((p.durS || 0)/60);
   return `<article class="card cl-card" aria-label="Sortida publicada: ${esc(p.titol || "")}">
@@ -203,7 +205,6 @@ function card(p){
       <div class="cl-who"><b>${esc(p.nom)}</b><span>${esc(boatShort(p.act))} · ${esc(dayStr(p.inici))} · ${hm(p.inici)}–${hm(p.fi)}${p.editada ? " · editada" : ""}${mine ? " · " + esc(NIVT(p.visibilitat || "club")) : ""}</span></div>
       <span class="cl-boat">${typeof boatIcon === "function" ? boatIcon(p.act) : ""}</span></div>
     <h3 class="cl-title">${esc(p.titol || "Sortida")}</h3>
-    ${v.k ? `<div class="cl-verd k-${esc(v.k)}"><b>${esc(v.t)}</b>${v.why ? `<span>${esc(v.why)}</span>` : ""}</div>` : ""}
     <div class="cl-stats">
       ${st("Distància", (p.distNm || 0).toFixed(1).replace(".", ","), "nm", durM >= 60 ? Math.floor(durM/60) + " h " + (durM % 60) + " min" : durM + " min")}
       ${st("Vel. màx.", r1(p.maxKn), "kn", "Mitjana " + r1(p.avgKn))}
@@ -217,14 +218,32 @@ function card(p){
   </article>`;
 }
 const NO_ROUTE = "Aquesta sortida no té prou recorregut GPS per mostrar-ne la ruta (cal haver-se allunyat almenys 100 m). Treu «Inclou la ruta» per publicar-la sense.";
+function routePts(s){ return String(s).split(";").map(x => x.split(",").map(Number)).filter(a => a.length === 2 && isFinite(a[0]) && isFinite(a[1])); }
 function routeSvg(s){
-  const P = String(s).split(";").map(x => x.split(",").map(Number)).filter(a => a.length === 2 && isFinite(a[0]) && isFinite(a[1]));
+  const P = routePts(s);
   if(P.length < 2) return "";
+  return `<figure class="cl-route"><div class="map short cl-rmap" data-route="${esc(String(s))}" role="img" aria-label="Mapa de la ruta">${routeLine(P)}</div><figcaption>Ruta simplificada, sense l'inici ni el final.</figcaption></figure>`;
+}
+// traçat sense fons de mapa: es veu mentre carrega el mapa i si no hi ha Leaflet
+function routeLine(P){
   const k = Math.cos(P[0][0]*Math.PI/180), xs = P.map(p => p[1]*k), ys = P.map(p => p[0]);
-  const Wd = 360, H = 170, pd = 16, x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const Wd = 360, H = 240, pd = 16, x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const sc = Math.min((Wd - 2*pd)/((x1 - x0) || 1e-6), (H - 2*pd)/((y1 - y0) || 1e-6)), ox = (Wd - (x1 - x0)*sc)/2, oy = (H - (y1 - y0)*sc)/2;
   const pts = P.map((p, i) => (ox + (xs[i] - x0)*sc).toFixed(1) + "," + (oy + (y1 - ys[i])*sc).toFixed(1)).join(" ");
-  return `<figure class="cl-route"><svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Ruta simplificada"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><figcaption>Ruta simplificada, sense l'inici ni el final.</figcaption></figure>`;
+  return `<svg viewBox="0 0 ${Wd} ${H}"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+let routeMaps = [];
+function clearRouteMaps(){ routeMaps.forEach(m => { try{ m.remove(); }catch(e){} }); routeMaps = []; }
+function drawRouteMaps(){
+  clearRouteMaps();
+  if(typeof baseMap !== "function" || !window.L) return;
+  document.querySelectorAll("#clubView .cl-rmap[data-route]").forEach(el => {
+    const P = routePts(el.dataset.route); if(P.length < 2) return;
+    const m = baseMap(el, true); if(!m) return;
+    const line = L.polyline(P, {color:cssVar("--accent"), weight:4, opacity:.95}).addTo(m);
+    m.fitBounds(line.getBounds().pad(0.15), {maxZoom:16});
+    routeMaps.push(m);
+  });
 }
 
 /* ---------- AVISOS ---------- */
@@ -629,7 +648,7 @@ window.addEventListener("ov-cloud", async () => {
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
   if(C && visible()) load(true); else if(!C && visible()) render();
 });
-window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load(); loadAlerts(); } else if(accSt()) renderWait(); else go("fc"); } else if(mapObj){ mapObj.remove(); mapObj = null; } });
+window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load(); loadAlerts(); } else if(accSt()) renderWait(); else go("fc"); } else { if(mapObj){ mapObj.remove(); mapObj = null; } clearRouteMaps(); } });
 
 /* ---------- connexió amb trip.js i cloud.js ---------- */
 const OV_CLUB = window.OV_CLUB = {
