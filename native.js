@@ -67,6 +67,15 @@ window.OV_NATIVE = {
     return watcher;
   },
   async clear(){ if(watcher){ const id = watcher; watcher = null; try{ await BG.removeWatcher({id}); }catch(e){} } },
-  openSettings(){ try{ BG.openSettings(); }catch(e){} }
+  openSettings(){ try{ BG.openSettings(); }catch(e){} },
+  // Petició GET nativa (CapacitorHttp, inclòs a Capacitor): sense CORS ni les restriccions de la WebView.
+  // Retorna un objecte semblant a Response: {ok, status, text(), json()}.
+  async http(url){
+    const H = CAP.Plugins.CapacitorHttp || P("CapacitorHttp");
+    const r = await H.request({url, method:"GET", responseType:"text", connectTimeout:15000, readTimeout:15000,
+      headers:{"Cache-Control":"no-cache"}});
+    const body = typeof r.data === "string" ? r.data : JSON.stringify(r.data);
+    return {ok: r.status >= 200 && r.status < 300, status: r.status, text: async () => body, json: async () => JSON.parse(body)};
+  }
 };
 })();

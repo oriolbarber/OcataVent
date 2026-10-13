@@ -174,6 +174,11 @@ const STATIONS = {
 let stKey = store.get("ov2_station_v3"); if(!LOC.stations.includes(stKey)) stKey = LOC.st;
 
 async function getJSON(u){ const r = await fetch(u, {cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+// Estacions (meteoelmasnou.cat): a l'app Android, petició nativa (la WebView les bloqueja); si falla, fetch normal.
+async function stFetch(u){
+  if(window.OV_NATIVE && OV_NATIVE.http){ try{ return await OV_NATIVE.http(u); }catch(e){} }
+  return fetch(u, {cache:"no-store"});
+}
 function build(fc, ma){
   const hours = {}, H = fc.hourly;
   H.time.forEach((t,i) => { hours[t] = {t, temp:H.temperature_2m[i], pp:H.precipitation_probability?.[i], code:H.weather_code[i],
@@ -330,7 +335,9 @@ async function load(){
 }
 async function loadStation(){
   try{
-    const key = stKey, j = await getJSON(STATIONS[key].url+"?t="+Date.now());
+    const key = stKey, r = await stFetch(STATIONS[key].url+"?t="+Date.now());
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j = await r.json();
     if(key === stKey) ST = {key, wind:j.W*KMH, gust:j.G*KMH, dir:j.B, temp:j.T, hum:j.H, pres:j.P, at:(j.U||0)*1000};
   }catch(e){}
   if(DATA) renderNow();
@@ -346,7 +353,7 @@ const fmtLocal = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pa
 async function stationRecords(key, interval, fromMs, toMs){
   const base = new URL(STATIONS[key].url).origin;
   const q = `value=all&interval=${interval}&from=${fromMs ? encodeURIComponent(fmtLocal(fromMs)) : ""}&to=${toMs ? encodeURIComponent(fmtLocal(toMs)) : ""}&parameters=${OBS_PARAMS}`;
-  const r = await fetch(base+"/pages/station/tableAjax.php?"+q+"&t="+Date.now(), {cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status);
+  const r = await stFetch(base+"/pages/station/tableAjax.php?"+q+"&t="+Date.now()); if(!r.ok) throw new Error("HTTP "+r.status);
   const doc = new DOMParser().parseFromString(await r.text(), "text/html");
   const unitTxt = (doc.querySelector("thead th:nth-child(2)")?.textContent || "").toLowerCase();
   const f = UNIT_KN[((unitTxt.match(/\(([^)]+)\)/) || [])[1] || "").replace(/\s/g,"")] ?? KMH;
