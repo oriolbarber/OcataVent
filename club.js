@@ -479,28 +479,38 @@ async function setPres(doc){
 async function delPres(){ await C.F.deleteDoc(ref("presencia", uid())); D.myPres = null; D.pres = D.pres.filter(x => x.id !== uid()); }
 
 /* ---------- arribada i sortida de la base pel GPS (si el soci ho ha activat a Confidencialitat) ---------- */
-// Amb l'app oberta i sense cap sortida en curs: cada 2 minuts mira la posició.
-// A menys de 100 m de la base → «a la base»; a més de 300 m → deixa d'estar-hi. (Marge ample per l'error del GPS.)
-const AUTO_IN = 100, AUTO_OUT = 300;
+// Amb l'app oberta i sense cap sortida en curs, mira la posició cada minut:
+// · a menys de 50 m de la base durant almenys 10 minuts seguits → «a la base»;
+// · a més de 200 m durant 2 minuts seguits → deixa d'estar-hi.
+// Els instants d'entrada i de sortida es guarden al mòbil, perquè compti encara que es tanqui i es torni a obrir l'app.
+const AUTO_IN = 50, AUTO_IN_MS = 10*MIN, AUTO_OUT = 200, AUTO_OUT_MS = 2*MIN, AUTO_ACC = 60;
 let autoBusy = false, autoLast = 0;
 function autoTick(force){
   if(!C || autoBusy || !navigator.geolocation || !window.OV_PRIV?.autoBase() || vis() === "ningu") return;
   if(document.visibilityState !== "visible" || (typeof LIVE !== "undefined" && LIVE)) return;   // durant una sortida, ja ho fa avisos.js
-  if(!force && now() - autoLast < 110000) return;
+  if(!force && now() - autoLast < 50000) return;
   autoBusy = true; autoLast = now();
   navigator.geolocation.getCurrentPosition(async pos => {
     try{
-      const c = pos.coords; if(c.accuracy > 150) return;
-      const d = hav({lat:HOME[0], lon:HOME[1]}, {lat:c.latitude, lon:c.longitude});
-      if(!D.at.mypres){ const s = await C.F.getDoc(ref("presencia", uid())); D.myPres = s.exists() ? Object.assign({id:s.id}, s.data()) : null; D.at.mypres = now(); }
-      const st = D.myPres && now() - (ms(D.myPres.actualitzat) || 0) < DAY ? D.myPres.estat : null;
-      if(d <= AUTO_IN && !st){ await setPres(presDoc("base")); loadAlerts(); if(visible()) render(); }
-      else if(d >= AUTO_OUT && st === "base"){ await delPres(); loadAlerts(); if(visible()) render(); }
+      const c = pos.coords; if(c.accuracy > AUTO_ACC) return;   // massa imprecís per a un radi de 50 m
+      const d = hav({lat:HOME[0], lon:HOME[1]}, {lat:c.latitude, lon:c.longitude}), t = now();
+      if(!D.at.mypres){ const s = await C.F.getDoc(ref("presencia", uid())); D.myPres = s.exists() ? Object.assign({id:s.id}, s.data()) : null; D.at.mypres = t; }
+      const st = D.myPres && t - (ms(D.myPres.actualitzat) || 0) < DAY ? D.myPres.estat : null;
+      let inS = store.get("ov2_auto_in"), outS = store.get("ov2_auto_out");
+      // un forat de més de 15 min sense mirar la posició trenca el compte (no sabem on era)
+      if(inS && t - (store.get("ov2_auto_seen") || 0) > 15*MIN) inS = null;
+      if(outS && t - (store.get("ov2_auto_seen") || 0) > 15*MIN) outS = null;
+      if(d <= AUTO_IN){ inS = inS || t; outS = null; }
+      else if(d >= AUTO_OUT){ outS = outS || t; inS = null; }
+      else { inS = null; outS = null; }
+      store.set("ov2_auto_in", inS); store.set("ov2_auto_out", outS); store.set("ov2_auto_seen", t);
+      if(inS && t - inS >= AUTO_IN_MS && !st){ await setPres(presDoc("base", {desde:inS})); loadAlerts(); if(visible()) render(); }
+      else if(outS && t - outS >= AUTO_OUT_MS && st === "base"){ await delPres(); loadAlerts(); if(visible()) render(); }
     }catch(e){}
     finally{ autoBusy = false; }
-  }, () => { autoBusy = false; }, {enableHighAccuracy:true, maximumAge: force ? 0 : 60000, timeout:30000});   // en obrir l'app, posició nova
+  }, () => { autoBusy = false; }, {enableHighAccuracy:true, maximumAge: force ? 0 : 30000, timeout:30000});   // en obrir l'app, posició nova
 }
-setInterval(() => autoTick(), 120000);
+setInterval(() => autoTick(), 60000);
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") autoTick(true); });
 
 document.addEventListener("click", async e => {
