@@ -1128,7 +1128,7 @@ footer #iSrc{text-align:left;margin:8px 0}
 .gear-box h2{margin:0 0 14px;font-family:var(--f-head);font-size:1.6rem;text-transform:uppercase;letter-spacing:.04em}
 .gear-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .gear-i{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:14px;background:var(--surface-2);color:var(--accent)}
-.gear-i b{color:var(--ink);font-size:.95rem;line-height:1.15}
+.gear-i b{color:var(--ink);font-size:.85rem;line-height:1.15}
 .gear-n{margin:14px 0 0;font-size:.9rem;color:var(--muted);font-weight:600}
 .gear-i{animation:gearTick .35s ease-out both}
 @keyframes gearTick{from{background:var(--surface-2);color:var(--accent)}to{background:var(--marg);color:var(--on-k)}}

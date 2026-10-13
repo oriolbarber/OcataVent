@@ -196,21 +196,26 @@ const KIT_IC = {
   xiulet:`<circle cx="9" cy="14" r="6"/><path d="M13 9.5V8h9v5h-7"/><circle cx="9" cy="14" r="2"/><path d="M3 9 1.5 7.5"/>`,
   aigua:`<path d="M10 2h4v3l2 3v12a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8l2-3z"/><path d="M8 12h8"/>`,
   abric:`<path d="M8 3h8l4 3 2 8-3 1-1-3v9H6v-9l-1 3-3-1 2-8z"/><path d="M8 3l4 4 4-4M12 7v14"/>`,
+  guants:`<path d="M8 21v-5l-3.4-4.6a1.6 1.6 0 0 1 2.6-1.9L9 11.5V5a1.5 1.5 0 0 1 3 0v5V3.5a1.5 1.5 0 0 1 3 0V10V5a1.5 1.5 0 0 1 3 0v9a7 7 0 0 1-2 4.8V21"/>`,
+  mobil:`<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/><path d="M12 6.5c-1.6 2.1-2.4 3.4-2.4 4.5a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.5z"/>`,
+  bossa:`<rect x="5" y="2.5" width="14" height="3.5" rx="1.75"/><path d="M5 4.2H3v7M19 4.2h2v7"/><path d="M6.5 6v12.5A2.5 2.5 0 0 0 9 21h6a2.5 2.5 0 0 0 2.5-2.5V6"/><path d="M12 10.5v5M9.5 13h5"/>`,
   sol:`<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>`
 };
+const GEAR_MS = 7000;   // amb 8-9 objectes, 5 s no donaven temps de llegir-los
 function gearCheck(){
   const fc = (typeof DATA !== "undefined" && DATA && DATA.now) || {}, air = stFresh() ? ST.temp : fc.temp, sea = fc.sst;
-  const items = [["armilla", "Armilla"], ["emissora", "Emissora"], ["navalla", "Navalla"], ["xiulet", "Xiulet"], ["aigua", "Aigua"]];
+  // llista d'equipament i seguretat del club; l'abric/neoprè només quan fa fred
+  const items = [["armilla", "Armilla ben ajustada"], ["navalla", "Navalla"], ["emissora", "Emissora carregada"], ["xiulet", "Xiulet a l'armilla"],
+    ["aigua", "Aigua i crema solar"], ["guants", "Guants i calçat"], ["mobil", "Mòbil en funda estanca"], ["bossa", "Claus i farmaciola"]];
   if((air != null && air < 18) || (sea != null && sea < 17)) items.push(["abric", sea != null && sea < 17 ? "Neoprè o abric" : "Abric"]);
-  else if(air != null && air >= 24) items.push(["sol", "Gorra i crema"]);
   const el = document.createElement("div"); el.className = "gear"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Abans de sortir, porta");
   el.innerHTML = `<div class="gear-box"><h2>Ho portes tot?</h2>
-    <div class="gear-grid">${items.map(([k, t], i) => `<div class="gear-i" style="animation-delay:${Math.round(i * 5000 / items.length)}ms"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KIT_IC[k]}</svg><b>${t}</b></div>`).join("")}</div>
+    <div class="gear-grid">${items.map(([k, t], i) => `<div class="gear-i" style="animation-delay:${Math.round(i * GEAR_MS / items.length)}ms"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KIT_IC[k]}</svg><b>${t}</b></div>`).join("")}</div>
     <p class="gear-n">Bona navegada! · toca per tancar</p></div>`;
   const close = () => { if(!el.isConnected) return; el.classList.add("out"); setTimeout(() => el.remove(), 250); };
   el.addEventListener("click", close);
   document.body.appendChild(el);
-  setTimeout(close, 5000);
+  setTimeout(close, GEAR_MS + 400);
 }
 let confirmStop = 0, confirmDiscard = 0;
 async function stopTrip(){
