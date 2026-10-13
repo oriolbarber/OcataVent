@@ -1045,3 +1045,9 @@ footer #iSrc{text-align:left;margin:8px 0}
 .cl-event svg{color:var(--accent-2);flex:none}
 .cl-event b::first-letter{text-transform:uppercase}
 :root[data-size="big"] .wev-card b,:root[data-size="big"] .cl-event{font-size:1.15rem}
+/* ---------- app Android (native.js) ---------- */
+.native-handoff{position:fixed;inset:0;z-index:5000;background:#000c;display:grid;place-items:center;padding:16px}
+.native-handoff .card{max-width:420px;display:flex;flex-direction:column;gap:12px;text-align:center}
+.native-handoff h2{margin:0;font-family:var(--f-head);font-size:1.6rem;text-transform:uppercase;letter-spacing:.05em}
+.native-handoff p{margin:0}
+.native-handoff a.cta{text-decoration:none}

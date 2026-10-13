@@ -119,12 +119,15 @@ async function sendLink(){
   say("Enviant l'enllaç…");
   try{
     await load();
-    await A.sendSignInLinkToEmail(auth, mail, {url: location.origin + location.pathname, handleCodeInApp:true});
+    await A.sendSignInLinkToEmail(auth, mail, {url: linkUrl(), handleCodeInApp:true});
     store.set("ov2_link_mail", mail);
     say(`T'hem enviat un enllaç a ${mail}. Obre'l en aquest mòbil. Pot trigar uns minuts: mira també el correu brossa.`);
   }catch(e){ say(errText(e), true); }
 }
+// A l'app Android, l'enllaç porta «app=1»: si s'obre al navegador, native.js el torna a enviar a l'app
+const linkUrl = () => location.origin + location.pathname + (window.OV_NATIVE ? "?app=1" : "");
 async function handleLink(){
+  if(window.OV_APP_LINK) return;   // és per a l'app: el navegador no el fa servir
   if(!A.isSignInWithEmailLink(auth, location.href)) return;
   const mail = store.get("ov2_link_mail");
   if(!mail){ pendingLink = location.href; history.replaceState(null, "", location.pathname); openPanel(); return; }
@@ -233,7 +236,7 @@ async function deleteAccount(){
   }catch(e){ say(errText(e), true); render(); }
 }
 async function relink(){
-  try{ await A.sendSignInLinkToEmail(auth, user.email, {url: location.origin + location.pathname, handleCodeInApp:true});
+  try{ await A.sendSignInLinkToEmail(auth, user.email, {url: linkUrl(), handleCodeInApp:true});
     store.set("ov2_link_mail", user.email); say(`T'hem enviat un enllaç a ${user.email}. Obre'l i esborra el compte de seguida.`); }
   catch(e){ say(errText(e), true); }
 }
@@ -279,8 +282,9 @@ function render(){
     peek.textContent = "Sense compte";
     h = `<p class="note">Opcional. Amb un compte de soci aprovat, les sortides es desen al núvol i les recuperes en qualsevol mòbil. Sense compte, l'app funciona igual.</p>
       ${consentBlock(true)}
-      <button class="btn acc-wide" type="button" id="accGoogle">Entra amb Google</button>
-      <div class="acc-or">o amb un enllaç al correu, sense contrasenya</div>
+      ${window.OV_NATIVE ? `<p class="note">A l'app s'entra amb un enllaç al correu (Google no deixa entrar des de dins d'una app). Si ja tens compte amb Google, fes servir el mateix correu: és el mateix compte.</p>`
+        : `<button class="btn acc-wide" type="button" id="accGoogle">Entra amb Google</button>
+      <div class="acc-or">o amb un enllaç al correu, sense contrasenya</div>`}
       <input class="field" id="accMail" type="email" autocomplete="email" placeholder="correu@exemple.cat">
       <button class="btn acc-wide" type="button" id="accLink">Envia'm l'enllaç</button>`;
   } else {
@@ -367,7 +371,7 @@ window.OV_CLOUD = {
 window.addEventListener("online", () => { if(store.get("ov2_cloud") && !user) load().catch(() => {}); else if(approved()) sync(); });
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible" && approved() && Date.now() - lastSync > 60000) sync(); });
 
-const isLink = /[?&]mode=signIn\b/.test(location.search) && /[?&]oobCode=/.test(location.search);
+const isLink = !window.OV_APP_LINK && /[?&]mode=signIn\b/.test(location.search) && /[?&]oobCode=/.test(location.search);
 render();
 if(store.get("ov2_cloud") || isLink) load().catch(() => {});
 })();

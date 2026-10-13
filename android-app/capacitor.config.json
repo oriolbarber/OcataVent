@@ -1,0 +1,13 @@
+{
+  "appId": "cat.ocatavent.app",
+  "appName": "Ocata Vent",
+  "webDir": "www",
+  "server": {
+    "url": "https://oriolbarber.github.io/OcataVent/",
+    "cleartext": false,
+    "allowNavigation": ["oriolbarber.github.io"]
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

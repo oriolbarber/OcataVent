@@ -1,0 +1,18 @@
+{
+  "name": "ocata-vent-android",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Ocata Vent per a Android: carrega la web publicada i hi afegeix el GPS en segon pla",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor-community/background-geolocation": "1.2.26",
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
+}

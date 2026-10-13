@@ -31,7 +31,9 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
   - Administrador inicial (UID de Firebase de l'Oriol): `aHjoROUH3aQsHh6ksS3Tt1p5soF2`.
   - Firestore: cada registre amb `userId`, `clubId` i `visibilitat` (`privat` | `club` | `public`).
 - **Tasques programades sense pla Blaze:** GitHub Actions amb `cron`. S'hi fa l'historial d'encerts dels models (desar la previsió a les 7 h i comparar-la a les 22 h).
-- **Android:** APK directe amb Capacitor que carrega la web publicada i hi afegeix el GPS en segon pla (foreground service). L'iPhone es queda com a PWA.
+- **Android (`android-app/`, Capacitor 8):** l'APK carrega la web publicada (`server.url`), així que els canvis de la web hi arriben sols; només cal recompilar si canvia `android-app/`. L'iPhone es queda com a PWA.
+  - `native.js` (a la web): si hi ha Capacitor, `window.OV_NATIVE` grava les sortides amb `@capacitor-community/background-geolocation` (servei en primer pla, continua amb la pantalla apagada). A l'app no hi ha «Entra amb Google» (Google no ho permet dins d'una WebView): s'entra amb l'enllaç per correu, que porta `?app=1`; obert al navegador, `native.js` el reenvia a l'app amb `ocatavent://login?link=…` (intent-filter a l'AndroidManifest).
+  - Compilació: GitHub Actions `build-apk.yml` (en canviar `android-app/` o a mà) → Release «apk», enllaç fix https://github.com/oriolbarber/OcataVent/releases/download/apk/ocata-vent.apk. Signatura amb els secrets `APK_KEYSTORE_B64` i `APK_KEYSTORE_PASSWORD` (àlies `ocatavent`); sense secrets, clau de proves. `versionCode` = número d'execució.
 
 ## Núvol (Fase 1, `cloud.js`)
 - Firebase es descarrega des de gstatic només si ja s'havia entrat en aquest mòbil (`ov2_cloud`), si s'obre un enllaç d'accés o si es prem «Entra». Sense compte, l'app és la V1.

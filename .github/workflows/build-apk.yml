@@ -1,0 +1,87 @@
+# Compila l'app Android (android-app/, Capacitor) i la publica a la Release «apk» del repositori.
+# Enllaç fix de descàrrega: https://github.com/oriolbarber/OcataVent/releases/download/apk/ocata-vent.apk
+# L'app carrega la web publicada: els canvis de la web arriben sols. Només cal recompilar si canvia android-app/.
+# Signatura: amb els secrets APK_KEYSTORE_B64 i APK_KEYSTORE_PASSWORD (sempre la mateixa clau, perquè les
+# actualitzacions s'instal·lin per sobre). Sense secrets, es signa amb una clau de proves (cal desinstal·lar per actualitzar).
+name: Compila l'APK
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android-app/**"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: android-actions/setup-android@v3
+      - name: Dependències i sincronització de Capacitor
+        run: |
+          npm ci --no-audit --no-fund
+          npx cap sync android
+      - name: Clau de signatura
+        env:
+          KS_B64: ${{ secrets.APK_KEYSTORE_B64 }}
+          KS_PW: ${{ secrets.APK_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PW" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/ocatavent.jks"
+            {
+              echo "APK_KEYSTORE_PATH=$RUNNER_TEMP/ocatavent.jks"
+              echo "APK_KEYSTORE_PASSWORD=$KS_PW"
+              echo "APK_KEY_ALIAS=ocatavent"
+              echo "APK_KEY_PASSWORD=$KS_PW"
+              echo "APK_TASK=assembleRelease"
+              echo "APK_SIGN=clau del club"
+            } >> "$GITHUB_ENV"
+          else
+            echo "Sense secrets de signatura: es compila amb la clau de proves."
+            { echo "APK_TASK=assembleDebug"; echo "APK_SIGN=clau de proves (per actualitzar cal desinstal·lar)"; } >> "$GITHUB_ENV"
+          fi
+      - name: Compila
+        env:
+          APK_VERSION_CODE: ${{ github.run_number }}
+          APK_VERSION_NAME: 2.0.${{ github.run_number }}
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew --no-daemon "$APK_TASK"
+          f=$(find app/build/outputs/apk -name "*.apk" | head -1)
+          echo "APK: $f"
+          cp "$f" "$GITHUB_WORKSPACE/ocata-vent.apk"
+      - name: Publica a la Release «apk»
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="Ocata Vent per a Android · versió 2.0.${{ github.run_number }} · $(TZ=Europe/Madrid date '+%d/%m/%Y %H:%M') · signada amb: $APK_SIGN.
+          Descarrega ocata-vent.apk al mòbil i obre-la (cal permetre «Instal·lar aplicacions desconegudes» per al navegador o el gestor de fitxers)."
+          if gh release view apk >/dev/null 2>&1; then
+            gh release edit apk --title "Ocata Vent per a Android (2.0.${{ github.run_number }})" --notes "$notes"
+          else
+            gh release create apk --title "Ocata Vent per a Android (2.0.${{ github.run_number }})" --notes "$notes" --target "$GITHUB_SHA"
+          fi
+          gh release upload apk ocata-vent.apk --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ocata-vent-apk
+          path: ocata-vent.apk
+          retention-days: 30

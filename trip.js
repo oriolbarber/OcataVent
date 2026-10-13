@@ -132,6 +132,15 @@ function liveGapNote(){
   el.hidden = !g.length;
 }
 function startWatch(){
+  if(window.OV_NATIVE){   // app Android: GPS en segon pla (continua amb la pantalla apagada)
+    clearInterval(tTimer); clearInterval(ecoTimer);
+    window.OV_NATIVE.watch(onPos, onPosErr).catch(e => onPosErr({code:2, message:String(e && e.message || e)}));
+    tTimer = setInterval(() => { if(LIVE){ $("liveTimer").textContent = fmtDur(Date.now()-LIVE.start); LIVE.eco ? renderLive() : rideTime(); } }, LIVE.eco ? 20000 : 1000);
+    if(LIVE.eco) setEco();
+    clearInterval(tWind); tWind = setInterval(sampleWind, (LIVE.eco ? 5 : 1)*60*1000); sampleWind();
+    clearInterval(tSave); tSave = setInterval(saveLive, 15000);
+    return true;
+  }
   if(!("geolocation" in navigator)){ $("tripErr").textContent = "Aquest navegador no té accés al GPS."; $("tripErr").hidden = false; return false; }
   keepAwake();
   clearInterval(tTimer); clearInterval(ecoTimer);
@@ -150,6 +159,7 @@ function startWatch(){
   return true;
 }
 function stopWatch(){
+  if(window.OV_NATIVE) window.OV_NATIVE.clear();
   if(watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null;
   clearInterval(ecoTimer); ecoTimer = null;
   clearInterval(tTimer); clearInterval(tWind); clearInterval(tSave);
@@ -616,7 +626,10 @@ async function permCheck(){
     else if(st === "denied") set("pmGeo", "bad", "Denegada. Activa-la a Ajustaments ▸ Aplicacions ▸ Chrome ▸ Permisos ▸ Ubicació, i a la icona del cadenat de la web.");
     else set("pmGeo", "wait", "Encara no l'has concedida. Toca «Permet».");
   }
-  if("wakeLock" in navigator) set("pmWake", "ok", "Mentre graves, la pantalla no s'apagarà sola.");
+  if(window.OV_NATIVE){   // app Android: el GPS continua amb la pantalla apagada
+    set("pmWake", "ok", "A l'app, la gravació continua encara que la pantalla s'apagui.");
+    const b = $("pmBat"); if(b) b.querySelector("small").innerHTML = "Perquè Android no aturi la gravació: Ajustaments ▸ Aplicacions ▸ Ocata Vent ▸ Bateria ▸ <b>Sense restriccions</b>. En començar, permet la ubicació i les notificacions.";
+  } else if("wakeLock" in navigator) set("pmWake", "ok", "Mentre graves, la pantalla no s'apagarà sola.");
   else set("pmWake", "bad", "Aquest navegador no pot mantenir la pantalla encesa: allarga el temps d'apagada a Ajustaments del mòbil.");
   // si alguna cosa falta, se n'ensenya el detall sense haver de tocar
   const bad = document.querySelector("#ckRow .ck.bad, #ckRow .ck.wait"); ckShow(bad ? bad.dataset.ck : ckOpen);
