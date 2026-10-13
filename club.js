@@ -255,7 +255,9 @@ function renderBase(){
     <div class="cl-who"><b>${esc(x.id === uid() ? "Tu" : x.nom)}${x.estat === "aigua" ? " · " + esc(boatShort(x.act)) : ""}</b>
     <span${al.length ? ' class="cl-late"' : ""}>${al.length ? esc(al.map(a => ALERT_T[a.tipus] || a.tipus).join(" · ")) : "Des de les " + hm(x.desde)}</span></div>
     <span class="note">${esc(ago(ms(x.actualitzat) || now()))}</span></div>`; };
-  return `<div class="cl-counts"><div class="stat"><span class="lbl">A l'aigua</span><span class="v" style="color:var(--accent)">${ai.length}</span></div><div class="stat"><span class="lbl">A la base</span><span class="v" style="color:var(--ideal)">${ba.length}</span></div></div>
+  const rec = typeof LIVE !== "undefined" && LIVE;
+  return `<button class="cta" type="button" data-go="trip">${rec ? svgI('<circle cx="12" cy="12" r="6" fill="currentColor"/>', 22) : svgI('<path d="M12 3v14"/><path d="M12 4l7 11h-7"/><path d="M3 19c3 2 6 2 9 0s6-2 9 0"/>', 22)}${rec ? "Sortida en curs" : "Comença una sortida"}</button>
+    <div class="cl-counts"><div class="stat"><span class="lbl">A l'aigua</span><span class="v" style="color:var(--accent)">${ai.length}</span></div><div class="stat"><span class="lbl">A la base</span><span class="v" style="color:var(--ideal)">${ba.length}</span></div></div>
     <article class="card"><div class="map short" id="clMap"></div>
       <div class="legend"><span><span class="sw cl-sw-base"></span>A la base</span><span><span class="sw cl-sw-aigua"></span>Navegant</span><span><span class="sw cl-sw-late"></span>Amb un avís de seguretat</span></div></article>
     <section class="card"><div class="card-h"><span class="lbl">A l'aigua</span></div>${ai.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}</section>
