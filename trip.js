@@ -184,6 +184,31 @@ function startTrip(){
   if(!startWatch()){ LIVE = null; return; }
   saveLive(); setRecUI(); showRide(true);
   window.OV_CLUB?.tripStart(LIVE);   // presència «a l'aigua» (només si el soci ho té activat)
+  gearCheck();
+}
+/* ---------- recordatori de material en començar (es tanca sol als 5 s o tocant-lo; la gravació ja ha començat) ---------- */
+const KIT_IC = {
+  armilla:`<path d="M8 3 5 5v15h5v-6h4v6h5V5l-3-2-2 3h-4z"/><path d="M10 14V9h4v5"/>`,
+  emissora:`<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V2M10 11h4M10 14h4M10 17h4"/>`,
+  navalla:`<rect x="2" y="14" width="15" height="5" rx="2.5"/><circle cx="14.5" cy="16.5" r=".8" fill="currentColor"/><path d="M14 14 21 4c-4.5 1.5-8.5 5-10.5 10z"/>`,
+  xiulet:`<circle cx="9" cy="14" r="6"/><path d="M13 9.5V8h9v5h-7"/><circle cx="9" cy="14" r="2"/><path d="M3 9 1.5 7.5"/>`,
+  aigua:`<path d="M10 2h4v3l2 3v12a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8l2-3z"/><path d="M8 12h8"/>`,
+  abric:`<path d="M8 3h8l4 3 2 8-3 1-1-3v9H6v-9l-1 3-3-1 2-8z"/><path d="M8 3l4 4 4-4M12 7v14"/>`,
+  sol:`<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>`
+};
+function gearCheck(){
+  const fc = (typeof DATA !== "undefined" && DATA && DATA.now) || {}, air = stFresh() ? ST.temp : fc.temp, sea = fc.sst;
+  const items = [["armilla", "Armilla"], ["emissora", "Emissora"], ["navalla", "Navalla"], ["xiulet", "Xiulet"], ["aigua", "Aigua"]];
+  if((air != null && air < 18) || (sea != null && sea < 17)) items.push(["abric", sea != null && sea < 17 ? "Neoprè o abric" : "Abric"]);
+  else if(air != null && air >= 24) items.push(["sol", "Gorra i crema"]);
+  const el = document.createElement("div"); el.className = "gear"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Abans de sortir, porta");
+  el.innerHTML = `<div class="gear-box"><h2>Ho portes tot?</h2>
+    <div class="gear-grid">${items.map(([k, t]) => `<div class="gear-i"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${KIT_IC[k]}</svg><b>${t}</b></div>`).join("")}</div>
+    <p class="gear-n">Bona navegada! · toca per tancar</p><i class="gear-bar"></i></div>`;
+  const close = () => { if(!el.isConnected) return; el.classList.add("out"); setTimeout(() => el.remove(), 250); };
+  el.addEventListener("click", close);
+  document.body.appendChild(el);
+  setTimeout(close, 5000);
 }
 let confirmStop = 0, confirmDiscard = 0;
 async function stopTrip(){
