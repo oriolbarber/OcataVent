@@ -18,7 +18,7 @@ const svgI = (p, z, rot) => `<svg width="${z||22}" height="${z||22}" viewBox="0 
 const LOCK = svgI('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', 18);
 const PIN = svgI('<path d="M9 4h6l-1 6 4 4H6l4-4z"/><path d="M12 14v6"/>', 15);
 const XI = svgI('<path d="M6 6l12 12M18 6L6 18"/>', 20);
-const DAY = 864e5, MIN = 6e4;
+const DAY = 864e5, MIN = 6e4, INT_DIES = 15;   // «Qui surt»: fins a 15 dies vista
 const now = () => Date.now();
 
 let C = null, tab = store.get("ov2_club_tab") || "mur", mapObj = null, lastPos = 0;
@@ -343,14 +343,22 @@ async function refreshShare(){ if(shareEl && shareTrip && document.body.contains
 function intentSheet(){
   const d = new Date(), h = pad(Math.min(20, d.getHours() + 1)) + ":00";
   sheet("Anuncia que surts", `
-    ${field("shDay", "Dia", `<select class="field" id="shDay"><option value="0">Avui</option><option value="1">Demà</option><option value="2">Demà passat</option></select>`)}
+    <div class="cl-field"><span class="lbl">Dia</span>
+      <div class="cl-row2" role="group" aria-label="Dia">${chip("data-iday", "0", true, "Avui")}${chip("data-iday", "1", false, "Demà")}</div>
+      <label class="cl-field" for="shDate"><span class="note">O tria un altre dia, fins a ${INT_DIES} dies</span>
+        <input class="field" id="shDate" type="date" value="${ymd(d)}" min="${ymd(d)}" max="${ymd(new Date(now() + INT_DIES*DAY))}"></label></div>
     ${field("shHour", "Hora", `<input class="field" id="shHour" type="time" value="${h}">`)}
     ${field("shAct", "Embarcació", `<select class="field" id="shAct">${Object.keys(DEFAULTS).map(k => `<option value="${k}"${k === act ? " selected" : ""}>${esc(DEFAULTS[k].name)}</option>`).join("")}</select>`)}
     ${visSelect("intencions", prefOf("intencions"))}
     <p class="note">Qui ho veu s'hi pot apuntar. S'esborra l'endemà.</p>
-    <button type="button" class="btn cl-pri cl-wide" id="shSave">Publica</button>`, () => {
+    <button type="button" class="btn cl-pri cl-wide" id="shSave">Publica</button>`, sh => {
+    const mark = () => { const v = $("shDate").value; sh.querySelectorAll("[data-iday]").forEach(b => b.setAttribute("aria-pressed", String(ymd(new Date(now() + (+b.dataset.iday)*DAY)) === v))); };
+    sh.addEventListener("click", ev => { const b = ev.target.closest("[data-iday]"); if(!b) return; $("shDate").value = ymd(new Date(now() + (+b.dataset.iday)*DAY)); mark(); });
+    $("shDate").addEventListener("change", mark);
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
-      const day = new Date(); day.setDate(day.getDate() + (+$("shDay").value)); day.setHours(23, 59, 59, 0);
+      const v = $("shDate").value, min = ymd(new Date()), max = ymd(new Date(now() + INT_DIES*DAY));
+      if(!v || v < min || v > max){ sheetSay(`Tria un dia d'avui a ${INT_DIES} dies vista.`); return; }
+      const day = new Date(v + "T23:59:59");
       const doc = Object.assign({userId:uid(), clubId:C.member.clubId, nom:C.member.nom, act:$("shAct").value, dia:ymd(day), hora:$("shHour").value || "12:00", apuntats:{}, caduca:TS(day.getTime()), creat:C.F.serverTimestamp()}, await visFields($("shVis").value));
       const r = await C.F.addDoc(col("intencions"), doc);
       D.intents.push(Object.assign({id:r.id}, doc, {caduca:day.getTime()})); closeSheet(); render();

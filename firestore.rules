@@ -184,7 +184,7 @@ service cloud.firestore {
         && request.resource.data.dia is string && request.resource.data.dia.size() == 10
         && request.resource.data.hora is string && request.resource.data.hora.size() <= 5
         && request.resource.data.apuntats == {} && request.resource.data.caduca is timestamp
-        && request.resource.data.caduca < request.time + duration.value(4, 'd')
+        && request.resource.data.caduca < request.time + duration.value(17, 'd')
         && request.resource.data.creat == request.time;
       allow update: if veu(resource.data) && onlyMyKey('apuntats')
         && (!(me() in request.resource.data.apuntats) || nomOk(request.resource.data.apuntats[me()], 80));
