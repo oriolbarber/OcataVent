@@ -153,6 +153,14 @@ async function passReset(){
     say(`Si ${mail} té compte, t'hi arribarà un correu per posar una contrasenya nova. Mira també el correu brossa.`); }
   catch(e){ say(errText(e), true); }
 }
+async function setPassword(){
+  const pw = $("accNewPw")?.value || "";
+  if(pw.length < 6){ say("La contrasenya ha de tenir almenys 6 caràcters.", true); return; }
+  say("Desant…");
+  try{ await A.linkWithCredential(user, A.EmailAuthProvider.credential(user.email, pw)); await user.reload();
+    say(`Fet. A l'app entra amb ${user.email} i aquesta contrasenya.`); render(); }
+  catch(e){ say(e && e.code === "auth/provider-already-linked" ? "Aquest compte ja té contrasenya." : errText(e), true); }
+}
 async function sendLink(){
   const mail = ($("accMail")?.value || "").trim().toLowerCase();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)){ say("Escriu un correu vàlid.", true); return; }
@@ -356,6 +364,12 @@ function render(){
       peek.textContent = (isAdm ? "Administrador" : "Soci") + " · " + (member.nom || user.email || "");
       h = who + `<p class="note">Soci aprovat. Les sortides es desen al núvol, privades: només les veus tu.</p>`;
     }
+    const hasPw = (user.providerData || []).some(p => p.providerId === "password");
+    if(!hasPw && user.email) h += `<div class="acc-pw"><div class="vp-row"><span class="lbl">Contrasenya per a l'app</span>
+        <button class="ib-i" type="button" data-info="iPw" aria-label="Per a què serveix" aria-expanded="false">i</button></div>
+      <p class="vp-info" id="iPw" hidden>A l'app d'Android no es pot entrar amb Google. Posa aquí una contrasenya i a l'app entra amb ${esc(user.email)} i aquesta contrasenya: és el mateix compte.</p>
+      <input class="field" id="accNewPw" type="password" autocomplete="new-password" minlength="6" placeholder="Contrasenya nova (mínim 6)">
+      <button class="btn acc-wide" type="button" id="accSetPw">Desa la contrasenya</button></div>`;
     h += `<button class="btn" type="button" id="accOut">Tanca la sessió</button>` + delBlock();
   }
   body.innerHTML = `<div class="msg${flash.err ? " err" : ""}" id="accMsg"${flash.t ? "" : " hidden"}>${esc(flash.t)}</div>` + h;
@@ -384,6 +398,7 @@ document.addEventListener("click", e => {
   else if(t.id === "accLogin") passLogin();
   else if(t.id === "accCreate") passCreate();
   else if(t.id === "accReset") passReset();
+  else if(t.id === "accSetPw") setPassword();
   else if(t.id === "accLink") sendLink();
   else if(t.id === "accFinish"){ const m = ($("accLinkMail")?.value || "").trim().toLowerCase(); if(m && pendingLink) finishLink(m, pendingLink); }
   else if(t.id === "accRetry") load().catch(() => say("Encara no hi ha connexió.", true));
