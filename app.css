@@ -1142,3 +1142,6 @@ footer #iSrc{text-align:left;margin:8px 0}
 .ride-sleep{position:fixed;inset:0;z-index:3500;background:#000;display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));touch-action:none;cursor:pointer}
 .ride-sleep .rs-hint{color:#6b7a90;font:600 1rem var(--f-body);transition:opacity .6s}
 .ride-sleep.hint-off .rs-hint{opacity:0}
+/* Previsió dins la pantalla de ruta: la targeta «Vent per hores» s'hi trasllada */
+.ride-fc{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.ride-fc .card{margin:0}

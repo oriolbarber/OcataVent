@@ -367,12 +367,27 @@ const dirArrow = (deg, sz) => deg == null ? "" : `<svg class="rarw" width="${sz}
 function setEco(){ $("ride").classList.toggle("eco", !!(LIVE && LIVE.eco)); if(LIVE) $("rideEco").setAttribute("aria-pressed", String(!!LIVE.eco)); if(LIVE && LIVE.eco && ridePage === "map") rideShowPage("data"); }
 function showRide(on){
   rideVisible = !!on && !!LIVE; $("ride").hidden = !rideVisible; document.body.classList.toggle("riding", rideVisible);
-  if(!rideVisible){ if(liveMapEl === "rideMap") destroyLiveMap(); window.rideCmpOn = false; cmpListen(); return; }
+  if(!rideVisible){ if(liveMapEl === "rideMap") destroyLiveMap(); window.rideCmpOn = false; cmpListen(); fcSlot(false); return; }
   setEco(); rideShowPage(ridePage); rideConfirm(false); renderLive();
 }
+// «Previsió» dins la pantalla de ruta: s'hi porta la targeta «Vent per hores» (gràfic interactiu + mapa) de la portada, i en sortir es torna al seu lloc
+let fcHome = null;
+function fcSlot(on){
+  const card = $("windMap"); if(!card) return;
+  if(on){
+    if(!fcHome) fcHome = {parent: card.parentNode, next: card.nextSibling};
+    $("rideFcSlot").appendChild(card);
+    if(window.renderWindMap) renderWindMap();
+    setTimeout(() => { if(typeof wmMap !== "undefined" && wmMap) wmMap.invalidateSize(false); }, 50);
+  } else if(fcHome && card.parentNode !== fcHome.parent){
+    fcHome.parent.insertBefore(card, fcHome.next);
+    setTimeout(() => { if(typeof wmMap !== "undefined" && wmMap) wmMap.invalidateSize(false); }, 50);
+  }
+}
 function rideShowPage(pg){
-  if(LIVE && LIVE.eco) pg = "data";
-  ridePage = pg; $("rideData").hidden = pg !== "data"; $("rideMapP").hidden = pg !== "map"; $("rideCmpP").hidden = pg !== "cmp";
+  if(LIVE && LIVE.eco && pg !== "fc") pg = "data";
+  ridePage = pg; $("rideData").hidden = pg !== "data"; $("rideMapP").hidden = pg !== "map"; $("rideCmpP").hidden = pg !== "cmp"; $("rideFcP").hidden = pg !== "fc";
+  fcSlot(pg === "fc"); $("rideHide").setAttribute("aria-pressed", String(pg === "fc")); $("rideHide").textContent = pg === "fc" ? "Dades" : "Previsió";
   window.rideCmpOn = pg === "cmp" && !!LIVE; cmpListen();
   if(pg === "cmp") setTimeout(renderLive, 0);
   document.querySelectorAll("#rideSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.rp === pg)));
@@ -424,7 +439,8 @@ function rideToggleEco(){ if(!LIVE) return; LIVE.eco = !LIVE.eco; store.set("ov2
 $("rideSeg").addEventListener("click", async e => { const b = e.target.closest("[data-rp]"); if(!b) return;
   if(b.dataset.rp === "cmp") await cmpPerm();   // iPhone: cal demanar permís al sensor en tocar
   rideShowPage(b.dataset.rp); });
-$("rideHide").addEventListener("click", () => { showRide(false); go("fc"); });
+$("rideHide").addEventListener("click", () => rideShowPage(ridePage === "fc" ? "data" : "fc"));
+$("rideFull").addEventListener("click", () => { showRide(false); go("fc"); });
 $("rideEco").addEventListener("click", rideToggleEco);
 $("rideStop").addEventListener("click", () => rideConfirm(true));
 $("rideBack").addEventListener("click", () => rideConfirm(false));
@@ -636,6 +652,7 @@ function download(t, kind){
 /* ---------- connexions ---------- */
 $("startTrip").addEventListener("click", startTrip);
 $("ecoMode").checked = false;
+if(window.OV_NATIVE){ const rt = $("rideTip"); if(rt) rt.textContent = "Si no la toques es posa negra: dos tocs per tornar-la a veure."; }
 if(window.OV_NATIVE){ const tt = $("tnTipT"); if(tt) tt.textContent = "Si no la toques, la pantalla es posa negra: dos tocs per tornar-la a veure"; }
 $("ecoOn").addEventListener("click", () => showRide(true));
 $("logList").addEventListener("change", e => {

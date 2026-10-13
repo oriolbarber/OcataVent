@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=122">
+<link rel="stylesheet" href="app.css?v=123">
 </head>
 <body>
 <div class="app">
@@ -272,10 +272,14 @@
     <div class="ride-map" id="rideMap"></div>
     <div class="ride-mini" id="rideMini"></div>
   </div>
+  <div class="ride-page ride-fc" id="rideFcP" hidden>
+    <div id="rideFcSlot"></div>
+    <button type="button" class="ride-b" id="rideFull">Previsió completa</button>
+  </div>
   <div class="ride-gap" id="rideGap" hidden></div>
   <p class="ride-tip" id="rideTip">No bloquegis la pantalla amb el botó: si s'apaga, el GPS s'atura.</p>
   <div class="ride-bot" id="rideBot">
-    <button type="button" class="ride-b" id="rideHide">Previsió</button>
+    <button type="button" class="ride-b" id="rideHide" aria-pressed="false">Previsió</button>
     <button type="button" class="ride-b" id="rideEco" aria-pressed="false">Estalvi</button>
     <button type="button" class="ride-b stop" id="rideStop">Atura</button>
   </div>
@@ -378,7 +382,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=113"></script>
 <script src="app.js?v=115"></script>
-<script src="trip.js?v=119"></script>
+<script src="trip.js?v=120"></script>
 <script src="maps.js?v=105"></script>
 <script src="windmap.js?v=105"></script>
 <script src="prep.js?v=101"></script>
