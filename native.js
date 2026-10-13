@@ -2,6 +2,7 @@
 /* ============ Ocata Vent 2 · pont amb l'app Android (Capacitor) ============
    L'APK (android-app/) carrega aquesta mateixa web publicada i hi afegeix:
    · GPS en segon pla amb servei en primer pla (BackgroundGeolocation): la gravació continua amb la pantalla apagada.
+   · Pantalla encesa durant la gravació (KeepAwake): trip.js la posa negra si no es toca i la torna amb dos tocs.
    · Enllaç d'accés per correu: el correu s'obre al navegador, i la web el reenvia a l'app (ocatavent://login?link=…).
    Al navegador, window.OV_NATIVE no existeix i tot funciona com sempre. */
 (() => {
@@ -68,6 +69,12 @@ window.OV_NATIVE = {
   },
   async clear(){ if(watcher){ const id = watcher; watcher = null; try{ await BG.removeWatcher({id}); }catch(e){} } },
   openSettings(){ try{ BG.openSettings(); }catch(e){} },
+  // Pantalla sempre encesa mentre es grava (connector KeepAwake; en un APK antic sense el connector, la Wake Lock API del navegador)
+  async keepAwake(on){
+    try{ const K = P("KeepAwake"); if(K){ await (on ? K.keepAwake() : K.allowSleep()); return true; } }catch(e){}
+    try{ if(on && "wakeLock" in navigator){ this._wl = await navigator.wakeLock.request("screen"); return true; } if(!on && this._wl){ await this._wl.release(); this._wl = null; } }catch(e){}
+    return false;
+  },
   // Petició GET nativa (CapacitorHttp, inclòs a Capacitor): sense CORS ni les restriccions de la WebView.
   // Retorna un objecte semblant a Response: {ok, status, text(), json()}.
   async http(url){

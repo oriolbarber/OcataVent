@@ -1136,3 +1136,7 @@ footer #iSrc{text-align:left;margin:8px 0}
 :root[data-size="big"] .gear-i b{font-size:1.1rem}
 :root[data-size="big"] .gear-box h2{font-size:1.9rem}
 @media (prefers-reduced-motion: reduce){.gear,.gear-bar{animation:none}}
+/* Pantalla negra per inactivitat durant la gravació (trip.js): sota els avisos (4000), sobre la pantalla de ruta (3000) */
+.ride-sleep{position:fixed;inset:0;z-index:3500;background:#000;display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));touch-action:none;cursor:pointer}
+.ride-sleep .rs-hint{color:#6b7a90;font:600 1rem var(--f-body);transition:opacity .6s}
+.ride-sleep.hint-off .rs-hint{opacity:0}

@@ -115,7 +115,7 @@ function onPosErr(err){
   if(err.code === 1 && LIVE && !LIVE.pts.length){ $("tripErr").textContent = msg; $("tripErr").hidden = false; }
 }
 async function keepAwake(){
-  if(window.OV_NATIVE) return;   // a l'app el GPS continua amb la pantalla apagada: no cal tenir-la encesa
+  if(window.OV_NATIVE){ window.OV_NATIVE.keepAwake?.(true); return; }   // app: pantalla encesa amb el connector natiu
   try{ if("wakeLock" in navigator && document.visibilityState === "visible" && (!wakeLock || wakeLock.released)){
     wakeLock = await navigator.wakeLock.request("screen");
     wakeLock.addEventListener("release", () => { if(LIVE && document.visibilityState === "visible") setTimeout(keepAwake, 500); });
@@ -136,6 +136,7 @@ function liveGapNote(){
 }
 function startWatch(){
   if(window.OV_NATIVE){   // app Android: GPS en segon pla (continua amb la pantalla apagada)
+    keepAwake();
     clearInterval(tTimer); clearInterval(ecoTimer);
     window.OV_NATIVE.watch(onPos, onPosErr).catch(e => onPosErr({code:2, message:String(e && e.message || e)}));
     tTimer = setInterval(() => { if(LIVE){ $("liveTimer").textContent = fmtDur(Date.now()-LIVE.start); LIVE.eco ? renderLive() : rideTime(); } }, LIVE.eco ? 20000 : 1000);
@@ -167,6 +168,7 @@ function stopWatch(){
   clearInterval(ecoTimer); ecoTimer = null;
   clearInterval(tTimer); clearInterval(tWind); clearInterval(tSave);
   try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null;
+  window.OV_NATIVE?.keepAwake?.(false); sleepSet(false);
 }
 function setRecUI(){
   const on = !!LIVE;
@@ -629,7 +631,7 @@ function download(t, kind){
 /* ---------- connexions ---------- */
 $("startTrip").addEventListener("click", startTrip);
 $("ecoMode").checked = false;
-if(window.OV_NATIVE){ const tt = $("tnTipT"); if(tt) tt.textContent = "Pots apagar la pantalla: l'app continua gravant"; }
+if(window.OV_NATIVE){ const tt = $("tnTipT"); if(tt) tt.textContent = "Si no la toques, la pantalla es posa negra: dos tocs per tornar-la a veure"; }
 $("ecoOn").addEventListener("click", () => showRide(true));
 $("logList").addEventListener("change", e => {
   if(e.target.id === "gpxIn" && e.target.files[0]) importGpx(e.target.files[0]);
@@ -691,3 +693,38 @@ document.addEventListener("click", e => { if(e.target.id === "pmGeoBtn"){
 } });
 window.addEventListener("mm-view", e => { if(e.detail === "trip" && !LIVE) permCheck(); });
 permCheck();
+
+/* ---------- pantalla negra per inactivitat mentre es grava (dos tocs la tornen a encendre) ----------
+   La pantalla no s'apaga (wake lock / KeepAwake), però si no es toca en SLEEP_S segons es cobreix de negre:
+   en pantalles OLED el negre gasta molt poc, i les xifres es recuperen amb dos tocs sense desbloquejar el mòbil.
+   Els avisos de seguretat (#liveAlert) i el recordatori de material queden per sobre i a més la desperten. */
+const SLEEP_S = 40;
+let lastTouch = Date.now(), lastTap = 0, sleeping = false;
+function sleepEl(){
+  let el = $("rideSleep");
+  if(!el){ el = document.createElement("div"); el.id = "rideSleep"; el.className = "ride-sleep"; el.hidden = true;
+    el.innerHTML = `<span class="rs-hint">Dos tocs per veure les xifres</span>`; document.body.appendChild(el); }
+  return el;
+}
+function sleepSet(on){
+  on = !!on && !!LIVE; if(on === sleeping) return; sleeping = on;
+  const el = sleepEl(); el.hidden = !on; if(on){ el.classList.remove("hint-off"); clearTimeout(sleepSet.t); sleepSet.t = setTimeout(() => el.classList.add("hint-off"), 4000); }
+  if(!on) lastTouch = Date.now();
+}
+document.addEventListener("pointerdown", e => {
+  const now = Date.now();
+  if(sleeping){
+    e.preventDefault(); e.stopPropagation();
+    if(now - lastTap < 450){ sleepSet(false); lastTap = 0; } else { lastTap = now; sleepEl().classList.remove("hint-off"); clearTimeout(sleepSet.t); sleepSet.t = setTimeout(() => sleepEl().classList.add("hint-off"), 2500); }
+    return;
+  }
+  lastTouch = now;
+}, true);
+// el toc que desperta no ha d'arribar als botons de sota
+document.addEventListener("click", e => { if(e.target && e.target.id === "rideSleep"){ e.preventDefault(); e.stopPropagation(); } }, true);
+setInterval(() => {
+  if(!LIVE || !rideVisible || document.visibilityState !== "visible"){ sleepSet(false); return; }
+  const al = $("liveAlert"); if(al && !al.hidden){ sleepSet(false); return; }   // un avís de seguretat sempre es veu
+  if(document.querySelector(".gear")){ lastTouch = Date.now(); return; }
+  if(!sleeping && Date.now() - lastTouch > SLEEP_S * 1000) sleepSet(true);
+}, 1000);

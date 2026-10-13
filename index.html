@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=119">
+<link rel="stylesheet" href="app.css?v=120">
 </head>
 <body>
 <div class="app">
@@ -190,6 +190,7 @@
       <div class="vp-info" id="iTrip" hidden>
         <p>Grava la ruta amb el GPS i el vent de l'estació (cada minut; cada 5 en mode estalvi). En acabar tens la distància, les velocitats, els rumbs respecte al vent i el mapa.</p>
         <p><b>App d'Android:</b> continua gravant amb la pantalla apagada.</p>
+        <p><b>Pantalla negra:</b> si no la toques en 40 s es posa negra per estalviar bateria; dos tocs i tornes a veure les xifres. Els avisos de seguretat sempre es veuen.</p>
         <p><b>Web:</b> amb la pantalla apagada no grava, perquè el navegador atura el GPS. Deixa-la oberta: el mode estalvi la posa negra i gasta molt poc. També pots gravar amb una altra app o un rellotge i importar el GPX a l'Historial.</p>
       </div>
       <div class="prep-now" id="prepNow"></div>
@@ -375,9 +376,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="native.js?v=112"></script>
+<script src="native.js?v=113"></script>
 <script src="app.js?v=115"></script>
-<script src="trip.js?v=116"></script>
+<script src="trip.js?v=117"></script>
 <script src="maps.js?v=105"></script>
 <script src="windmap.js?v=105"></script>
 <script src="prep.js?v=101"></script>
