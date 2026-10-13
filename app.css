@@ -1051,3 +1051,5 @@ footer #iSrc{text-align:left;margin:8px 0}
 .native-handoff h2{margin:0;font-family:var(--f-head);font-size:1.6rem;text-transform:uppercase;letter-spacing:.05em}
 .native-handoff p{margin:0}
 .native-handoff a.cta{text-decoration:none}
+.acc-mode{display:flex;width:100%;margin-bottom:10px}
+.acc-mode button{flex:1;min-height:46px;font-size:1rem}

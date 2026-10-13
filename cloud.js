@@ -76,7 +76,7 @@ const emit = () => window.dispatchEvent(new CustomEvent("ov-cloud"));   // club.
 async function onUser(u){
   user = u; member = null; isAdm = false; delStep = false;
   if(!u){ store.del("ov2_cloud"); ready = true; render(); refreshList(); emit(); return; }
-  store.set("ov2_cloud", 1);
+  store.set("ov2_cloud", 1); store.set("ov2_had", 1); accMode = "entra";
   try{
     await readMember();
     if(!member){ const c = store.get("ov2_consent"); if(c && c.v === CONSENT_V) await createMember(c.nom); }
@@ -99,7 +99,11 @@ async function createMember(nom){
   store.del("ov2_consent");
   await readMember();
 }
+// Pantalla d'entrada: «Ja soc soci» (només entra) o «Alta nova» (nom + consentiment). Per defecte, «Ja soc soci»
+// si aquest mòbil ja havia tingut compte; si no, «Alta nova».
+let accMode = store.get("ov2_had") ? "entra" : "alta";
 function consentFromForm(){
+  if(accMode === "entra") return true;   // si no té fitxa de soci, després d'entrar se li demana l'alta
   const ck = $("accConsent");
   if(!ck || !ck.checked){ say("Per crear el compte cal marcar la casella d'acceptació.", true); return false; }
   store.set("ov2_consent", {v:CONSENT_V, nom:($("accName")?.value || "").trim()});
@@ -232,7 +236,7 @@ async function deleteAccount(){
     await A.deleteUser(user);
     for(const t of ((await DB.all()) || [])) if(t.owner === uid){ delete t.owner; delete t.synced; await DB.put(t); }
     store.set("ov2_cloud_del", (store.get("ov2_cloud_del") || []).filter(d => d.uid !== uid));
-    store.del("ov2_cloud"); store.del("ov2_consent");
+    store.del("ov2_cloud"); store.del("ov2_consent"); store.del("ov2_had"); accMode = "alta";
     say("Compte esborrat, amb la fitxa de soci, les sortides del núvol i el que havies publicat al club. Les sortides d'aquest mòbil es queden al mòbil.");
   }catch(e){ say(errText(e), true); render(); }
 }
@@ -281,8 +285,12 @@ function render(){
       <button class="btn" type="button" id="accRetry">Torna-ho a provar</button>`;
   } else if(!user){
     peek.textContent = "Sense compte";
-    h = `<p class="note">Opcional. Amb un compte de soci aprovat, les sortides es desen al núvol i les recuperes en qualsevol mòbil. Sense compte, l'app funciona igual.</p>
-      ${consentBlock(true)}
+    const alta = accMode === "alta";
+    h = `<div class="seg acc-mode" role="group" aria-label="Tipus d'entrada">
+        <button type="button" id="accModeEntra" aria-pressed="${!alta}">Ja soc soci</button>
+        <button type="button" id="accModeAlta" aria-pressed="${alta}">Alta nova</button></div>
+      ${alta ? `<p class="note">Opcional. Amb un compte de soci aprovat, les sortides es desen al núvol i les recuperes en qualsevol mòbil. Sense compte, l'app funciona igual.</p>
+      ${consentBlock(true)}` : `<p class="note">Entra amb el mateix compte que ja fas servir.</p>`}
       ${window.OV_NATIVE ? `<p class="note">A l'app s'entra amb un enllaç al correu (Google no deixa entrar des de dins d'una app). Si ja tens compte amb Google, fes servir el mateix correu: és el mateix compte.</p>`
         : `<button class="btn acc-wide" type="button" id="accGoogle">Entra amb Google</button>
       <div class="acc-or">o amb un enllaç al correu, sense contrasenya</div>`}
@@ -329,6 +337,7 @@ async function refresh(){   // en obrir la configuració: comprova si ja t'han a
 document.addEventListener("click", e => {
   const t = e.target.closest && e.target.closest("#accBody button"); if(!t || t.classList.contains("ib-i")) return;
   if(t.disabled) return; t.disabled = true; setTimeout(() => { t.disabled = false; }, 1500);
+  if(t.id === "accModeEntra" || t.id === "accModeAlta"){ accMode = t.id === "accModeAlta" ? "alta" : "entra"; flash = {t:"", err:false}; render(); t.disabled = false; return; }
   if(t.id === "accGoogle") google();
   else if(t.id === "accLink") sendLink();
   else if(t.id === "accFinish"){ const m = ($("accLinkMail")?.value || "").trim().toLowerCase(); if(m && pendingLink) finishLink(m, pendingLink); }
