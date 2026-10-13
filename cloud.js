@@ -430,6 +430,8 @@ document.addEventListener("click", e => {
 /* ---------- connexió amb trip.js ---------- */
 window.OV_CLOUD = {
   approved,
+  // Estat del compte per a la pestanya Club: null (sense sessió), "sense-alta", "pendent", "rebutjat" o "aprovat"
+  status(){ return !user ? null : !member ? "sense-alta" : member.estat; },
   async ctx(){ if(!approved()) return null; const f = await fs(); const perms = isAdm ? ["altes", "rols", "permisos", "moderar"] : (member.permisos || []);
     return {F:f, db, user, member, isAdm, perms, isResp: isAdm || !!member.responsable || (member.comissions || []).includes("junta")}; },
   async reread(){ if(!user) return; try{ await readMember(); }catch(e){} render(); emit(); },

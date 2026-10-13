@@ -120,8 +120,26 @@ function cleanup(){   // les coses caducades les esborra qualsevol soci que les 
 }
 
 /* ---------- vista ---------- */
+// Compte sense aprovar: la pestanya hi és, però només explica què falta
+const accSt = () => window.OV_CLOUD?.status ? OV_CLOUD.status() : null;
+function renderWait(){
+  const el = $("clubView"); if(!el) return;
+  const st = accSt();
+  const t = st === "pendent" ? ["Pendent d'aprovació", "Has demanat l'alta de soci. Quan un administrador del club l'aprovi, aquí hi veuràs el mur, els avisos, els anuncis i qui és a la base."]
+    : st === "sense-alta" ? ["Falta l'alta de soci", "Has entrat, però encara no has demanat l'alta. Ves a Configuració ▸ Compte i prem «Sol·licita l'alta»."]
+    : ["Alta no aprovada", "L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta del club."];
+  el.innerHTML = `<article class="card cl-wait"><h2>${t[0]}</h2><p>${t[1]}</p>
+    <button type="button" class="btn acc-wide" id="clWaitRe">Torna-ho a comprovar</button></article>`;
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest && e.target.closest("#clWaitRe"); if(!b) return;
+  b.disabled = true; b.textContent = "Comprovant…";
+  await window.OV_CLOUD?.reread?.();
+  if(!C) renderWait();
+});
 function render(){
-  const el = $("clubView"); if(!el || !C) return;
+  const el = $("clubView"); if(!el) return;
+  if(!C){ if(accSt()) renderWait(); return; }
   if(mapObj){ mapObj.remove(); mapObj = null; }
   const unread = D.avisos.filter(a => alive(a) && !(a.vist || {})[uid()]).length;
   const tabs = [["mur", "Mur"], ["avisos", "Avisos"], ["anuncis", "Anuncis"], ["base", "Base"]];
@@ -601,7 +619,7 @@ document.addEventListener("visibilitychange", () => { if(C && document.visibilit
 
 /* ---------- pestanya i sessió ---------- */
 function tabBtn(){
-  const on = !!C, b = $("tabClub"); if(!b) return;
+  const on = !!C || !!accSt(), b = $("tabClub"); if(!b) return;
   b.hidden = !on; document.querySelector(".tabs .in").classList.toggle("n5", on);
   if(!on && visible()) go("fc");
 }
@@ -609,9 +627,9 @@ window.addEventListener("ov-coms", () => { publishEvents(); if(visible()) render
 window.addEventListener("ov-cloud", async () => {
   await ctx(); tabBtn(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
-  if(C && visible()) load(true);
+  if(C && visible()) load(true); else if(!C && visible()) render();
 });
-window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load(); loadAlerts(); } else go("fc"); } else if(mapObj){ mapObj.remove(); mapObj = null; } });
+window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load(); loadAlerts(); } else if(accSt()) renderWait(); else go("fc"); } else if(mapObj){ mapObj.remove(); mapObj = null; } });
 
 /* ---------- connexió amb trip.js i cloud.js ---------- */
 const OV_CLUB = window.OV_CLUB = {
