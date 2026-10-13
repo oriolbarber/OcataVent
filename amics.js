@@ -8,13 +8,13 @@
 (() => {
 const NIV = {tothom:"Tothom", club:"El club", amics:"Amics", ningu:"Ningú"};
 const NIV_LLARG = {
-  tothom:"Qualsevol soci aprovat de l'app (avui, el club; amb la V3, també altres clubs).",
-  club:"Els socis aprovats del teu club.",
-  amics:"Només els socis que heu acceptat com a amics.",
-  ningu:"Ningú: no es comparteix."
+  tothom:"Qualsevol persona amb l'alta aprovada a l'app (avui, el club; més endavant, també altres clubs).",
+  club:"La gent del teu club amb l'alta aprovada.",
+  amics:"Només les persones que heu acceptat mútuament com a amistat.",
+  ningu:"No es comparteix."
 };
 const ITEMS = [
-  {k:"mur", t:"Publicacions al mur", d:"club", ningu:false, nota:"Valor per defecte: el pots canviar en cada publicació."},
+  {k:"mur", t:"Publicacions al mur", d:"club", ningu:false, nota:"Valor per defecte; es pot canviar en cada publicació."},
   {k:"presencia", t:"On ets (a la base o a l'aigua)", d:"club", ningu:true, nota:"Inclou la posició mentre navegues."},
   {k:"avisos", t:"Avisos de seguretat en ruta", d:"club", ningu:true, nota:"Sense vent i lluny, vent massa fort, onades perilloses."},
   {k:"intencions", t:"Qui surt", d:"club", ningu:false, nota:"Valor per defecte quan anuncies que surts."},
@@ -68,13 +68,13 @@ function render(){
   sec.hidden = !C; if(!C) return;
   $("peekPriv").textContent = "Mur: " + NIV[pref("mur")].toLowerCase() + " · on ets: " + NIV[pref("presencia")].toLowerCase();
   body.innerHTML = `<div class="msg err" id="privMsg" hidden></div>
-    <p class="note" style="margin:0">Tria qui veu cada cosa. Els avisos de la junta i les comissions sempre els veu tot el club. Els amics s'afegeixen des del botó <b>Afegeix amics</b> del Club.</p>
+    <p class="note" style="margin:0">Tria qui veu cada cosa. Els avisos de les comissions (Junta inclosa) els veu sempre tot el club. Les amistats s'afegeixen des del botó <b>Afegeix amics</b> del Club.</p>
     ${ITEMS.map(it => { const v = pref(it.k); return `<label class="priv-row" for="pv_${it.k}"><span class="priv-t"><b>${esc(it.t)}</b><small class="note">${esc(it.nota)}</small></span>
       <select class="field" id="pv_${it.k}" data-priv="${it.k}">${Object.keys(NIV).filter(k => it.ningu || k !== "ningu").map(k => `<option value="${k}"${k === v ? " selected" : ""}>${NIV[k]}</option>`).join("")}</select></label>
-      ${it.k === "presencia" ? `<label class="cl-sw priv-base"><span><b>Marca'm a la base automàticament</b><small class="note">Si fa 10 minuts que ets a menys de 50 m de la base, et marca a la base; si fa 2 minuts que ets a més de 200 m, et treu. <b>Consum de bateria baix:</b> només funciona amb l'app oberta i llegeix el GPS més sovint com més a prop de la base ets.</small></span><input type="checkbox" class="switch" id="pvAuto"${autoBase() ? " checked" : ""}${pref("presencia") === "ningu" ? " disabled" : ""}></label>` : ""}
-      ${it.k === "avisos" ? `<label class="cl-sw priv-base"><span><b>+ Gent a la base nàutica</b><small class="note">Els socis que en aquell moment són a la base també veuen els teus avisos, encara que no siguin del grup triat.</small></span><input type="checkbox" class="switch" id="pvBase"${avisosBase() ? " checked" : ""}></label>` : ""}`; }).join("")}
+      ${it.k === "presencia" ? `<label class="cl-sw priv-base"><span><b>Marca'm a la base automàticament</b><small class="note">Després de 10 minuts a menys de 50 m de la base, et marca a la base; després de 2 minuts a més de 200 m, et treu. Només funciona amb l'app oberta i gasta poca bateria: llegeix el GPS més sovint com més a prop ets.</small></span><input type="checkbox" class="switch" id="pvAuto"${autoBase() ? " checked" : ""}${pref("presencia") === "ningu" ? " disabled" : ""}></label>` : ""}
+      ${it.k === "avisos" ? `<label class="cl-sw priv-base"><span><b>+ Gent a la base nàutica</b><small class="note">Qui sigui a la base en aquell moment també veu els teus avisos, encara que no sigui del grup triat.</small></span><input type="checkbox" class="switch" id="pvBase"${avisosBase() ? " checked" : ""}></label>` : ""}`; }).join("")}
     <div class="vp-more"><button class="ib-i" type="button" data-info="iPriv" aria-label="Què vol dir cada opció" aria-expanded="false">i</button>
-      <div class="vp-info" id="iPriv" hidden>${Object.keys(NIV).map(k => `<p><b>${NIV[k]}:</b> ${esc(NIV_LLARG[k])}</p>`).join("")}<p><b>Gent a la base:</b> els socis que han marcat «Soc a la base» o hi han tornat amb el GPS. Els avisos de seguretat els poden marcar com a resolts la junta, els responsables i qui és a la base.</p><p>El que ja has compartit amb «Amics» ho veuen els amics que tenies en aquell moment; quan acceptes o treus un amic, l'app ho actualitza.</p></div></div>`;
+      <div class="vp-info" id="iPriv" hidden>${Object.keys(NIV).map(k => `<p><b>${NIV[k]}:</b> ${esc(NIV_LLARG[k])}</p>`).join("")}<p><b>Gent a la base:</b> qui ha marcat «Soc a la base» o hi ha tornat amb el GPS. Els avisos de seguretat els poden marcar com a resolts la Junta, les persones responsables i qui és a la base.</p><p>Quan acceptes o treus una amistat, l'app actualitza qui veu el que ja havies compartit amb «Amics».</p></div></div>`;
 }
 
 /* ---------- amics: botó flotant del Club i full ---------- */
@@ -96,12 +96,12 @@ function friendsBody(){
   return `<div class="msg err" id="privMsg" hidden></div>
     <label class="cl-field" for="privCerca"><span class="lbl">Cerca un soci</span>
       <input class="field" id="privCerca" type="search" placeholder="Escriu el nom" autocomplete="off" value="${esc(cerca)}" style="font-family:var(--f-body)"></label>
-    <div id="privTroba">${troba.map(p => row(p.nom, `<button class="btn sm cl-pri" type="button" data-fadd="${esc(p.id)}">Afegeix</button>`)).join("") || (q.length >= 2 ? `<p class="note">Cap soci amb aquest nom (o ja és amic teu).</p>` : `<p class="note">Escriu almenys dues lletres.</p>`)}</div>
+    <div id="privTroba">${troba.map(p => row(p.nom, `<button class="btn sm cl-pri" type="button" data-fadd="${esc(p.id)}">Afegeix</button>`)).join("") || (q.length >= 2 ? `<p class="note">Ningú amb aquest nom (o ja és una amistat teva).</p>` : `<p class="note">Escriu almenys dues lletres.</p>`)}</div>
     ${rebudes.length ? `<span class="lbl">Sol·licituds rebudes · ${rebudes.length}</span>` + rebudes.map(a => row(nomDe(a), `<button class="btn sm cl-pri" type="button" data-fok="${esc(a.id)}">Accepta</button><button class="btn sm" type="button" data-fno="${esc(a.id)}">Rebutja</button>`)).join("") : ""}
     <span class="lbl">Amics · ${acc.length}</span>
-    ${acc.map(a => row(nomDe(a), `<button class="btn sm" type="button" data-fask="${esc(a.id)}">Treu</button>`) + `<div data-fbox="${esc(a.id)}"></div>`).join("") || `<p class="note">Encara no tens cap amic a l'app.</p>`}
+    ${acc.map(a => row(nomDe(a), `<button class="btn sm" type="button" data-fask="${esc(a.id)}">Treu</button>`) + `<div data-fbox="${esc(a.id)}"></div>`).join("") || `<p class="note">Encara no tens cap amistat a l'app.</p>`}
     ${enviades.length ? `<span class="lbl">Enviades, pendents</span>` + enviades.map(a => row(nomDe(a), `<button class="btn sm" type="button" data-fno="${esc(a.id)}">Cancel·la</button>`)).join("") : ""}
-    <p class="note">Els amics han d'acceptar la sol·licitud. Qui veu cada cosa es tria a Configuració ▸ Confidencialitat.</p>`;
+    <p class="note">L'altra persona ha d'acceptar la sol·licitud. Qui veu cada cosa es tria a Configuració ▸ Confidencialitat.</p>`;
 }
 function openFriends(){
   if(!C || !window.OV_CLUB?.sheet) return;

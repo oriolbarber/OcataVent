@@ -72,7 +72,7 @@
         <div class="seg" role="group" aria-label="Mida del text" id="sizeSeg">
           <button type="button" data-size="normal"><span style="font-size:.85em">A</span>&nbsp;Petita</button><button type="button" data-size="big"><span style="font-size:1.25em">A</span>&nbsp;Gran</button></div></div>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iVis" aria-label="Més informació sobre la visualització" aria-expanded="false">i</button>
-        <p class="vp-info" id="iVis" hidden>«Automàtic» fa servir el tema clar o fosc que tingui el mòbil. «Gran» fa més grans les lletres i els números i mostra els indicadors l'un sota l'altre.</p></div>
+        <p class="vp-info" id="iVis" hidden>«Automàtic» segueix el tema clar o fosc del mòbil. «Gran» amplia lletres i números i posa els indicadors un sota l'altre.</p></div>
     </div>
   </details>
   <details class="vp-sec">
@@ -81,11 +81,11 @@
       <div id="modelBox"></div>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iModel" aria-label="Més informació sobre els models" aria-expanded="false">i</button>
       <div class="vp-info" id="iModel" hidden>
-        <p><b>El que més encerta avui</b>: compara les hores ja passades d'avui amb el vent mesurat a l'estació i fa servir el model que s'hi ha acostat més. Calen 3 hores mesurades; abans, fa servir el model que més ha encertat els últims 30 dies (si n'hi ha prou dies) o el guanyador de l'últim cop.</p>
-        <p><b>Historial d'encerts</b>: cada dia es desa la previsió de cada model a les 7 h i, a les 22 h, es compara amb el vent mesurat a l'estació entre les 8 i les 20 h. També es classifica el dia segons el vent dominant (terral, marinada, llevant o garbí).</p>
-        <p><b>Optimista</b> i <b>Pessimista</b>: per a cada hora, agafa el model que dona les condicions més favorables o més desfavorables per a l'embarcació triada. Si tots dos diuen el mateix, la previsió és fiable; si són molt diferents, hi ha dubte.</p>
-        <p><b>AROME</b>: model de Météo-France d'alta resolució (≈1,3 km), molt detallat a la costa; arriba a 2–4 dies. <b>ICON</b>: model europeu del servei alemany (DWD, ≈7 km), molt bo amb el vent; arriba a 5 dies. <b>ECMWF</b>: model del centre europeu (9 km), el més fiable a mitjà termini. <b>UKMO</b>: model global del Met Office britànic (10 km). <b>Open-Meteo</b>: no és un model sinó la barreja que fa el servei Open-Meteo dels models que funcionen millor a cada zona i termini.</p>
-        <p>L'<b>error d'avui</b> és la diferència mitjana entre el vent previst i el mesurat, en nusos: com més baix, millor.</p>
+        <p><b>El que més encerta avui</b>: compara les hores passades d'avui amb el vent mesurat a l'estació i tria el model que s'hi ha acostat més. Fins que hi ha 3 hores mesurades, fa servir el que més ha encertat els últims 30 dies (amb 5 dies de dades com a mínim) o, si no, el de l'últim cop.</p>
+        <p><b>Historial d'encerts</b>: cada dia es desa la previsió de les 7 h de cada model i, a les 22 h, es compara amb el vent mesurat de 8 a 20 h. El dia es classifica pel vent dominant, per saber quin model encerta més amb terral, marinada, llevant o garbí.</p>
+        <p><b>Optimista</b> i <b>Pessimista</b>: per a cada hora, el model més favorable o més desfavorable per a l'embarcació triada. Si coincideixen, la previsió és fiable; si difereixen molt, hi ha dubte.</p>
+        <p><b>AROME</b> (Météo-France, ≈1,3 km): molt detallat a la costa; 2–4 dies. <b>ICON-EU</b> (servei alemany DWD, ≈7 km): bo amb el vent; 5 dies. <b>ECMWF</b> (centre europeu, 9 km): el més fiable a mitjà termini. <b>UKMO</b> (Met Office britànic, 10 km): global. <b>Open-Meteo</b>: no és un model, sinó la barreja dels que funcionen millor a cada zona i termini.</p>
+        <p>L'<b>error d'avui</b> és la diferència mitjana, en nusos, entre el vent previst i el mesurat: com més baix, millor.</p>
       </div></div>
     </div>
   </details>
@@ -98,10 +98,10 @@
       <div class="vp-more"><button class="ib-i" type="button" data-info="iCrit" aria-label="Més informació sobre els criteris" aria-expanded="false">i</button>
       <div class="vp-info" id="iCrit" hidden>
         <p><b>Colors</b>: verd dins la franja ideal; taronja entre el mínim i l'ideal o entre l'ideal i el màxim; vermell fora dels límits.</p>
-        <p><b>Veredicte</b>: Ideal o Bo (verd), Limitat (taronja) i No recomanat (vermell). Sota l'indicador surt el motiu: poc vent, vent fort, onada, terral…</p>
-        <p><b>Com es calcula</b>: es valoren el vent mitjà i l'onada que arriba a la platja (amb mar de fons, de 7 s o més, es compta més alta). Resten les ratxes de més d'1,6 vegades la mitjana, el terral (mestral, tramuntana o ponent), el plugim i la pluja probable.</p>
-        <p><b>Sempre no recomanat</b>: ratxes per sobre del màxim, terral de 10 kn o més, pluja, tempesta i poca llum (des de 30 min abans de la posta fins a 30 min després de la sortida del sol).</p>
-        <p>L'indicador de la portada fa la mitjana de l'última hora mesurada i de les 2 hores següents de previsió. «Aigua freda» (menys de 17 °C) només avisa del neoprè.</p>
+        <p><b>Veredicte</b>: Ideal o Bo (6 o més), en verd; Limitat (de 3,5 a 6), en taronja; No recomanat (menys de 3,5), en vermell. Sota l'indicador surt el motiu: poc vent, vent fort, onada, terral…</p>
+        <p><b>Com es calcula</b>: es valoren el vent mitjà i l'onada a la platja (amb mar de fons, de 7 s o més, es compta més alta). Resten punts les ratxes de més d'1,6 vegades el vent mitjà, el terral de 6 kn o més (ponent, mestral o tramuntana), el plugim i la pluja probable (60 % o més).</p>
+        <p><b>Sempre no recomanat</b>: ratxes per sobre del màxim, terral de 10 kn o més, pluja, tempesta i poca llum (de 30 min abans de la posta a 30 min abans de la sortida del sol).</p>
+        <p>L'indicador de la portada fa la mitjana de l'última hora mesurada i les 2 hores següents de previsió. «Aigua freda» (menys de 17 °C) només avisa per dur neoprè.</p>
       </div></div>
     </div>
   </details>
@@ -122,8 +122,8 @@
         <button class="ib-i" type="button" data-info="iInd" aria-label="Què mostren els indicadors" aria-expanded="false">i</button>
       </div>
       <div class="vp-info" id="iInd" hidden>
-        <p><b>Idoneïtat</b> (esquerra): nota de 0 a 10 per a l'embarcació triada. Fa la mitjana de l'última hora mesurada i de les 2 hores següents de previsió. L'anell exterior va del vermell (0) al taronja (5) i al verd (10). Els anells de dins i els mini indicadors són el vent (blanc o negre) i les onades (blau). A sota hi ha la bandera de bany i el motiu.</p>
-        <p><b>Rosa dels vents</b> (dreta): d'on ha bufat i d'on bufarà avui. Les barres <b>plenes</b> són el vent registrat a l'estació; les <b>buides</b> (només contorn), la previsió fins a la posta. Com més llarga la barra, més estona de vent d'aquella direcció. El con marca el vent d'ara, el número al centre és la seva força. La icona blava d'onades, per fora del cercle, indica d'on ve l'onada i la seva alçada. El botó rodó de dalt a la dreta orienta la rosa amb la brúixola del mòbil: el nord de la rosa apunta al nord de veritat i el triangle blau de dalt marca cap on mires.</p>
+        <p><b>Idoneïtat</b> (esquerra): nota de 0 a 10 per a l'embarcació triada, amb la mitjana de l'última hora mesurada i les 2 hores següents de previsió. L'anell exterior va del vermell (0) al taronja (5) i al verd (10); els de dins i els mini indicadors són el vent (blanc o negre) i les onades (blau). A sota, la bandera de bany i el motiu.</p>
+        <p><b>Rosa dels vents</b> (dreta): d'on ha bufat i d'on bufarà avui. Barres <b>plenes</b>: vent mesurat a l'estació; <b>buides</b>: previsió fins a la posta. Com més llarga, més estona de vent d'aquella direcció. El con és el vent d'ara i el número del centre, la força. La icona blava de fora indica d'on ve l'onada i l'alçada. El botó rodó de dalt a la dreta orienta la rosa amb la brúixola del mòbil: el nord apunta al nord real i el triangle blau marca cap on mires.</p>
       </div>
       <div class="now-grid">
         <div class="gauge" id="gauge"></div>
@@ -170,10 +170,11 @@
     <div class="src-line"><span><b>Dades:</b> Open-Meteo · meteoelmasnou.cat · Ports de l'Estat · Meteocat · Generalitat</span>
       <button class="ib-i" type="button" data-info="iSrc" aria-label="D'on vénen les dades" aria-expanded="false">i</button></div>
     <div class="vp-info" id="iSrc" hidden>
-      <p><b>Previsió:</b> Open-Meteo (models AROME, ICON, ECMWF i UKMO; onatge MFWAM).</p>
-      <p><b>Vent mesurat:</b> estacions del Masnou i d'Ocata de meteoelmasnou.cat.</p>
+      <p><b>Previsió:</b> Open-Meteo (models AROME, ICON-EU, ECMWF i UKMO; onatge MFWAM).</p>
+      <p><b>Vent mesurat:</b> estacions d'Ocata, El Masnou i Badalona, de meteoelmasnou.cat.</p>
       <p><b>Onada mesurada:</b> boia Barcelona II de Ports de l'Estat.</p>
       <p><b>Avisos:</b> Meteocat. <b>Bandera de les platges:</b> Generalitat de Catalunya.</p>
+      <p><b>Mapes:</b> meteoblue, Windy, RainViewer (radar) i OpenSeaMap (carta nàutica).</p>
       <p>Vent en nusos, onades en metres.</p>
     </div>
     
@@ -187,9 +188,9 @@
     <article class="card trip-new">
       <div class="card-h"><h2 class="tn-h">Nova sortida</h2><button class="ib-i" type="button" data-info="iTrip" aria-label="Com funciona la gravació" aria-expanded="false">i</button></div>
       <div class="vp-info" id="iTrip" hidden>
-        <p>Grava la ruta amb el GPS i el vent de l'estació cada minut. En acabar tens la distància, les velocitats, els rumbs respecte al vent i el mapa.</p>
-        <p><b>Amb la pantalla apagada no grava:</b> el navegador atura el GPS. Deixa l'app oberta; el mode estalvi la posa negra i gasta molt poc.</p>
-        <p><b>Vols gravar amb la pantalla apagada?</b> Fes servir una app de GPS (GPS Logger, OsmAnd, Strava o el rellotge) i després importa el GPX a l'Historial: l'app hi afegeix el vent de l'estació.</p>
+        <p>Grava la ruta amb el GPS i el vent de l'estació (cada minut; cada 5 en mode estalvi). En acabar tens la distància, les velocitats, els rumbs respecte al vent i el mapa.</p>
+        <p><b>App d'Android:</b> continua gravant amb la pantalla apagada.</p>
+        <p><b>Web:</b> amb la pantalla apagada no grava, perquè el navegador atura el GPS. Deixa-la oberta: el mode estalvi la posa negra i gasta molt poc. També pots gravar amb una altra app o un rellotge i importar el GPX a l'Historial.</p>
       </div>
       <div class="ck-row" id="ckRow">
         <button type="button" class="ck" id="pmGeo" data-ck="geo"><i class="pm-ic"></i><b>GPS</b><em></em><small id="pmGeoT">Comprovant…</small></button>
@@ -300,7 +301,7 @@
   <article class="card" id="mapCam" hidden>
     <div class="card-h"><span class="lbl">Webcam · Nàutic Masnou</span><button class="ib-i" type="button" data-info="iCam" aria-label="Informació de la webcam" aria-expanded="false">i</button></div>
     <div class="vp-info" id="iCam" hidden>
-      <p>El zoom que posis a pantalla completa es guarda en aquest mòbil i es fa servir també aquí. Per tornar a veure-la sencera, toca dues vegades el vídeo a pantalla completa.</p>
+      <p>El zoom de la pantalla completa es desa en aquest mòbil i també s'aplica aquí. Per tornar a veure-la sencera, toca dues vegades el vídeo a pantalla completa.</p>
     </div>
     <div class="frame cam cam-box" id="camBox"><iframe id="camFrame" class="cam-if" title="Webcam en directe del Nàutic Masnou" sandbox="allow-scripts allow-same-origin" allow="autoplay"></iframe>
       <div class="cam-play" id="camPlay" aria-hidden="true"><span><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Toca per veure-la</span></div>
@@ -313,7 +314,7 @@
   <article class="card" id="mapCam2" hidden>
     <div class="card-h"><span class="lbl">Webcam · Club Natació Badalona</span><button class="ib-i" type="button" data-info="iCam2" aria-label="Informació de la webcam de Badalona" aria-expanded="false">i</button></div>
     <div class="vp-info" id="iCam2" hidden>
-      <p>El zoom que posis a pantalla completa es guarda en aquest mòbil i es fa servir també aquí. Per tornar a veure-la sencera, toca dues vegades el vídeo a pantalla completa.</p>
+      <p>El zoom de la pantalla completa es desa en aquest mòbil i també s'aplica aquí. Per tornar a veure-la sencera, toca dues vegades el vídeo a pantalla completa.</p>
     </div>
     <div class="frame cam cam-box" id="camBox2"><iframe id="camFrame2" class="cam-if" title="Webcam del Club Natació Badalona" sandbox="allow-scripts allow-same-origin" referrerpolicy="origin" allow="autoplay"></iframe>
       <div class="cam-play" id="camPlay2" aria-hidden="true"><span><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Toca per veure-la</span></div>

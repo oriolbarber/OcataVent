@@ -16,7 +16,7 @@ const FB_CONFIG = {
 };
 const OWNER_UID = "aHjoROUH3aQsHh6ksS3Tt1p5soF2";   // administrador inicial (també fixat a firestore.rules)
 const CLUB_ID = "ocatavent";
-const CONSENT_V = "2026-10-13";                      // canvia-la si canvia el text de consentiment
+const CONSENT_V = "2026-10-14";                      // canvia-la si canvia el text de consentiment
 const CHUNK = 400000;                                // caràcters per tros (Firestore: màx. 1 MiB per document)
 const MAX_TRAMS = 20;
 
@@ -293,12 +293,12 @@ async function relink(){
 /* ---------- interfície: secció «Compte» de la configuració ---------- */
 const CONSENT_HTML = `
   <p><b>Responsable:</b> Club Ocata Vent (El Masnou).</p>
-  <p><b>Què es desa:</b> el teu nom, el correu del compte i la data d'aquesta acceptació, perquè els administradors del club et reconeguin i aprovin l'alta. I les sortides que hi pugis: ruta GPS, hores, velocitats i vent.</p>
-  <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. El que publiques al club (sortides, «qui surt», anuncis), on ets i els avisos de seguretat ho veu qui triïs a Configuració ▸ Confidencialitat: tothom, el club, la junta, els teus amics o ningú. Els socis veuen el teu nom per poder-te afegir com a amic. Els administradors veuen el nom i el correu dels socis.</p>
-  <p><b>Presència a la base:</b> només si l'actives. Mentre ets a la base o navegant, els responsables (o tot el club, si ho tries) veuen on ets. S'esborra en acabar o al cap de 24 h.</p>
-  <p><b>On:</b> Google Firebase. El compte el gestiona Firebase Authentication; les sortides es guarden a Cloud Firestore, en servidors de la Unió Europea.</p>
-  <p><b>Per a què:</b> només perquè l'app funcioni. No es ven ni es cedeix a ningú, i el correu no s'envia a cap altre servei.</p>
-  <p><b>Els teus drets:</b> pots esborrar el compte i totes les dades del núvol des d'aquí mateix, quan vulguis. Per consultar-les o corregir-les, adreça't a la junta del club.</p>
+  <p><b>Què es desa:</b> el teu nom, el correu i la data d'aquesta acceptació, perquè l'administració del club pugui aprovar l'alta; i les sortides que hi pugis (ruta GPS, hores, velocitats i vent).</p>
+  <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. El que publiques (mur, «Qui surt», anuncis), on ets i els avisos de seguretat ho veu qui triïs a Configuració ▸ Confidencialitat: tothom, el club, les teves amistats o ningú. La gent del club veu el teu nom per poder-te afegir com a amistat. L'administració veu el nom i el correu de cada persona sòcia.</p>
+  <p><b>On ets:</b> només mentre ets a la base o navegant, i ho veu qui hagis triat (per defecte, el club). Navegant, inclou la posició. S'esborra en acabar, en marxar o al cap de 24 h.</p>
+  <p><b>On:</b> Google Firebase (Authentication per al compte i Cloud Firestore per a les dades), en servidors de la Unió Europea.</p>
+  <p><b>Per a què:</b> només perquè l'app funcioni. No es ven ni es cedeix, i el correu no s'envia a cap altre servei.</p>
+  <p><b>Els teus drets:</b> pots esborrar el compte i totes les dades del núvol des d'aquí, quan vulguis. Per consultar-les o corregir-les, adreça't a la junta.</p>
   <p><b>Edat:</b> només per a majors de 18 anys.</p>
   <p><b>Avís:</b> l'app no substitueix el VHF (canal 16) ni el 112.</p>`;
 const consentBlock = (withName) => `
@@ -308,7 +308,7 @@ const consentBlock = (withName) => `
   <div class="vp-info" id="iConsent" hidden>${CONSENT_HTML}</div>`;
 const delBlock = () => `
   <details class="acc-del"><summary>Esborra el compte</summary>
-    <p class="note">S'esborraran el compte, la fitxa de soci, les teves sortides del núvol i tot el que hagis publicat o marcat al club (publicacions, reaccions, avisos, anuncis i presència). No es pot desfer. Les còpies que hi ha en aquest mòbil es queden al mòbil.</p>
+    <p class="note">S'esborraran el compte, la teva fitxa, les sortides del núvol i tot el que hagis publicat o marcat al club (publicacions, reaccions, avisos, anuncis i presència). No es pot desfer. Les sortides d'aquest mòbil s'hi queden.</p>
     ${delStep === "relink" ? `<button class="btn" type="button" id="accRelink">Envia'm un enllaç nou</button>` : `<div id="accDel"></div>`}
   </details>`;
 
@@ -325,7 +325,7 @@ function render(){
     peek.textContent = "Connectant…"; h = `<p class="note">Connectant amb el compte…</p>`;
   } else if(!user && offline && store.get("ov2_cloud")){
     peek.textContent = "Sense connexió";
-    h = `<p class="note">Ara no es pot connectar amb el compte. Les sortides es desen al mòbil i es pujaran quan hi hagi connexió.</p>
+    h = `<p class="note">Ara no es pot connectar. Les sortides es desen al mòbil i es pujaran quan hi hagi connexió.</p>
       <button class="btn" type="button" id="accRetry">Torna-ho a provar</button>`;
   } else if(!user){
     peek.textContent = "Sense compte";
@@ -336,7 +336,7 @@ function render(){
     h = `<div class="seg acc-mode" role="group" aria-label="Tipus d'entrada">
         <button type="button" id="accModeEntra" aria-pressed="${!alta}">Ja soc soci</button>
         <button type="button" id="accModeAlta" aria-pressed="${alta}">Alta nova</button></div>
-      ${alta ? `<p class="note">Opcional. Amb un compte de soci aprovat, les sortides es desen al núvol i les recuperes en qualsevol mòbil. Sense compte, l'app funciona igual.</p>
+      ${alta ? `<p class="note">Opcional. Amb l'alta aprovada, les sortides es desen al núvol, les recuperes en qualsevol mòbil i tens accés al Club. Sense compte, la previsió i la gravació funcionen igual.</p>
       ${consentBlock(true)}` : ""}
       ${google}
       <label class="acc-f"><span class="lbl">Correu</span><input class="field" id="accMail" type="email" autocomplete="${alta ? "email" : "username"}" placeholder="correu@exemple.cat"></label>
@@ -349,25 +349,25 @@ function render(){
   } else {
     const who = `<div class="vp-row"><div class="acc-who"><b>${esc(member?.nom || user.displayName || "")}</b><span>${esc(user.email || "")}${isAdm ? " · administrador" : ""}</span></div>
         <button class="ib-i" type="button" data-info="iUid" aria-label="Identificador del compte" aria-expanded="false">i</button></div>
-      <p class="vp-info" id="iUid" hidden>ID del compte: <b style="font-family:var(--f-mono);word-break:break-all">${esc(user.uid)}</b>${user.uid === OWNER_UID ? "<br>És l'administrador inicial." : ""}</p>`;
+      <p class="vp-info" id="iUid" hidden>ID del compte: <b style="font-family:var(--f-mono);word-break:break-all">${esc(user.uid)}</b>${user.uid === OWNER_UID ? "<br>És el compte d'administració inicial." : ""}</p>`;
     if(!member){
       peek.textContent = "Falta l'alta";
-      h = who + `<p class="note">Has entrat, però encara no has demanat l'alta de soci.</p>${consentBlock(true)}
+      h = who + `<p class="note">Has entrat, però encara no has demanat l'alta al club.</p>${consentBlock(true)}
         <button class="btn acc-wide" type="button" id="accJoin">Sol·licita l'alta</button>`;
     } else if(member.estat === "pendent"){
       peek.textContent = "Pendent d'aprovació";
-      h = who + `<div class="warnbox">Sol·licitud enviada. Un administrador del club l'ha d'aprovar. Mentrestant, les sortides es desen només en aquest mòbil.</div>`;
+      h = who + `<div class="warnbox">Sol·licitud enviada: l'administració del club l'ha d'aprovar. Mentrestant, les sortides es desen només en aquest mòbil.</div>`;
     } else if(member.estat === "rebutjat"){
       peek.textContent = "No aprovat";
-      h = who + `<div class="warnbox">L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta del club.</div>`;
+      h = who + `<div class="warnbox">L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta.</div>`;
     } else {
       peek.textContent = (isAdm ? "Administrador" : "Soci") + " · " + (member.nom || user.email || "");
-      h = who + `<p class="note">Soci aprovat. Les sortides es desen al núvol, privades: només les veus tu.</p>`;
+      h = who + `<p class="note">Alta aprovada. Les sortides es desen al núvol, privades: només les veus tu.</p>`;
     }
     const hasPw = (user.providerData || []).some(p => p.providerId === "password");
     if(!hasPw && user.email) h += `<div class="acc-pw"><div class="vp-row"><span class="lbl">Contrasenya per a l'app</span>
         <button class="ib-i" type="button" data-info="iPw" aria-label="Per a què serveix" aria-expanded="false">i</button></div>
-      <p class="vp-info" id="iPw" hidden>A l'app d'Android no es pot entrar amb Google. Posa aquí una contrasenya i a l'app entra amb ${esc(user.email)} i aquesta contrasenya: és el mateix compte.</p>
+      <p class="vp-info" id="iPw" hidden>A l'app d'Android no es pot entrar amb Google. Posa una contrasenya aquí i, a l'app, entra amb ${esc(user.email)} i aquesta contrasenya: és el mateix compte.</p>
       <input class="field" id="accNewPw" type="password" autocomplete="new-password" minlength="6" placeholder="Contrasenya nova (mínim 6)">
       <button class="btn acc-wide" type="button" id="accSetPw">Desa la contrasenya</button></div>`;
     h += `<button class="btn" type="button" id="accOut">Tanca la sessió</button>` + delBlock();

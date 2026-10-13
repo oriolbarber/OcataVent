@@ -707,8 +707,8 @@ document.addEventListener("pointermove", e => { if(hcDrag) hcPick(hcDrag, e.clie
 ["pointerup","pointercancel"].forEach(t => document.addEventListener(t, () => { hcDrag = null; }));
 document.addEventListener("click", e => { const tr = e.target.closest && e.target.closest("tr[data-k]"); if(tr) selectHour(tr.dataset.k, "table"); });
 const chartLegend = wide => `<details class="legend-d"><summary>Què és cada línia?</summary><div class="legend"><span><span class="sw" style="background:var(--accent-2)"></span>Vent mesurat</span><span><span class="sw" style="background:var(--ink)"></span>Vent previst (kn)</span><span><span class="sw" style="background:var(--muted)"></span>Ratxa</span>${wide?`<span><span class="sw" style="background:var(--wave-l)"></span>Onada (m)</span>`:""}<span><span class="sw" style="background:var(--ideal-t);height:10px"></span>Vent ideal ${esc(DEFAULTS[act].short)}</span></div>
-  <div class="legend lv-legend"><span><span class="vd" style="background:var(--ideal)"></span>Bo</span><span><span class="vd" style="background:var(--marg)"></span>Amb limitacions</span><span><span class="vd" style="background:var(--no)"></span>No adequat</span></div>
-  <p class="note">Toca o arrossega el gràfic per veure les dades d'una hora a la targeta de sobre.</p></details>`;
+  <div class="legend lv-legend"><span><span class="vd" style="background:var(--ideal)"></span>Bo</span><span><span class="vd" style="background:var(--marg)"></span>Limitat</span><span><span class="vd" style="background:var(--no)"></span>No recomanat</span></div>
+  <p class="note">Toca o arrossega el gràfic per veure una hora a la targeta de dalt.</p></details>`;
 function hourTable(date, h0, h1){
   const c = crit[act], nk = nowKey(); let rows = "";
   for(let h=h0; h<=h1; h++){ const p = hourAt(date,h); if(!p) continue; const s = scoreHour(p,c), v = verdict(s);
@@ -871,10 +871,10 @@ function renderHours(){
   const tdI = DATA.daily.time.indexOf(todayDate()), hx = new Date(td + "T12:00:00");
   $("hoursTitle").textContent = td === todayDate() ? "Hores d'avui" : td === DATA.daily.time[tdI+1] ? "Hores de demà" : `Hores ${DAYS_L[hx.getDay()].toLowerCase()} ${hx.getDate()}`;
   const wf = DATA.wf;
-  $("iHours").innerHTML = `<p>Cada fila és una hora, de les 7 a les 21 h. Les hores que ja han passat diuen <b>mesurat</b> i fan servir les dades de l'estació ${esc(STATIONS[stKey].name)}; la resta són previsió del model ${esc(MODELS[model].label)}. Llisca la taula cap als costats per veure totes les columnes.</p>` +
+  $("iHours").innerHTML = `<p>Una fila per hora, de 7 a 21 h. Les hores passades diuen <b>mesurat</b> i són dades de l'estació ${esc(STATIONS[stKey].name)}; la resta, previsió del model ${esc(MODELS[model].label)}. Llisca la taula cap als costats per veure totes les columnes.</p>` +
     (wf && Math.abs(wf.f-1) > 0.05
-      ? `<p><b>Onada corregida ×${r1(wf.f)}.</b> Ara hi ha mar de fons (onada llarga, de 7 s o més) i la ${esc(BUOY.name)} mesura ${wf.f > 1 ? "més" : "menys"} onada que la que dona el model. Per això, a les hores de mar de fons, la previsió d'onada es multiplica per aquest factor. Amb onada curta no es corregeix.</p>`
-      : `<p>L'onada és la del model. Només es corregeix amb les mesures de la ${esc(BUOY.name)} quan hi ha mar de fons (onada de 7 s o més).</p>`);
+      ? `<p><b>Onada corregida ×${r1(wf.f)}.</b> Hi ha mar de fons (onada de 7 s o més) i la ${esc(BUOY.name)} mesura ${wf.f > 1 ? "més" : "menys"} onada que el model: a les hores de mar de fons, la previsió d'onada es multiplica per aquest factor.</p>`
+      : `<p>L'onada és la del model. Només es corregeix amb la ${esc(BUOY.name)} quan hi ha mar de fons (onada de 7 s o més).</p>`);
   $("hoursBody").innerHTML = hourTable(td, 7, 21);
   applySel();
   const best = SLOTS.map(sl => ({sl, a:slotAgg(td, sl, crit[act])})).filter(x=>x.a && !x.a.past).sort((a,b)=>b.a.score-a.a.score)[0];

@@ -486,12 +486,12 @@ async function renderList(){
   trips.sort((a,b) => b.start - a.start);
   const imp = `<article class="card"><div class="import-row"><label class="btn imp-btn" for="gpxIn">Importa una sortida (GPX)</label>
     <button class="ib-i" type="button" data-info="iImp" aria-label="Què és importar una sortida" aria-expanded="false">i</button></div>
-    <div class="vp-info" id="iImp" hidden><p>Una ruta gravada amb una altra app o un rellotge, que sí funcionen amb la pantalla apagada. L'app hi afegeix el vent de l'estació d'aquell moment.</p></div>
+    <div class="vp-info" id="iImp" hidden><p>Una ruta en format GPX gravada amb una altra app o un rellotge. L'app hi afegeix el vent que marcava l'estació.</p></div>
     <input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden><div class="msg" id="importMsg" hidden style="margin-top:8px"></div></article>`;
   const persisted = await storagePersisted();
   const bak = `<article class="card"><div class="card-h"><span class="lbl">Còpia de seguretat</span>
       <span class="src ${persisted ? "live" : ""}"><span class="dot"></span>${persisted ? "Dades protegides al mòbil" : "El navegador pot esborrar-les si falta espai"}</span></div>
-    <p class="note">${window.OV_CLOUD?.approved() ? "Les sortides del teu compte també es guarden al núvol. Si vols, en pots desar una còpia en un fitxer." : "Les sortides només es guarden en aquest mòbil. Desa'n una còpia de tant en tant (per exemple, al Drive) per no perdre-les si canvies de mòbil o esborres l'app."}</p>
+    <p class="note">${window.OV_CLOUD?.approved() ? "Les sortides del teu compte també es desen al núvol. Si vols, en pots guardar una còpia en un fitxer." : "Les sortides només es desen en aquest mòbil. Guarda'n una còpia de tant en tant (per exemple, al Drive) per no perdre-les si canvies de mòbil o esborres l'app."}</p>
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" type="button" id="backupOut">Fes una còpia de seguretat</button>
       <label class="btn" for="backupIn" style="display:inline-flex;align-items:center">Recupera una còpia</label>

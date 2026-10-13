@@ -125,9 +125,9 @@ const accSt = () => window.OV_CLOUD?.status ? OV_CLOUD.status() : null;
 function renderWait(){
   const el = $("clubView"); if(!el) return;
   const st = accSt();
-  const t = st === "pendent" ? ["Pendent d'aprovació", "Has demanat l'alta de soci. Quan un administrador del club l'aprovi, aquí hi veuràs el mur, els avisos, els anuncis i qui és a la base."]
-    : st === "sense-alta" ? ["Falta l'alta de soci", "Has entrat, però encara no has demanat l'alta. Ves a Configuració ▸ Compte i prem «Sol·licita l'alta»."]
-    : ["Alta no aprovada", "L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta del club."];
+  const t = st === "pendent" ? ["Pendent d'aprovació", "Has demanat l'alta. Quan l'administració del club l'aprovi, aquí hi veuràs el mur, els avisos, els anuncis i qui és a la base."]
+    : st === "sense-alta" ? ["Falta l'alta al club", "Has entrat, però encara no has demanat l'alta. Ves a Configuració ▸ Compte i prem «Sol·licita l'alta»."]
+    : ["Alta no aprovada", "L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta."];
   el.innerHTML = `<article class="card cl-wait"><h2>${t[0]}</h2><p>${t[1]}</p>
     <button type="button" class="btn acc-wide" id="clWaitRe">Torna-ho a comprovar</button></article>`;
 }
@@ -262,7 +262,7 @@ function renderAvisos(){
           <button type="button" class="btn cl-go" data-seen="${esc(a.id)}" aria-pressed="${seen}">${seen ? "Vist ✓" : "Marca com a vist"}</button></div>
         ${own || del ? `<div class="cl-row2">${own ? `<button type="button" class="btn sm" data-editavis="${esc(a.id)}">Edita</button>` : "<span></span>"}${del ? `<button type="button" class="btn sm" data-askdel="avisos" data-id="${esc(a.id)}">Retira l'avís</button>` : ""}</div><div data-delbox="${esc(a.id)}"></div>` : ""}</article>`; }).join("")
       || `<article class="card empty">${D.at.avisos ? "No hi ha cap avís." : "Carregant…"}</article>`}
-    ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Només ho veuen els socis d'una comissió${mine.length ? " (" + esc(mine.map(k => COMSm()[k]).join(", ")) + ")" : ""}.</p>` : ""}`;
+    ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Només hi publiquen les comissions${mine.length ? ". Tu hi publiques com a: " + esc(mine.map(k => COMSm()[k]).join(", ")) : ""}.</p>` : ""}`;
 }
 
 /* ---------- ANUNCIS ---------- */
@@ -279,7 +279,7 @@ function renderAnuncis(){
         <div data-delbox="${esc(a.id)}"></div></article>`; }).join("")
       || `<article class="card empty">${D.at.anuncis ? "No hi ha cap anunci." : "Carregant…"}</article>`}
     <button type="button" class="btn cl-pri cl-wide" id="clNewAn">+ Publica un anunci</button>
-    <p class="note">Qui hi està interessat prem «M'interessa» i tu veus qui és per contactar-hi pel teu compte.</p>`;
+    <p class="note">Qui s'hi interessa prem «M'interessa»; només tu veus qui és, per contactar-hi pel teu compte.</p>`;
 }
 
 /* ---------- BASE ---------- */
@@ -304,7 +304,7 @@ function renderBase(){
     <section class="card"><div class="card-h"><span class="lbl">Qui et veu aquí</span><button class="ib-i" type="button" data-info="iPres" aria-label="Com funciona la presència" aria-expanded="false">i</button></div>
       <div class="cl-privrow"><b>${esc(NIVT(v))}</b><button type="button" class="btn" id="clPriv">Canvia-ho</button></div>
       <p class="note" style="margin-top:8px">Es tria a Configuració ▸ Confidencialitat, junt amb qui veu les teves publicacions i els avisos de seguretat.</p>
-      <div class="vp-info" id="iPres" hidden><p>Només mentre ets a la base (amb el botó) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, la web no la pot enviar: caldrà l'app Android.</p></div></section>`;
+      <div class="vp-info" id="iPres" hidden><p>Només mentre ets a la base (amb el botó o automàticament, si ho actives) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, només l'app d'Android la continua enviant.</p></div></section>`;
 }
 function drawMap(){
   const el = $("clMap"); if(!el || typeof baseMap !== "function") return;
@@ -366,11 +366,11 @@ async function pubSheet(t, p){
   sheet(p ? "La meva publicació" : "Comparteix amb el club", `
     ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="60" value="${esc(def)}" style="font-family:var(--f-body)">`)}
     ${field("shText", "Comentari <small>(opcional)</small>", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="280" placeholder="Què ha de saber qui surti un dia com aquest?">${esc(p ? p.comentari || "" : "")}</textarea>`)}
-    <label class="cl-sw"><span><b>${p ? "Mostra la ruta" : "Inclou la ruta"}</b><small class="note">Simplificada i sense el tram inicial i final (fins a 200 m). Ho pots canviar després.</small></span><input type="checkbox" class="switch" id="shRoute"${p && p.ruta ? " checked" : ""}></label>
+    <label class="cl-sw"><span><b>${p ? "Mostra la ruta" : "Inclou la ruta"}</b><small class="note">Simplificada i sense els primers ni els últims 200 m. Ho pots canviar després.</small></span><input type="checkbox" class="switch" id="shRoute"${p && p.ruta ? " checked" : ""}></label>
     ${visSelect("mur", p ? (p.visibilitat || "club") : prefOf("mur"))}
     <p class="note">Les xifres de la sortida no es poden retocar.</p>
     <button type="button" class="btn cl-pri cl-wide" id="shSave">${p ? "Desa els canvis" : "Publica al mur"}</button>
-    ${p ? `<div class="cl-retire"><span class="lbl">Retira del mur</span><p class="note">Desapareix del mur amb les reaccions. La sortida es queda al teu historial.</p><div id="shDel"></div></div>` : ""}`, d => {
+    ${p ? `<div class="cl-retire"><span class="lbl">Retira del mur</span><p class="note">Desapareix del mur amb les reaccions; la sortida es queda al teu historial.</p><div id="shDel"></div></div>` : ""}`, d => {
     if(p) slideConfirm($("shDel"), "Llisca per retirar", async () => { try{ await TO(C.F.deleteDoc(ref("publicacions", p.id))); D.pubs = D.pubs.filter(x => x.id !== p.id); closeSheet(); render(); refreshShare(); }catch(e){ sheetSay(errText(e)); } });
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
       const titol = $("shTitle").value.trim().slice(0, 60) || "Sortida", comentari = $("shText").value.trim().slice(0, 280), wantRoute = $("shRoute").checked;

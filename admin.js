@@ -8,10 +8,10 @@
    Ningú no es pot canviar l'estat ni els permisos a si mateix. Les regles de Firestore ho controlen. */
 (() => {
 const PERMS = {
-  altes:   {t:"Altes",    d:"Aprovar, rebutjar o treure l'accés als socis."},
-  rols:    {t:"Rols i comissions", d:"Crear, reanomenar i eliminar comissions, posar-hi socis i fer-los responsables."},
-  permisos:{t:"Permisos", d:"Donar i treure aquests permisos a altres socis."},
-  moderar: {t:"Moderar",  d:"Retirar publicacions, «Qui surt» i anuncis d'altres socis."}
+  altes:   {t:"Altes",    d:"Aprovar o rebutjar altes i treure l'accés."},
+  rols:    {t:"Rols i comissions", d:"Crear, reanomenar i eliminar comissions, assignar-hi persones i nomenar responsables."},
+  permisos:{t:"Permisos", d:"Donar i treure aquests permisos a altres persones sòcies."},
+  moderar: {t:"Moderar",  d:"Retirar publicacions, «Qui surt» i anuncis d'altres persones."}
 };
 const COMS0 = {junta:"Junta", manteniment:"Manteniment", economica:"Econòmica"};
 let COMS = COMS0;
@@ -62,7 +62,7 @@ function render(){
   sec.hidden = !(C && (gestor() || has("moderar"))); if(sec.hidden) return;
   const pend = members.filter(m => m.estat === "pendent");
   $("peekAdm").textContent = C.isAdm ? "Administrador" + (pend.length ? " · " + pend.length + " pendents" : "") : "Permisos: " + C.perms.map(k => PERMS[k]?.t).join(", ");
-  if(!gestor()){ body.innerHTML = `<p class="note" style="margin:0">Tens el permís de moderar: al Club, a les publicacions, «Qui surt» i anuncis d'altres socis hi veuràs el botó «Retira».</p>`; return; }
+  if(!gestor()){ body.innerHTML = `<p class="note" style="margin:0">Tens el permís de moderar: al Club, a les publicacions, «Qui surt» i anuncis d'altres persones hi veuràs el botó «Retira».</p>`; return; }
   const q = cerca.trim().toLowerCase(), L = members.filter(m => m.estat !== "pendent" && (!q || String(m.nom).toLowerCase().includes(q) || String(m.email).toLowerCase().includes(q)));
   const row = (m, extra) => `<div class="acc-row adm-row"><button type="button" class="adm-open" data-adm="${esc(m.userId)}"><b>${esc(m.nom)}${m.userId === C.user.uid ? " (tu)" : ""}</b><span>${esc(m.email)}</span><small>${esc(rolesTxt(m))}</small></button>${extra || ""}</div>`;
   body.innerHTML = `<div class="msg err" id="admMsg" hidden></div>
@@ -76,9 +76,9 @@ function render(){
         ${k === "junta" ? `<span class="note">No es pot eliminar</span>` : `<button class="btn sm" type="button" data-comdel="${esc(k)}">Elimina</button>`}</div>
         <div data-combox="${esc(k)}"></div>`).join("")}
         <div class="adm-com"><input class="field" type="text" maxlength="40" id="admNewCom" placeholder="Nova comissió" style="font-family:var(--f-body)"><button class="btn sm cl-pri" type="button" id="admAddCom">Afegeix</button></div></div>
-      <p class="note">Canviar el nom es desa en sortir del camp. Eliminar una comissió en treu el nom de la llista; els seus avisos es queden fins que caduquen.</p>` : ""}
+      <p class="note">El nom nou es desa en sortir del camp. Si elimines una comissió, desapareix de la llista; els seus avisos es queden fins que caduquen.</p>` : ""}
     <div class="vp-more"><button class="ib-i" type="button" data-info="iAdm" aria-label="Què permet cada permís" aria-expanded="false">i</button>
-      <div class="vp-info" id="iAdm" hidden>${Object.values(PERMS).map(p => `<p><b>${p.t}:</b> ${esc(p.d)}</p>`).join("")}<p>Toca un soci per canviar-li l'estat, les comissions i els permisos. Ningú no es pot canviar l'estat ni els permisos a si mateix. L'administrador inicial els té tots.</p></div></div>
+      <div class="vp-info" id="iAdm" hidden>${Object.values(PERMS).map(p => `<p><b>${p.t}:</b> ${esc(p.d)}</p>`).join("")}<p>Toca una persona per canviar-ne l'estat, les comissions i els permisos. Ningú no pot canviar el seu propi estat ni els seus permisos. L'administració inicial els té tots.</p></div></div>
     <button class="btn sm" type="button" id="admReload">Actualitza la llista</button>`;
 }
 
@@ -89,8 +89,8 @@ function openMember(id){
   OV_CLUB.sheet(m.nom, `
     <p class="note" style="margin:0">${esc(m.email)} · ${esc(ESTAT[m.estat] || m.estat)}</p>
     ${has("rols") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Comissions i rol</span><div class="acc-roles">${Object.entries(COMS).map(([k, t]) => tog("data-mcom", k, (m.comissions || []).includes(k), t)).join("")}${tog("data-mresp", "1", !!m.responsable, "Responsable")}</div>
-      <p class="note">Les comissions poden publicar avisos al Club. Els responsables (i la Junta) poden marcar com a resolts els avisos de seguretat.</p></div>` : ""}
-    ${has("permisos") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Permisos</span>${self ? `<p class="note">No et pots canviar els permisos a tu mateix.</p>` :
+      <p class="note">Les comissions poden publicar avisos al Club. Les persones responsables i la Junta poden marcar com a resolts els avisos de seguretat.</p></div>` : ""}
+    ${has("permisos") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Permisos</span>${self ? `<p class="note">No pots canviar els teus propis permisos.</p>` :
       `<div class="adm-perms">${Object.entries(PERMS).map(([k, p]) => `<label class="cl-sw"><span><b>${p.t}</b><small class="note">${esc(p.d)}</small></span><input type="checkbox" class="switch" data-mperm="${k}"${(m.permisos || []).includes(k) ? " checked" : ""}></label>`).join("")}</div>`}</div>` : ""}
     ${has("altes") && !self ? `<div class="adm-grp"><span class="lbl">Accés</span>${m.estat === "aprovat" ? `<div id="admRevoke"></div>` : `<button class="btn cl-pri cl-wide" type="button" data-mestat="aprovat">Aprova</button>`}</div>` : ""}`, d => {
     const rev = $("admRevoke"); if(rev) slideConfirm(rev, "Llisca per treure l'accés", () => update(id, {estat:"rebutjat", revisatPer:C.user.uid, revisatAt:C.F.serverTimestamp()}, true));
