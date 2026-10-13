@@ -292,7 +292,7 @@ async function loadBuoy(){
       if(o.Hm0 != null) hours[localKey(d)] = {hs:o.Hm0, hmax:o.Hmax ?? null, tp:o.Tp ?? null, dir:o.MeanDir ?? null, t:d.getTime()}; });
     if(Object.keys(hours).length){ BU = {at:Date.now(), hours}; store.set("ov2_buoy", BU); }
   }catch(e){}
-  if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); }
+  if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); if(window.renderPrep) renderPrep(); }
 }
 /* ---------- historial d'encerts dels models (el desa GitHub Actions a data/encerts.json) ---------- */
 let ENC = null;
@@ -387,7 +387,7 @@ async function loadObs(){
     const hours = {};
     for(const k in by){ const L = by[k], ws = L.map(o=>o.wind).filter(v=>v!=null), gs = L.map(o=>o.gust).filter(v=>v!=null), ts = L.map(o=>o.temp).filter(v=>v!=null);
       hours[k] = {wind: ws.length ? ws.reduce((a,b)=>a+b,0)/ws.length : null, gust: gs.length ? Math.max(...gs) : null, dir: vecDir(L), temp: ts.length ? ts.reduce((a,b)=>a+b,0)/ts.length : null, n: L.length}; }
-    if(key === stKey){ OBS = {key, at: Date.now(), hours, recs: recs24, recs24h: recs24 !== recs}; if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); } }
+    if(key === stKey){ OBS = {key, at: Date.now(), hours, recs: recs24, recs24h: recs24 !== recs}; if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); if(window.renderPrep) renderPrep(); } }
   }catch(e){}
 }
 // Hora combinada: mesura real de l'estació per a les hores passades i l'actual; previsió per a la resta
@@ -772,7 +772,7 @@ function renderInfo(){
     parts.push(`<div class="info-row k-${pv.k}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>
       <span><b>${esc(a.tipus)} Meteocat · ${esc(a.meteor)}</b><br>${esc(a.llindar || "")} · ${when} ${esc(hrs)} · ${pv.t}${a.zones.includes("mar") ? " · zona de mar del Maresme" : " · Maresme"}</span></div>`); });
   el.innerHTML = parts.join("");   // només hi surten avisos actius
-  renderFlag();
+  renderFlag(); if(window.renderPrep) renderPrep();
 }
 // Traços de la bandera, de l'editor d'icones (traç 1 = pal; la resta, farcit del color de la bandera)
 const FLAG_IC = ["M5 23L5 3","M5 3L19 4L18.5 7.5L19 13L5 12Z"];
@@ -863,7 +863,7 @@ function waveSrc(p){
   return p.wcorr ? "previsió corregida" : (p.wdir!=null ? "de "+windName(p.wdir) : "previsió");
 }
 function renderHours(){
-  if(window.renderWindMap) setTimeout(renderWindMap, 0);
+  if(window.renderWindMap) setTimeout(renderWindMap, 0); if(window.renderPrep) setTimeout(renderPrep, 0);
   // tot el dia (7–21 h) del dia que es mira al selector Avui/Demà; les hores passades surten com a «mesurat»
   const td = viewDay(), isTom = td !== todayDate();
   const errs = modelErrors(), bestE = errs.length ? Math.min(...errs.map(e => e.mae)) : null;
@@ -959,7 +959,7 @@ $("themeBtn").addEventListener("click", () => { const p = $("viewPanel"); p.hidd
 $("themeSeg").addEventListener("click", e => { const b = e.target.closest("button[data-theme]"); if(!b) return; theme = b.dataset.theme; store.set("ov2_theme", theme); applyTheme(); renderViewPanel(); });
 $("sizeSeg").addEventListener("click", e => { const b = e.target.closest("button[data-size]"); if(!b) return; textSize = b.dataset.size; store.set("ov2_size", textSize); applySize(); renderViewPanel(); });
 document.addEventListener("change", e => { if(e.target.id !== "modelSel") return; modelPref = e.target.value; store.set("ov2_model_pref", modelPref);
-  if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); } });
+  if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); if(window.renderPrep) renderPrep(); } });
 $("closeView").addEventListener("click", () => { $("viewPanel").hidden = true; $("themeBtn").setAttribute("aria-expanded","false"); });
 applySize();
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
@@ -993,7 +993,7 @@ function tick(){ const d = new Date(); $("clock").textContent = (locKey !== "mas
 tick(); setInterval(tick, 20000);
 
 /* ---------- events ---------- */
-$("actSeg").addEventListener("click", e => { const b = e.target.closest("button[data-act]"); if(!b) return; act = b.dataset.act; store.set("ov2_act", act); if(DATA) applyModel(); render(); if(window.renderWindMap) renderWindMap(); });
+$("actSeg").addEventListener("click", e => { const b = e.target.closest("button[data-act]"); if(!b) return; act = b.dataset.act; store.set("ov2_act", act); if(DATA) applyModel(); render(); if(window.renderWindMap) renderWindMap(); if(window.renderPrep) renderPrep(); });
 $("week").addEventListener("click", e => { const b = e.target.closest(".wrow"); if(!b) return; openDay = openDay === b.dataset.day ? null : b.dataset.day; renderWeek();
   if(openDay && (!SEL || SEL.slice(0,10) !== openDay)) selectHour(hourKey(openDay, Math.max(7, Math.min(21, +selKey().slice(11,13)))), "chart"); });
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-dayv]"); if(!b || !DATA) return;

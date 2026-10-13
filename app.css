@@ -1060,3 +1060,50 @@ footer #iSrc{text-align:left;margin:8px 0}
 .acc-alt{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
 .acc-alt .lnk{background:none;border:0;padding:10px 0;font:inherit;font-weight:600;color:var(--accent);text-decoration:underline;cursor:pointer;min-height:44px}
 .acc-pw{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+
+/* ---------- Nova sortida: condicions, mapa i capes (prep.js) ---------- */
+.prep-now{display:flex;flex-direction:column;gap:10px}
+.pn-top{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;background:var(--kt);border:1.5px solid var(--k)}
+.pn-score{display:flex;align-items:baseline;font-family:var(--f-head);color:var(--k);line-height:1}
+.pn-score b{font-size:3rem;font-weight:700}
+.pn-score small{font-size:1rem;color:var(--muted);margin-left:2px}
+.pn-v{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pn-boat{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;color:var(--muted)}
+.pn-t{font-family:var(--f-head);font-size:1.5rem;text-transform:uppercase;letter-spacing:.04em;color:var(--k);line-height:1.1}
+.pn-why{font-size:.95rem;font-weight:600;color:var(--ink)}
+.pn-hrs{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.pn-hrs::-webkit-scrollbar{display:none}
+.pn-h{flex:1 0 40px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:10px;background:var(--surface-2);font-size:.75rem;color:var(--muted)}
+.pn-h.now{outline:2px solid var(--accent);outline-offset:-2px}
+.pn-h i{width:100%;max-width:26px;height:6px;border-radius:3px;background:var(--k)}
+.pn-h b{font-family:var(--f-mono);font-size:1rem;color:var(--ink)}
+.pn-h svg{color:var(--ink)}
+.pn-lines{display:flex;flex-direction:column;gap:4px;font-size:.92rem}
+.pn-lines .vd{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.prep-card .card-h{margin-bottom:8px}
+.prep-map{height:min(52vh,380px);position:relative;touch-action:pan-y;cursor:default}
+.prep-map .leaflet-marker-pane{z-index:650}
+.prep-cv{position:absolute;left:0;top:0;pointer-events:none}
+.prep-t{margin:8px 0 0;font-size:.92rem}
+.prep-t:empty{display:none}
+.src.bad{color:var(--no)}
+.prep-me{background:none;border:0}
+.pm-pivot{position:relative;width:0;height:0}
+.pm-dot{position:absolute;left:-9px;top:-9px;width:18px;height:18px;border-radius:50%;background:#2f80ff;border:3px solid #fff;box-shadow:0 0 0 1px #0006,0 0 0 8px #2f80ff33;z-index:2}
+.pm-head{position:absolute;left:-9px;top:-30px;width:18px;height:22px;transform-origin:9px 30px;background:#2f80ff;clip-path:polygon(50% 0,100% 100%,50% 75%,0 100%);opacity:.85}
+.prep-base{background:none;border:0}
+.pb-pin{position:absolute;left:-15px;top:-15px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ideal);color:var(--on-k);border:2px solid #fff;box-shadow:0 2px 6px #0007}
+.pb-l{position:absolute;left:18px;top:-9px;font:700 12px/1 var(--f-body);color:#fff;background:#0009;padding:3px 6px;border-radius:6px;white-space:nowrap}
+.prep-layers{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.prep-ly{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.prep-ly button,.prep-more button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:6px 10px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--muted);font:600 .9rem var(--f-body);cursor:pointer}
+.prep-ly button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 10%, var(--surface))}
+.prep-more{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.prep-more .lbl{width:100%}
+.prep-more button{flex:1 1 auto;min-height:40px;font-size:.85rem}
+:root[data-size="big"] .pn-score b{font-size:3.6rem}
+:root[data-size="big"] .pn-t{font-size:1.9rem}
+:root[data-size="big"] .pn-why,:root[data-size="big"] .pn-lines,:root[data-size="big"] .prep-t{font-size:1.1rem}
+:root[data-size="big"] .pn-h{flex-basis:50px;font-size:.9rem}
+:root[data-size="big"] .pn-h b{font-size:1.2rem}
+:root[data-size="big"] .prep-ly button,:root[data-size="big"] .prep-more button{font-size:1.05rem;min-height:50px}

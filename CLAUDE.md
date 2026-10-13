@@ -59,6 +59,12 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Cada document compartit porta `visibilitat` i `lectors` (els uid dels amics en desar-lo, només si és «amics»; si no, buit). Les regles fan servir `veu()`; l'app llegeix amb una consulta per nivell (`getVisible` a `club.js`). Quan s'accepta o es treu un amic, `OV_CLUB.refreshLectors()` actualitza els documents propis.
 - Amics mutus: botó flotant d'afegir amic a baix a la dreta del Club. `amistats/{uidMenor}_{uidMajor}` (de, a, estat pendent | acceptada). `perfils/{uid}` (nom i club) per trobar socis.
 
+## Pantalla «Nova sortida» (`prep.js`)
+- Condicions d'ara per a l'embarcació (mateix càlcul que la portada, `scoreWindow`), hores fins a la posta, millor franja, llum que queda (fins a posta − 30 min), avisos de Meteocat d'avui i bandera.
+- Mapa «On ets»: GPS propi només mentre la pantalla és visible i no es grava (per comprovar-lo), base nàutica, distància i rumb fins a la base. Estàtic al dit (zoom amb botons).
+- Capes (es desen a `ov2_prep_ly`): Vent (partícules en un canvas a la capa `prepWind` + etiquetes de vent i onada com al mapa de la portada, ancorades a la posició), Pluja (últim fotograma de RainViewer) i Carta (OpenSeaMap). «Més mapes» obre la pestanya Mapes amb `mapKind`.
+- L'app crida `window.renderPrep()` quan arriben dades noves.
+
 ## Avisos de seguretat i tasques programades (Fase 3, part 1)
 - **Avisos en ruta** (`avisos.js`, al mòbil de qui navega, cada 20 s): sense vent i lluny (< 1 kn 10 min, > 0,5 nm de la base, estació < 4 kn i previsió < mínim de l'embarcació 2 h), vent massa fort (estació per sobre del màxim o de la ratxa màxima de l'embarcació), onades perilloses (previsió de les properes 3 h per sobre de `wMax`). Avís a pantalla amb vibració i so; es desa a `alertes/{uid}_{inici}_{tipus}` perquè el vegi qui el soci tria a Confidencialitat (per defecte, el club i la gent a la base). El marquen com a resolt la Junta, els responsables o qui és a la base.
 - **Tornada a la base:** dins de 50 m de la base, després d'haver-se allunyat 150 m, i aturat 2 min → la sortida es desa sola i la presència passa a «a la base».

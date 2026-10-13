@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=114">
+<link rel="stylesheet" href="app.css?v=115">
 </head>
 <body>
 <div class="app">
@@ -192,6 +192,28 @@
         <p><b>App d'Android:</b> continua gravant amb la pantalla apagada.</p>
         <p><b>Web:</b> amb la pantalla apagada no grava, perquè el navegador atura el GPS. Deixa-la oberta: el mode estalvi la posa negra i gasta molt poc. També pots gravar amb una altra app o un rellotge i importar el GPX a l'Historial.</p>
       </div>
+      <div class="prep-now" id="prepNow"></div>
+    </article>
+    <article class="card prep-card">
+      <div class="card-h"><span class="lbl">On ets</span><span class="src" id="prepGps">GPS…</span></div>
+      <div class="map prep-map" id="prepMap"></div>
+      <p class="prep-t" id="prepBaseT"></p>
+      <p class="prep-t" id="prepWindT"></p>
+      <p class="prep-t" id="prepRadarT" hidden></p>
+      <div class="prep-layers" id="prepLayers">
+        <div class="prep-ly" role="group" aria-label="Capes del mapa">
+          <button type="button" data-ly="vent" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/></svg>Vent</button>
+          <button type="button" data-ly="pluja" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M7 14a4 4 0 1 1 1-7.9A5 5 0 0 1 18 8a3 3 0 0 1 0 6H7"/><path d="M9 17l-1 3M13 17l-1 3M17 17l-1 3"/></svg>Pluja</button>
+          <button type="button" data-ly="carta" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v15M8 6h8M5 13a7 7 0 0 0 14 0M5 13l-2 2M19 13l2 2"/></svg>Carta</button>
+        </div>
+        <div class="prep-more" role="group" aria-label="Altres mapes"><span class="lbl">Més mapes</span>
+          <button type="button" data-more="mb">Vent · meteoblue</button>
+          <button type="button" data-more="windy">Onades · Windy</button>
+          <button type="button" data-more="cam">Webcam</button>
+        </div>
+      </div>
+    </article>
+    <article class="card prep-checks">
       <div class="ck-row" id="ckRow">
         <button type="button" class="ck" id="pmGeo" data-ck="geo"><i class="pm-ic"></i><b>GPS</b><em></em><small id="pmGeoT">Comprovant…</small></button>
         <button type="button" class="ck" id="pmWake" data-ck="wake"><i class="pm-ic"></i><b>Pantalla</b><em></em><small id="pmWakeT">Comprovant…</small></button>
@@ -356,14 +378,15 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=112"></script>
-<script src="app.js?v=114"></script>
-<script src="trip.js?v=111"></script>
+<script src="app.js?v=115"></script>
+<script src="trip.js?v=112"></script>
 <script src="maps.js?v=105"></script>
 <script src="windmap.js?v=105"></script>
-<script src="cloud.js?v=116"></script>
-<script src="amics.js?v=110"></script>
-<script src="club.js?v=111"></script>
-<script src="admin.js?v=105"></script>
+<script src="prep.js?v=100"></script>
+<script src="cloud.js?v=117"></script>
+<script src="amics.js?v=111"></script>
+<script src="club.js?v=112"></script>
+<script src="admin.js?v=106"></script>
 <script src="avisos.js?v=105"></script>
 </body>
 </html>
