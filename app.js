@@ -333,13 +333,22 @@ async function load(){
   $("refresh").removeAttribute("aria-busy");
   render();
 }
+// Si l'estació triada no envia vent (sensor aturat: el fitxer només porta pressió, pluja…), es fa servir la
+// següent de la llista que en tingui, i la capçalera ho indica amb «↪».
+const stNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+async function stRead(key){
+  const r = await stFetch(STATIONS[key].url+"?t="+Date.now());
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const j = await r.json(), W = stNum(j.W);
+  if(W == null) return null;
+  const G = stNum(j.G);
+  return {key, wind:W*KMH, gust:G == null ? null : G*KMH, dir:stNum(j.B), temp:stNum(j.T), hum:stNum(j.H), pres:stNum(j.P), at:(stNum(j.U)||0)*1000};
+}
 async function loadStation(){
-  try{
-    const key = stKey, r = await stFetch(STATIONS[key].url+"?t="+Date.now());
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    const j = await r.json();
-    if(key === stKey) ST = {key, wind:j.W*KMH, gust:j.G*KMH, dir:j.B, temp:j.T, hum:j.H, pres:j.P, at:(j.U||0)*1000};
-  }catch(e){}
+  const want = stKey, order = [want, ...LOC.stations.filter(k => k !== want)];
+  let got = null;
+  for(const k of order){ try{ got = await stRead(k); }catch(e){ got = null; } if(got && Date.now() - got.at < 30*60*1000) break; got = null; }
+  if(want === stKey) ST = got;
   if(DATA) renderNow();
   return ST;
 }
@@ -388,7 +397,7 @@ function hourAt(date, h){
   if(o && o.wind != null && k <= nowKey()) return Object.assign({}, f, {wind:o.wind, gust:o.gust ?? f.gust, dir:o.dir ?? f.dir, temp:o.temp ?? f.temp, obs:true, fc:f});
   return f;
 }
-const stFresh = () => !!(ST && (Date.now() - ST.at) < 30*60*1000);
+const stFresh = () => !!(ST && ST.wind != null && (Date.now() - ST.at) < 30*60*1000);
 const stamp = iso => { const d = new Date(iso); return d.toLocaleDateString("ca",{day:"numeric",month:"short"})+" a les "+d.toLocaleTimeString("ca",{hour:"2-digit",minute:"2-digit"}); };
 const hourKey = (date,h) => date+"T"+pad(h)+":00";
 const nowKey = () => (DATA?.now?.t || new Date().toISOString()).slice(0,13)+":00";
@@ -800,8 +809,8 @@ function renderNow(){
   const s = scoreWindow(n, c), v = verdict(s);
   const mins = live ? Math.max(0, Math.round((Date.now()-ST.at)/60000)) : null;
   $("src").className = "src"+(live?" live":"");
-  $("src").innerHTML = `<span class="dot"></span>${live ? `${STATIONS[stKey].name} · fa ${mins} min` : `${STATIONS[stKey].name}: sense dades · model`}${LOC.stations.length > 1 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>` : ""}`;
-  $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+". Canvia d'estació");
+  $("src").innerHTML = `<span class="dot"></span>${live ? `${ST.key !== stKey ? "↪ " : ""}${STATIONS[ST.key].name} · fa ${mins} min` : `${STATIONS[stKey].name}: sense dades · model`}${LOC.stations.length > 1 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>` : ""}`;
+  $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+(live && ST.key !== stKey ? ", sense vent ara; dades de "+STATIONS[ST.key].name : "")+". Canvia d'estació");
   $("gauge").innerHTML = gaugeSvg(s, v) + `<div class="grow"><div class="gflag" id="gflag"></div><span class="g-why k-${v.k}">${esc(v.sub || "")}</span></div>`; renderFlag();
   const kind = isOffshore(n.dir) ? "terral" : isOnshore(n.dir) ? "de mar" : "lateral";
   $("rose").innerHTML = `<button type="button" class="cmp-btn" id="cmpBtn" aria-pressed="${cmpOn}" aria-label="Orienta la rosa amb la brúixola del mòbil" title="Orienta amb la brúixola"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 15 12h-6z" fill="currentColor"/><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35"/></svg></button>` + roseSvg({k: lvWind(n.wind, c), dir:n.dir, wind:n.wind, fcDir:fc.dir, wdir:fc.wdir, wave:fc.wave, live, hist: roseHist(OBS.key === stKey ? OBS.recs : [], roseForecast())}); cmpApply();
