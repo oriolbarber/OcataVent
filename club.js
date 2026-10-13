@@ -211,17 +211,18 @@ function renderAnuncis(){
 
 /* ---------- BASE ---------- */
 const presLive = () => D.pres.filter(x => now() - (ms(x.actualitzat) || 0) < DAY);
-const late = x => x.estat === "aigua" && x.retorn && now() > x.retorn;
+const warned = x => x.estat === "aigua" && D.alertes.some(a => a.userId === x.id);
 function renderBase(){
-  const L = presLive(), ai = L.filter(x => x.estat === "aigua").sort((a, b) => (late(b) ? 1 : 0) - (late(a) ? 1 : 0)), ba = L.filter(x => x.estat === "base");
+  const L = presLive(), ai = L.filter(x => x.estat === "aigua").sort((a, b) => (warned(b) ? 1 : 0) - (warned(a) ? 1 : 0)), ba = L.filter(x => x.estat === "base");
   const me = D.myPres && now() - (ms(D.myPres.actualitzat) || 0) < DAY ? D.myPres : null, v = vis();
-  const row = x => `<div class="cl-prow"><span class="cl-av ${x.estat === "base" ? "s-base" : late(x) ? "s-late" : "s-aigua"}" aria-hidden="true">${esc(x.id === uid() ? "TU" : initials(x.nom))}</span>
+  const row = x => { const al = D.alertes.filter(a => a.userId === x.id);
+    return `<div class="cl-prow"><span class="cl-av ${x.estat === "base" ? "s-base" : al.length ? "s-late" : "s-aigua"}" aria-hidden="true">${esc(x.id === uid() ? "TU" : initials(x.nom))}</span>
     <div class="cl-who"><b>${esc(x.id === uid() ? "Tu" : x.nom)}${x.estat === "aigua" ? " · " + esc(boatShort(x.act)) : ""}</b>
-    <span${late(x) ? ' class="cl-late"' : ""}>${x.estat === "base" ? "Des de les " + hm(x.desde) : late(x) ? "Havia de tornar a les " + hm(x.retorn) + " · " + ago(x.retorn) : "Des de les " + hm(x.desde) + (x.retorn ? " · torna a les " + hm(x.retorn) : "")}</span></div>
-    <span class="note">${esc(ago(ms(x.actualitzat) || now()))}</span></div>`;
+    <span${al.length ? ' class="cl-late"' : ""}>${al.length ? esc(al.map(a => ALERT_T[a.tipus] || a.tipus).join(" · ")) : "Des de les " + hm(x.desde)}</span></div>
+    <span class="note">${esc(ago(ms(x.actualitzat) || now()))}</span></div>`; };
   return `<div class="cl-counts"><div class="stat"><span class="lbl">A l'aigua</span><span class="v" style="color:var(--accent)">${ai.length}</span></div><div class="stat"><span class="lbl">A la base</span><span class="v" style="color:var(--ideal)">${ba.length}</span></div></div>
     <article class="card"><div class="map short" id="clMap"></div>
-      <div class="legend"><span><span class="sw cl-sw-base"></span>A la base</span><span><span class="sw cl-sw-aigua"></span>Navegant</span><span><span class="sw cl-sw-late"></span>Passada l'hora de tornada</span></div></article>
+      <div class="legend"><span><span class="sw cl-sw-base"></span>A la base</span><span><span class="sw cl-sw-aigua"></span>Navegant</span><span><span class="sw cl-sw-late"></span>Amb un avís de seguretat</span></div></article>
     <section class="card"><div class="card-h"><span class="lbl">A l'aigua</span></div>${ai.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}</section>
     <section class="card"><div class="card-h"><span class="lbl">A la base</span></div>${ba.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}
       ${v === "ningu" ? `<p class="note" style="margin-top:8px">Tens la presència desactivada (a sota).</p>` : me && me.estat === "base" ? `<button type="button" class="btn cl-wide" id="clLeave" style="margin-top:10px">Marxo de la base</button>` : me ? "" : `<button type="button" class="btn cl-wide cl-ok" id="clHere" style="margin-top:10px">Soc a la base</button>`}</section>
@@ -237,7 +238,7 @@ function drawMap(){
   const pts = [];
   for(const x of presLive()){
     if(x.lat == null) continue;
-    const c = cssVar(x.estat === "base" ? "--ideal" : late(x) ? "--accent-2" : "--accent");
+    const c = cssVar(x.estat === "base" ? "--ideal" : warned(x) ? "--no" : "--accent");
     L.circleMarker([x.lat, x.lon], {radius:11, color:c, fillColor:c, fillOpacity:.9, weight:2}).addTo(mapObj)
       .bindTooltip(x.id === uid() ? "Tu" : initials(x.nom), {permanent:true, direction:"center", className:"cl-tip"});
     pts.push([x.lat, x.lon]);
@@ -402,7 +403,7 @@ async function removeDoc(n, id){
 }
 function presDoc(estat, o){
   return Object.assign({userId:uid(), clubId:C.member.clubId, nom:C.member.nom, estat, act:String(act), lat:HOME[0], lon:HOME[1],
-    desde:now(), retorn:null, visib:vis(), actualitzat:C.F.serverTimestamp()}, o || {});
+    desde:now(), visib:vis(), actualitzat:C.F.serverTimestamp()}, o || {});
 }
 async function setPres(doc){
   await TO(C.F.setDoc(ref("presencia", uid()), doc));
@@ -442,30 +443,33 @@ document.addEventListener("click", async e => {
 document.addEventListener("change", e => { if(e.target.id === "clAll"){ filt.all = e.target.checked; store.set("ov2_club_filt", Object.assign({}, filt, {open:false})); render(); } });
 $("actSeg").addEventListener("click", () => { if(visible() && tab === "mur") setTimeout(render, 0); });
 
-/* ---------- alertes «no ha tornat a l'hora» (les crea GitHub Actions; scripts/no-ha-tornat.mjs) ---------- */
+/* ---------- avisos de seguretat (els detecta avisos.js al mòbil de qui navega) ---------- */
+const ALERT_T = {"sense-vent":"Sense vent i lluny", "vent-fort":"Vent massa fort", "onades":"Onades perilloses"};
 async function loadAlerts(){
   if(!C) return;
-  try{
-    const club = C.member.clubId;
-    D.alertes = C.isResp ? await getAll("alertes", W("clubId", "==", club), W("resolta", "==", false))
-      : await getAll("alertes", W("userId", "==", uid()), W("resolta", "==", false));
-  }catch(e){ D.alertes = []; }
+  try{ D.alertes = C.isResp ? (await getAll("alertes", W("clubId", "==", C.member.clubId), W("resolta", "==", false))).filter(a => ALERT_T[a.tipus]) : []; }
+  catch(e){ D.alertes = []; }
   alertDot(); if(visible()) render();
 }
 function alertDot(){
   const b = $("tabClub"); if(!b) return;
-  let s = b.querySelector(".cl-adot"); const n = D.alertes.length;
+  let s = b.querySelector(".cl-adot"); const n = D.alertes.filter(a => a.userId !== uid()).length;
   if(!n){ if(s) s.remove(); return; }
   if(!s){ s = document.createElement("span"); s.className = "cl-adot"; b.appendChild(s); }
-  s.textContent = n; s.setAttribute("aria-label", n === 1 ? "1 alerta" : n + " alertes");
+  s.textContent = n; s.setAttribute("aria-label", n === 1 ? "1 avís de seguretat" : n + " avisos de seguretat");
+}
+function alertText(a){
+  const v = a.valor, b = boatShort(a.act);
+  if(a.tipus === "sense-vent") return `${b} · sense vent a ${String(v).replace(".", ",")} nm de la base`;
+  if(a.tipus === "vent-fort") return `${b} · és a l'aigua amb ratxes de ${v} kn`;
+  return `${b} · és a l'aigua i s'esperen onades de ${String(v).replace(".", ",")} m`;
 }
 function alertBanner(){
-  if(!D.alertes.length) return "";
-  return D.alertes.slice().sort((a, b) => a.retorn - b.retorn).map(a => { const mine = a.userId === uid();
-    return `<div class="cl-alert" role="alert">${WARN}<div class="cl-who">
-      <b>${mine ? "Has passat l'hora de tornada" : esc(a.nom) + " no ha tornat a l'hora"}</b>
-      <span>${mine ? "Si ja ets a terra, tanca la sortida. Si no, avisa algú del club." : esc(boatShort(a.act)) + " · havia de tornar a les " + hm(a.retorn) + " (" + ago(a.retorn) + ") · última posició " + ago(ms(a.posAt) || now())}</span></div>
-      <div class="cl-abtns">${mine ? "" : `<button type="button" class="btn sm" data-ctab="base">Base</button>`}${C.isResp && !mine ? `<button type="button" class="btn sm" data-resolve="${esc(a.id)}">Resolta</button>` : ""}</div></div>`; }).join("");
+  const L = D.alertes.filter(a => a.userId !== uid()).sort((a, b) => ms(b.creat) - ms(a.creat));
+  return L.map(a => `<div class="cl-alert" role="alert">${WARN}<div class="cl-who">
+      <b>${esc(a.nom)}: ${esc((ALERT_T[a.tipus] || "").toLowerCase())}</b>
+      <span>${esc(alertText(a))} · posició ${esc(ago(ms(a.posAt) || now()))}</span></div>
+      <div class="cl-abtns"><button type="button" class="btn sm" data-ctab="base">Base</button><button type="button" class="btn sm" data-resolve="${esc(a.id)}">Resolta</button></div></div>`).join("");
 }
 async function resolveAlert(id){
   try{ await TO(C.F.updateDoc(ref("alertes", id), {resolta:true, resoltaPer:uid(), resoltaAt:C.F.serverTimestamp()})); D.alertes = D.alertes.filter(a => a.id !== id); alertDot(); render(); }
@@ -500,14 +504,26 @@ const OV_CLUB = window.OV_CLUB = {
   async tripStart(Lv){
     if(!C || vis() === "ningu" || !Lv) return;
     const last = Lv.pts && Lv.pts[Lv.pts.length - 1];
-    try{ await setPres(presDoc("aigua", {act:String(Lv.act || act), desde:Lv.start, retorn:Lv.retorn || null, lat:last ? last.lat : HOME[0], lon:last ? last.lon : HOME[1]})); lastPos = now(); }catch(e){}
+    try{ await setPres(presDoc("aigua", {act:String(Lv.act || act), desde:Lv.start, lat:last ? last.lat : HOME[0], lon:last ? last.lon : HOME[1]})); lastPos = now(); }catch(e){}
   },
   tripPos(Lv, p){
     if(!C || vis() === "ningu" || !D.myPres || D.myPres.estat !== "aigua" || now() - lastPos < 120000) return;
     lastPos = now();
-    C.F.updateDoc(ref("presencia", uid()), {lat:p.lat, lon:p.lon, actualitzat:C.F.serverTimestamp()}).catch(() => {});
+    const s10 = window.OV_AVISOS?.sog10();
+    C.F.updateDoc(ref("presencia", uid()), {lat:p.lat, lon:p.lon, sog: s10 == null ? null : Math.round(s10*10)/10, actualitzat:C.F.serverTimestamp()}).catch(() => {});
   },
   async tripEnd(){ if(!C || !D.myPres) return; try{ await delPres(); }catch(e){} },
+  async arrived(){ if(!C || vis() === "ningu") return; try{ await setPres(presDoc("base")); }catch(e){} },   // tornada a la base detectada pel GPS
+  // Avisos de seguretat de la sortida en curs: es desen perquè els vegin els responsables (només si es comparteix la presència)
+  async raiseAlert(tipus, valor, p, Lv){
+    if(!C || vis() === "ningu" || !Lv) return;
+    try{ await C.F.setDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus), {clubId:C.member.clubId, tipus, userId:uid(), nom:C.member.nom,
+      act:String(D.myPres?.act || act), desde:Lv.start, lat:p ? p.lat : HOME[0], lon:p ? p.lon : HOME[1], posAt:now(), valor:num(valor), resolta:false, creat:C.F.serverTimestamp()}); }catch(e){}
+  },
+  async clearAlert(tipus, Lv){
+    if(!C || !Lv) return;
+    C.F.updateDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus), {resolta:true, resoltaPer:uid(), resoltaAt:C.F.serverTimestamp()}).catch(() => {});
+  },
   async purge(){   // en esborrar el compte: treu tot el que el soci ha publicat o marcat al club
     await ctx(); if(!C) return;
     const me = uid(), club = C.member.clubId, del = (n, id) => C.F.deleteDoc(ref(n, id)).catch(() => {});

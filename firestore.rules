@@ -190,7 +190,7 @@ service cloud.firestore {
     match /presencia/{uid} {
       allow read: if signedIn() && (uid == me() || (clubOk() && (resource.data.visib == 'club' || isResp())));
       allow create, update: if isApproved() && uid == me()
-        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'nom', 'estat', 'act', 'lat', 'lon', 'desde', 'retorn', 'visib', 'actualitzat'])
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'nom', 'estat', 'act', 'lat', 'lon', 'sog', 'desde', 'visib', 'actualitzat'])
         && request.resource.data.userId == me() && request.resource.data.clubId == myClub()
         && nomOk(request.resource.data.nom, 80)
         && request.resource.data.estat in ['base', 'aigua'] && request.resource.data.visib in ['resp', 'club']
@@ -199,15 +199,25 @@ service cloud.firestore {
       allow delete: if signedIn() && (uid == me() || isAdmin());
     }
 
-    // Alertes «no ha tornat a l'hora»: les crea GitHub Actions (compte de servei, fora d'aquestes regles).
-    // Les veuen els responsables del club i la mateixa persona; un responsable la pot marcar com a resolta.
+    // Avisos de seguretat en ruta (sense vent i lluny, vent massa fort, onades perilloses).
+    // Els crea el mòbil de qui navega, només si comparteix la presència.
+    // Identificador: <uid>_<inici de la sortida>_<tipus>. Els veuen els responsables i la mateixa persona.
+    function alertaOk(id) {
+      return request.resource.data.keys().hasOnly(['clubId', 'tipus', 'userId', 'nom', 'act', 'desde', 'lat', 'lon', 'posAt', 'valor', 'resolta', 'creat', 'resoltaPer', 'resoltaAt'])
+        && request.resource.data.userId == me() && request.resource.data.clubId == myClub()
+        && request.resource.data.tipus in ['sense-vent', 'vent-fort', 'onades']
+        && id == me() + '_' + string(request.resource.data.desde) + '_' + request.resource.data.tipus
+        && nomOk(request.resource.data.nom, 80) && request.resource.data.lat is number && request.resource.data.lon is number;
+    }
     match /alertes/{id} {
       allow read: if signedIn() && (resource.data.userId == me() || (clubOk() && isResp()));
+      allow create: if isApproved() && alertaOk(id) && request.resource.data.resolta == false && request.resource.data.creat == request.time;
+      allow update: if isApproved() && resource.data.userId == me() && alertaOk(id);
       allow update: if clubOk() && isResp()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolta', 'resoltaPer', 'resoltaAt'])
         && request.resource.data.resolta == true && request.resource.data.resoltaPer == me()
         && request.resource.data.resoltaAt == request.time;
-      allow create, delete: if false;
+      allow delete: if false;
     }
 
     // Qualsevol altra cosa: tancada

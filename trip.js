@@ -166,8 +166,8 @@ function setRecUI(){
 function startTrip(){
   $("tripErr").hidden = true;
   const eco = $("ecoMode").checked; store.set("ov2_eco", eco);
-  const ret = +($("tripRet")?.value || 0), t0 = Date.now();
-  LIVE = {id: t0, name: $("tripName").value.trim(), act, start: t0, pts: [], wind: [], eco, station: stKey, retorn: ret ? t0 + ret*60000 : null};
+  const t0 = Date.now();
+  LIVE = {id: t0, name: $("tripName").value.trim(), act, start: t0, pts: [], wind: [], eco, station: stKey};
   if(!startWatch()){ LIVE = null; return; }
   saveLive(); setRecUI(); showRide(true);
   window.OV_CLUB?.tripStart(LIVE);   // presència «a l'aigua» (només si el soci ho té activat)
@@ -176,6 +176,11 @@ let confirmStop = 0, confirmDiscard = 0;
 async function stopTrip(){
   if(!LIVE) return;
   if(Date.now() - confirmStop > 4000){ confirmStop = Date.now(); $("stopTrip").textContent = "Toca de nou per desar"; setTimeout(() => $("stopTrip").textContent = "Atura i desa", 4000); return; }
+  await finishTrip();
+}
+// Desa la sortida en curs sense demanar confirmació (botó confirmat o tornada a la base detectada per avisos.js)
+async function finishTrip(){
+  if(!LIVE) return;
   stopWatch();
   const trip = Object.assign({}, LIVE, {end: Date.now()});
   await fillStationWind(trip);

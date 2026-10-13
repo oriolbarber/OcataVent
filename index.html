@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=100">
+<link rel="stylesheet" href="app.css?v=101">
 </head>
 <body>
 <div class="app">
@@ -198,8 +198,6 @@
     </div>
     <label class="tn-name" for="tripName"><span class="lbl">Nom de la sortida <small>(opcional)</small></span>
       <input class="field" id="tripName" type="text" placeholder="P. ex. Regata de dissabte" autocomplete="off" style="font-family:var(--f-body)"></label>
-    <label class="tn-name" for="tripRet"><span class="lbl">Tornada prevista <small>(opcional)</small></span>
-      <select class="field" id="tripRet" style="font-family:var(--f-body)"><option value="0">Sense hora</option><option value="60">D'aquí a 1 h</option><option value="90">D'aquí a 1 h 30</option><option value="120">D'aquí a 2 h</option><option value="180">D'aquí a 3 h</option><option value="240">D'aquí a 4 h</option></select></label>
     <button class="cta" type="button" id="startTrip"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Comença la sortida</button>
     <p class="tn-tip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v9M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>No premis el botó d'apagar mentre graves</p>
     <div class="msg err" id="tripErr" hidden></div>
@@ -348,11 +346,12 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=100"></script>
-<script src="trip.js?v=100"></script>
-<script src="maps.js?v=100"></script>
-<script src="windmap.js?v=100"></script>
-<script src="cloud.js?v=100"></script>
-<script src="club.js?v=100"></script>
+<script src="app.js?v=101"></script>
+<script src="trip.js?v=101"></script>
+<script src="maps.js?v=101"></script>
+<script src="windmap.js?v=101"></script>
+<script src="cloud.js?v=101"></script>
+<script src="club.js?v=101"></script>
+<script src="avisos.js?v=101"></script>
 </body>
 </html>

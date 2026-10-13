@@ -30,7 +30,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
   - Auth: Google i enllaç per correu. Socis aprovats per administradors.
   - Administrador inicial (UID de Firebase de l'Oriol): `aHjoROUH3aQsHh6ksS3Tt1p5soF2`.
   - Firestore: cada registre amb `userId`, `clubId` i `visibilitat` (`privat` | `club` | `public`).
-- **Tasques programades sense pla Blaze:** GitHub Actions amb `cron`. S'hi fan l'avís «no ha tornat a l'hora» i l'historial d'encerts dels models (desar la previsió a les 7 h i comparar-la a les 22 h).
+- **Tasques programades sense pla Blaze:** GitHub Actions amb `cron`. S'hi fa l'historial d'encerts dels models (desar la previsió a les 7 h i comparar-la a les 22 h).
 - **Android:** APK directe amb Capacitor que carrega la web publicada i hi afegeix el GPS en segon pla (foreground service). L'iPhone es queda com a PWA.
 
 ## Núvol (Fase 1, `cloud.js`)
@@ -47,8 +47,10 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Rols al document del soci: `comissions` (junta, manteniment, economica) i `responsable`; els assigna l'administrador des de Compte.
 - El que caduca (`caduca`) ho esborra qualsevol soci que ho vegi. En esborrar el compte, `OV_CLUB.purge()` treu tot el que el soci ha publicat o marcat.
 
-## Tasques programades (Fase 3, part 1: `.github/workflows`, `scripts/`)
-- **No ha tornat a l'hora** (`no-ha-tornat.yml`, cada 10 min): `scripts/no-ha-tornat.mjs` llegeix `presencia` amb firebase-admin; si algú és a l'aigua i passa la tornada prevista + `MARGE_MIN` (30), crea `alertes/{uid}_{desde}`, que el Club mostra als responsables i a l'afectat. Es resol sola quan torna; esborra presències de més de 24 h i alertes resoltes de més de 7 dies. Secrets: `FIREBASE_SERVICE_ACCOUNT` (obligatori) i `NOTIFY_URL` (opcional, ntfy.sh: només nom i hores, mai posició ni correu).
+## Avisos de seguretat i tasques programades (Fase 3, part 1)
+- **Avisos en ruta** (`avisos.js`, al mòbil de qui navega, cada 20 s): sense vent i lluny (< 1 kn 10 min, > 0,5 nm de la base, estació < 4 kn i previsió < mínim de l'embarcació 2 h), vent massa fort (estació per sobre del màxim o de la ratxa màxima de l'embarcació), onades perilloses (previsió de les properes 3 h per sobre de `wMax`). Avís a pantalla amb vibració i so; si es comparteix la presència, es desa a `alertes/{uid}_{inici}_{tipus}` perquè els responsables el vegin al Club.
+- **Tornada a la base:** dins de 50 m de la base, després d'haver-se allunyat 150 m, i aturat 2 min → la sortida es desa sola i la presència passa a «a la base».
+- **No hi ha avís per no tornar a l'hora prevista** (decisió de l'Oriol). Sense servidor de pagament, els responsables veuen els avisos en obrir l'app (no hi ha notificacions).
 - **Encerts dels models** (`encerts.yml`, 4 crons UTC per cobrir horari d'estiu i d'hivern): `scripts/encerts.mjs` desa la previsió de cada model al matí (`data/previsio-avui.json`) i al vespre la compara amb l'estació de 8 a 20 h → `data/encerts.json` (error per model, vent mitjà, tipus: terral, marinada, llevant, garbí, calma). L'app ho mostra al panell de models i ho fa servir quan avui encara no hi ha 3 hores mesurades.
 - `scripts/llocs.mjs` duplica LOCS/STATIONS/MODELS d'`app.js`: si canvien, cal canviar-los als dos llocs.
 
