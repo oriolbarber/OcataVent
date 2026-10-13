@@ -35,7 +35,7 @@ const ERR = {
   "auth/popup-blocked": "El mòbil no ha deixat obrir la finestra de Google. Prova-ho amb l'enllaç per correu.",
   "auth/operation-not-supported-in-this-environment": "Aquí no es pot obrir la finestra de Google. Prova-ho amb l'enllaç per correu.",
   "auth/network-request-failed": "Sense connexió. Torna-ho a provar quan en tinguis.",
-  "auth/operation-not-allowed": "L'entrada per correu encara no està activada al club. Avisa l'administrador.",
+  "auth/operation-not-allowed": "L'entrada per correu encara no està activada al club. Avisa l'administració del club.",
   "auth/unauthorized-domain": "Aquest domini no està autoritzat a Firebase (Authentication → Settings → Authorized domains).",
   "auth/unauthorized-continue-uri": "Aquest domini no està autoritzat a Firebase (Authentication → Settings → Authorized domains).",
   "auth/invalid-email": "El correu no és vàlid.",
@@ -44,7 +44,7 @@ const ERR = {
   "auth/invalid-credential": "Correu o contrasenya incorrectes. Si entraves amb Google o amb enllaç, prem «He oblidat la contrasenya» per posar-ne una.",
   "auth/wrong-password": "Contrasenya incorrecta.",
   "auth/user-not-found": "No hi ha cap compte amb aquest correu. Fes-te'n un a «Alta nova».",
-  "auth/email-already-in-use": "Aquest correu ja té compte (potser amb Google). Ves a «Ja soc soci» i prem «He oblidat la contrasenya» per posar-ne una.",
+  "auth/email-already-in-use": "Aquest correu ja té compte (potser amb Google). Ves a «Ja soc del club» i prem «He oblidat la contrasenya» per posar-ne una.",
   "auth/weak-password": "La contrasenya ha de tenir almenys 6 caràcters.",
   "auth/missing-password": "Escriu la contrasenya.",
   "auth/too-many-requests": "Massa intents seguits. Espera uns minuts.",
@@ -99,7 +99,7 @@ async function readMember(){
 }
 async function createMember(nom){
   const f = await fs(), mail = user.email || "";
-  const n = String(nom || user.displayName || mail.split("@")[0] || "Soci").trim().slice(0, 80);
+  const n = String(nom || user.displayName || mail.split("@")[0] || "Persona sòcia").trim().slice(0, 80);
   await T(f.setDoc(f.doc(db, "members", user.uid), {userId:user.uid, clubId:CLUB_ID, email:mail, nom:n,
     estat: isAdm ? "aprovat" : "pendent", consentVersio:CONSENT_V, consentAt:f.serverTimestamp(), creat:f.serverTimestamp()}));
   store.del("ov2_consent");
@@ -191,7 +191,7 @@ async function logout(){ try{ await A.signOut(auth); say("Has tancat la sessió.
 async function requestJoin(){
   if(!consentFromForm()) return;
   say("Enviant la sol·licitud…");
-  try{ await createMember(store.get("ov2_consent")?.nom); say(member ? (member.estat === "aprovat" ? "Alta feta: ets administrador i ja estàs aprovat." : "Sol·licitud enviada.") : "No s'ha pogut comprovar l'alta.", !member); render(); emit(); if(approved()) sync(); }
+  try{ await createMember(store.get("ov2_consent")?.nom); say(member ? (member.estat === "aprovat" ? "Alta feta: tens permisos d'administració i l'alta ja és aprovada." : "Sol·licitud enviada.") : "No s'ha pogut comprovar l'alta.", !member); render(); emit(); if(approved()) sync(); }
   catch(e){ say(errText(e), true); }
 }
 
@@ -334,7 +334,7 @@ function render(){
       <div class="acc-or">o amb correu i contrasenya</div>`)
       + (window.OV_NATIVE && !alta ? `<p class="note">Si fins ara entraves amb Google, prem «He oblidat la contrasenya» per posar-ne una al mateix compte.</p>` : "");
     h = `<div class="seg acc-mode" role="group" aria-label="Tipus d'entrada">
-        <button type="button" id="accModeEntra" aria-pressed="${!alta}">Ja soc soci</button>
+        <button type="button" id="accModeEntra" aria-pressed="${!alta}">Ja soc del club</button>
         <button type="button" id="accModeAlta" aria-pressed="${alta}">Alta nova</button></div>
       ${alta ? `<p class="note">Opcional. Amb l'alta aprovada, les sortides es desen al núvol, les recuperes en qualsevol mòbil i tens accés al Club. Sense compte, la previsió i la gravació funcionen igual.</p>
       ${consentBlock(true)}` : ""}
@@ -347,7 +347,7 @@ function render(){
       <div class="acc-alt"><button class="lnk" type="button" id="accReset">He oblidat la contrasenya</button>
         <button class="lnk" type="button" id="accLink">Envia'm un enllaç d'accés</button></div>`}`;
   } else {
-    const who = `<div class="vp-row"><div class="acc-who"><b>${esc(member?.nom || user.displayName || "")}</b><span>${esc(user.email || "")}${isAdm ? " · administrador" : ""}</span></div>
+    const who = `<div class="vp-row"><div class="acc-who"><b>${esc(member?.nom || user.displayName || "")}</b><span>${esc(user.email || "")}${isAdm ? " · administració" : ""}</span></div>
         <button class="ib-i" type="button" data-info="iUid" aria-label="Identificador del compte" aria-expanded="false">i</button></div>
       <p class="vp-info" id="iUid" hidden>ID del compte: <b style="font-family:var(--f-mono);word-break:break-all">${esc(user.uid)}</b>${user.uid === OWNER_UID ? "<br>És el compte d'administració inicial." : ""}</p>`;
     if(!member){
@@ -361,7 +361,7 @@ function render(){
       peek.textContent = "No aprovat";
       h = who + `<div class="warnbox">L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta.</div>`;
     } else {
-      peek.textContent = (isAdm ? "Administrador" : "Soci") + " · " + (member.nom || user.email || "");
+      peek.textContent = (isAdm ? "Administració" : "Alta aprovada") + " · " + (member.nom || user.email || "");
       h = who + `<p class="note">Alta aprovada. Les sortides es desen al núvol, privades: només les veus tu.</p>`;
     }
     const hasPw = (user.providerData || []).some(p => p.providerId === "password");

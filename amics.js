@@ -6,7 +6,7 @@
    Les preferències es desen a members/{uid}.privacitat; els amics, a amistats/{uidMenor}_{uidMajor}.
    Els avisos de les comissions no en depenen: sempre els veu tot el club. */
 (() => {
-const NIV = {tothom:"Tothom", club:"El club", amics:"Amics", ningu:"Ningú"};
+const NIV = {tothom:"Tothom", club:"El club", amics:"Amistats", ningu:"Ningú"};
 const NIV_LLARG = {
   tothom:"Qualsevol persona amb l'alta aprovada a l'app (avui, el club; més endavant, també altres clubs).",
   club:"La gent del teu club amb l'alta aprovada.",
@@ -68,44 +68,44 @@ function render(){
   sec.hidden = !C; if(!C) return;
   $("peekPriv").textContent = "Mur: " + NIV[pref("mur")].toLowerCase() + " · on ets: " + NIV[pref("presencia")].toLowerCase();
   body.innerHTML = `<div class="msg err" id="privMsg" hidden></div>
-    <p class="note" style="margin:0">Tria qui veu cada cosa. Els avisos de les comissions (Junta inclosa) els veu sempre tot el club. Les amistats s'afegeixen des del botó <b>Afegeix amics</b> del Club.</p>
+    <p class="note" style="margin:0">Tria qui veu cada cosa. Els avisos de les comissions (Junta inclosa) els veu sempre tot el club. Les amistats s'afegeixen des del botó <b>Afegeix amistats</b> del Club.</p>
     ${ITEMS.map(it => { const v = pref(it.k); return `<label class="priv-row" for="pv_${it.k}"><span class="priv-t"><b>${esc(it.t)}</b><small class="note">${esc(it.nota)}</small></span>
       <select class="field" id="pv_${it.k}" data-priv="${it.k}">${Object.keys(NIV).filter(k => it.ningu || k !== "ningu").map(k => `<option value="${k}"${k === v ? " selected" : ""}>${NIV[k]}</option>`).join("")}</select></label>
       ${it.k === "presencia" ? `<label class="cl-sw priv-base"><span><b>Marca'm a la base automàticament</b><small class="note">Després de 10 minuts a menys de 50 m de la base, et marca a la base; després de 2 minuts a més de 200 m, et treu. Només funciona amb l'app oberta i gasta poca bateria: llegeix el GPS més sovint com més a prop ets.</small></span><input type="checkbox" class="switch" id="pvAuto"${autoBase() ? " checked" : ""}${pref("presencia") === "ningu" ? " disabled" : ""}></label>` : ""}
       ${it.k === "avisos" ? `<label class="cl-sw priv-base"><span><b>+ Gent a la base nàutica</b><small class="note">Qui sigui a la base en aquell moment també veu els teus avisos, encara que no sigui del grup triat.</small></span><input type="checkbox" class="switch" id="pvBase"${avisosBase() ? " checked" : ""}></label>` : ""}`; }).join("")}
     <div class="vp-more"><button class="ib-i" type="button" data-info="iPriv" aria-label="Què vol dir cada opció" aria-expanded="false">i</button>
-      <div class="vp-info" id="iPriv" hidden>${Object.keys(NIV).map(k => `<p><b>${NIV[k]}:</b> ${esc(NIV_LLARG[k])}</p>`).join("")}<p><b>Gent a la base:</b> qui ha marcat «Soc a la base» o hi ha tornat amb el GPS. Els avisos de seguretat els poden marcar com a resolts la Junta, les persones responsables i qui és a la base.</p><p>Quan acceptes o treus una amistat, l'app actualitza qui veu el que ja havies compartit amb «Amics».</p></div></div>`;
+      <div class="vp-info" id="iPriv" hidden>${Object.keys(NIV).map(k => `<p><b>${NIV[k]}:</b> ${esc(NIV_LLARG[k])}</p>`).join("")}<p><b>Gent a la base:</b> qui ha marcat «Soc a la base» o hi ha tornat amb el GPS. Els avisos de seguretat els poden marcar com a resolts la Junta, les persones responsables i qui és a la base.</p><p>Quan acceptes o treus una amistat, l'app actualitza qui veu el que ja havies compartit amb «Amistats».</p></div></div>`;
 }
 
 /* ---------- amics: botó flotant del Club i full ---------- */
 function renderFab(){
   let b = $("friendFab");
   const show = !!C && !$("view-club").hidden;
-  if(!b){ if(!C) return; b = document.createElement("button"); b.type = "button"; b.id = "friendFab"; b.className = "friend-fab"; b.setAttribute("aria-label", "Afegeix amics"); b.innerHTML = ADD_IC; document.body.appendChild(b); b.onclick = openFriends; }
+  if(!b){ if(!C) return; b = document.createElement("button"); b.type = "button"; b.id = "friendFab"; b.className = "friend-fab"; b.setAttribute("aria-label", "Afegeix amistats"); b.innerHTML = ADD_IC; document.body.appendChild(b); b.onclick = openFriends; }
   b.hidden = !show;
   const n = C ? amistats.filter(a => a.estat === "pendent" && a.a === uid()).length : 0;
   let dot = b.querySelector(".ff-dot"); if(n){ if(!dot){ dot = document.createElement("span"); dot.className = "ff-dot"; b.appendChild(dot); } dot.textContent = n; } else if(dot) dot.remove();
-  b.setAttribute("aria-label", n ? `Afegeix amics · ${n} sol·licituds` : "Afegeix amics");
+  b.setAttribute("aria-label", n ? `Afegeix amistats · ${n} sol·licituds` : "Afegeix amistats");
 }
 function friendsBody(){
   const acc = amistats.filter(a => a.estat === "acceptada"), rebudes = amistats.filter(a => a.estat === "pendent" && a.a === uid()), enviades = amistats.filter(a => a.estat === "pendent" && a.de === uid());
-  const nomDe = a => (a.noms || {})[altre(a)] || perfils.find(p => p.id === altre(a))?.nom || "Soci";
+  const nomDe = a => (a.noms || {})[altre(a)] || perfils.find(p => p.id === altre(a))?.nom || "Persona sòcia";
   const lligats = new Set(amistats.map(altre));
   const q = cerca.trim().toLowerCase(), troba = q.length >= 2 ? perfils.filter(p => p.id !== uid() && !lligats.has(p.id) && String(p.nom).toLowerCase().includes(q)).slice(0, 8) : [];
   const row = (nom, btns) => `<div class="acc-row"><div class="acc-who"><b>${esc(nom)}</b></div><div class="acc-btns">${btns}</div></div>`;
   return `<div class="msg err" id="privMsg" hidden></div>
-    <label class="cl-field" for="privCerca"><span class="lbl">Cerca un soci</span>
+    <label class="cl-field" for="privCerca"><span class="lbl">Cerca una persona</span>
       <input class="field" id="privCerca" type="search" placeholder="Escriu el nom" autocomplete="off" value="${esc(cerca)}" style="font-family:var(--f-body)"></label>
     <div id="privTroba">${troba.map(p => row(p.nom, `<button class="btn sm cl-pri" type="button" data-fadd="${esc(p.id)}">Afegeix</button>`)).join("") || (q.length >= 2 ? `<p class="note">Ningú amb aquest nom (o ja és una amistat teva).</p>` : `<p class="note">Escriu almenys dues lletres.</p>`)}</div>
     ${rebudes.length ? `<span class="lbl">Sol·licituds rebudes · ${rebudes.length}</span>` + rebudes.map(a => row(nomDe(a), `<button class="btn sm cl-pri" type="button" data-fok="${esc(a.id)}">Accepta</button><button class="btn sm" type="button" data-fno="${esc(a.id)}">Rebutja</button>`)).join("") : ""}
-    <span class="lbl">Amics · ${acc.length}</span>
+    <span class="lbl">Amistats · ${acc.length}</span>
     ${acc.map(a => row(nomDe(a), `<button class="btn sm" type="button" data-fask="${esc(a.id)}">Treu</button>`) + `<div data-fbox="${esc(a.id)}"></div>`).join("") || `<p class="note">Encara no tens cap amistat a l'app.</p>`}
     ${enviades.length ? `<span class="lbl">Enviades, pendents</span>` + enviades.map(a => row(nomDe(a), `<button class="btn sm" type="button" data-fno="${esc(a.id)}">Cancel·la</button>`)).join("") : ""}
     <p class="note">L'altra persona ha d'acceptar la sol·licitud. Qui veu cada cosa es tria a Configuració ▸ Confidencialitat.</p>`;
 }
 function openFriends(){
   if(!C || !window.OV_CLUB?.sheet) return;
-  OV_CLUB.sheet("Amics", `<div id="friendsBody">${friendsBody()}</div>`, () => { load(); });
+  OV_CLUB.sheet("Amistats", `<div id="friendsBody">${friendsBody()}</div>`, () => { load(); });
 }
 function renderFriends(){ const b = $("friendsBody"); if(b) b.innerHTML = friendsBody(); renderFab(); }
 

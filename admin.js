@@ -61,16 +61,16 @@ function render(){
   const sec = $("admSec"), body = $("admBody"); if(!sec || !body) return;
   sec.hidden = !(C && (gestor() || has("moderar"))); if(sec.hidden) return;
   const pend = members.filter(m => m.estat === "pendent");
-  $("peekAdm").textContent = C.isAdm ? "Administrador" + (pend.length ? " · " + pend.length + " pendents" : "") : "Permisos: " + C.perms.map(k => PERMS[k]?.t).join(", ");
+  $("peekAdm").textContent = C.isAdm ? "Administració" + (pend.length ? " · " + pend.length + " pendents" : "") : "Permisos: " + C.perms.map(k => PERMS[k]?.t).join(", ");
   if(!gestor()){ body.innerHTML = `<p class="note" style="margin:0">Tens el permís de moderar: al Club, a les publicacions, «Qui surt» i anuncis d'altres persones hi veuràs el botó «Retira».</p>`; return; }
   const q = cerca.trim().toLowerCase(), L = members.filter(m => m.estat !== "pendent" && (!q || String(m.nom).toLowerCase().includes(q) || String(m.email).toLowerCase().includes(q)));
   const row = (m, extra) => `<div class="acc-row adm-row"><button type="button" class="adm-open" data-adm="${esc(m.userId)}"><b>${esc(m.nom)}${m.userId === C.user.uid ? " (tu)" : ""}</b><span>${esc(m.email)}</span><small>${esc(rolesTxt(m))}</small></button>${extra || ""}</div>`;
   body.innerHTML = `<div class="msg err" id="admMsg" hidden></div>
     ${has("altes") ? `<span class="lbl">Altes pendents · ${pend.length}</span>
       ${pend.map(m => row(m, `<div class="acc-btns"><button class="btn sm cl-pri" type="button" data-admset="aprovat" data-uid="${esc(m.userId)}">Aprova</button><button class="btn sm danger" type="button" data-admset="rebutjat" data-uid="${esc(m.userId)}">Rebutja</button></div>`)).join("") || `<p class="note">No n'hi ha cap.</p>`}` : ""}
-    <span class="lbl">Socis · ${members.filter(m => m.estat === "aprovat").length} aprovats</span>
+    <span class="lbl">Persones sòcies · ${members.filter(m => m.estat === "aprovat").length} amb alta</span>
     <input class="field" id="admCerca" type="search" placeholder="Cerca per nom o correu" autocomplete="off" value="${esc(cerca)}" style="font-family:var(--f-body)">
-    <div class="adm-list">${L.map(m => row(m)).join("") || `<p class="note">Cap soci.</p>`}</div>
+    <div class="adm-list">${L.map(m => row(m)).join("") || `<p class="note">Ningú.</p>`}</div>
     ${has("rols") ? `<span class="lbl">Comissions · ${Object.keys(COMS).length}</span>
       <div class="adm-coms">${Object.entries(COMS).map(([k, t]) => `<div class="adm-com"><input class="field" type="text" maxlength="40" value="${esc(t)}" data-comname="${esc(k)}" aria-label="Nom de la comissió" style="font-family:var(--f-body)">
         ${k === "junta" ? `<span class="note">No es pot eliminar</span>` : `<button class="btn sm" type="button" data-comdel="${esc(k)}">Elimina</button>`}</div>

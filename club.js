@@ -191,7 +191,7 @@ function intentsCard(){
   return `<section class="card cl-intents" aria-label="Qui surt a navegar"><div class="card-h"><span class="lbl">Qui surt</span><span class="note">S'esborra l'endemà</span></div>
     ${L.map(it => { const ap = it.apuntats || {}, n = Object.keys(ap).length, on = !!ap[uid()], mine = it.userId === uid();
       return `<div class="cl-int"><div class="cl-when"><b>${esc(dl(it.dia))}</b><span>${esc(it.hora)}</span></div>
-        <div class="cl-who"><b>${esc(it.nom)}</b><span>${esc(boatShort(it.act))} · ${n === 1 ? "1 apuntat" : n + " apuntats"}${n ? ": " + esc(Object.values(ap).join(", ")) : ""}</span></div>
+        <div class="cl-who"><b>${esc(it.nom)}</b><span>${esc(boatShort(it.act))} · ${n === 1 ? "1 s'hi apunta" : n + " s'hi apunten"}${n ? ": " + esc(Object.values(ap).join(", ")) : ""}</span></div>
         ${mine ? `<button type="button" class="btn sm" data-askdel="intencions" data-id="${esc(it.id)}">Retira</button>` : `<button type="button" class="btn cl-go" data-join="${esc(it.id)}" aria-pressed="${on}">${on ? "Hi vas ✓" : "Hi vaig"}</button>`}</div>
         ${!mine && canMod() ? modBtn("intencions", it.id) : ""}<div data-delbox="${esc(it.id)}"></div>`; }).join("")}
     <button type="button" class="btn cl-dash" id="clNewIntent">+ Anuncia que surts</button></section>`;
@@ -275,7 +275,7 @@ function renderAnuncis(){
         <div class="cl-afoot"><div class="cl-who"><b>${esc(mine ? "Tu" : a.autorNom)}</b>${mine ? `<span>${names.length === 1 ? "1 interessat" : names.length + " interessats"}</span>` : ""}</div>
           ${mine ? `<button type="button" class="btn sm" data-askdel="anuncis" data-id="${esc(a.id)}">Retira</button>` : `<button type="button" class="btn cl-go" data-interest="${esc(a.id)}" aria-pressed="${on}">${on ? "T'interessa ✓" : "M'interessa"}</button>`}</div>
         ${!mine && canMod() ? modBtn("anuncis", a.id) : ""}
-        ${mine && names.length ? `<div class="cl-names"><span class="lbl">Interessats (només ho veus tu)</span><b>${esc(names.join(" · "))}</b></div>` : ""}
+        ${mine && names.length ? `<div class="cl-names"><span class="lbl">Qui s'hi interessa (només ho veus tu)</span><b>${esc(names.join(" · "))}</b></div>` : ""}
         <div data-delbox="${esc(a.id)}"></div></article>`; }).join("")
       || `<article class="card empty">${D.at.anuncis ? "No hi ha cap anunci." : "Carregant…"}</article>`}
     <button type="button" class="btn cl-pri cl-wide" id="clNewAn">+ Publica un anunci</button>
