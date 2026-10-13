@@ -115,6 +115,7 @@ function onPosErr(err){
   if(err.code === 1 && LIVE && !LIVE.pts.length){ $("tripErr").textContent = msg; $("tripErr").hidden = false; }
 }
 async function keepAwake(){
+  if(window.OV_NATIVE) return;   // a l'app el GPS continua amb la pantalla apagada: no cal tenir-la encesa
   try{ if("wakeLock" in navigator && document.visibilityState === "visible" && (!wakeLock || wakeLock.released)){
     wakeLock = await navigator.wakeLock.request("screen");
     wakeLock.addEventListener("release", () => { if(LIVE && document.visibilityState === "visible") setTimeout(keepAwake, 500); });
@@ -128,7 +129,9 @@ function liveGapNote(){
   const el = $("liveGap"); if(!el) return;
   if(!g.length && !hiddenAt){ el.hidden = true; return; }
   const last = g[g.length - 1], hm = t => new Date(t).toTimeString().slice(0, 5);
-  el.innerHTML = g.length ? `⚠ Ruta incompleta: ${g.length} ${g.length === 1 ? "tram" : "trams"} sense GPS (${fmtDurShort(tot)}), l'últim de ${hm(last.from)} a ${hm(last.to)}. No apaguis la pantalla amb el botó: deixa l'app oberta${LIVE.eco ? " amb la pantalla negra d'estalvi" : " (o activa el mode estalvi)"}.` : "";
+  const fixTxt = window.OV_NATIVE ? "Comprova que l'app té la ubicació «Permet sempre» i la bateria «Sense restriccions»."
+    : `No apaguis la pantalla amb el botó: deixa l'app oberta${LIVE.eco ? " amb la pantalla negra d'estalvi" : " (o activa el mode estalvi)"}.`;
+  el.innerHTML = g.length ? `⚠ Ruta incompleta: ${g.length} ${g.length === 1 ? "tram" : "trams"} sense GPS (${fmtDurShort(tot)}), l'últim de ${hm(last.from)} a ${hm(last.to)}. ${fixTxt}` : "";
   el.hidden = !g.length;
 }
 function startWatch(){
@@ -175,7 +178,7 @@ function setRecUI(){
 
 function startTrip(){
   $("tripErr").hidden = true;
-  const eco = $("ecoMode").checked; store.set("ov2_eco", eco);
+  const eco = false;   // sempre comença en mode normal; l'estalvi es tria dins la pantalla de ruta
   const t0 = Date.now();
   LIVE = {id: t0, name: $("tripName").value.trim(), act, start: t0, pts: [], wind: [], eco, station: stKey};
   if(!startWatch()){ LIVE = null; return; }
@@ -600,7 +603,8 @@ function download(t, kind){
 
 /* ---------- connexions ---------- */
 $("startTrip").addEventListener("click", startTrip);
-$("ecoMode").checked = !!store.get("ov2_eco"); modeSync();
+$("ecoMode").checked = false;
+if(window.OV_NATIVE){ const tt = $("tnTipT"); if(tt) tt.textContent = "Pots apagar la pantalla: l'app continua gravant"; }
 $("ecoOn").addEventListener("click", () => showRide(true));
 $("logList").addEventListener("change", e => {
   if(e.target.id === "gpxIn" && e.target.files[0]) importGpx(e.target.files[0]);
@@ -656,8 +660,6 @@ function ckShow(k){
   d.hidden = !b; if(b) d.innerHTML = b.querySelector("small").innerHTML;
 }
 $("ckRow").addEventListener("click", e => { const b = e.target.closest(".ck"); if(b) ckShow(ckOpen === b.dataset.ck ? null : b.dataset.ck); });
-document.querySelectorAll(".mode-pick [data-mode]").forEach(b => b.addEventListener("click", () => { $("ecoMode").checked = b.dataset.mode === "eco"; store.set("ov2_eco", $("ecoMode").checked); modeSync(); }));
-function modeSync(){ const eco = $("ecoMode").checked; document.querySelectorAll(".mode-pick [data-mode]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.mode === "eco") === eco))); }
 document.addEventListener("click", e => { if(e.target.id === "pmGeoBtn"){
   $("pmGeo").querySelector("small").textContent = "Esperant la resposta…"; ckShow("geo");
   navigator.geolocation.getCurrentPosition(() => permCheck(), () => permCheck(), {enableHighAccuracy:true, timeout:20000});

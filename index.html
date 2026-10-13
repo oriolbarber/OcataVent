@@ -224,15 +224,11 @@
       <div class="ck-detail" id="ckDetail" hidden></div>
       <button class="btn sm ck-allow" type="button" id="pmGeoBtn" hidden>Permet la ubicació</button>
     </article>
-    <div class="mode-pick" role="group" aria-label="Pantalla durant la sortida">
-      <button type="button" data-mode="normal" aria-pressed="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14"/></svg><b>Normal</b><small>Dades i mapa</small></button>
-      <button type="button" data-mode="eco" aria-pressed="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><b>Estalvi</b><small>Negra · bateria</small></button>
-      <input type="checkbox" id="ecoMode" hidden>
-    </div>
+    <input type="checkbox" id="ecoMode" hidden>
     <label class="tn-name" for="tripName"><span class="lbl">Nom de la sortida <small>(opcional)</small></span>
       <input class="field" id="tripName" type="text" placeholder="P. ex. Regata de dissabte" autocomplete="off" style="font-family:var(--f-body)"></label>
     <button class="cta" type="button" id="startTrip"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Comença la sortida</button>
-    <p class="tn-tip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v9M6.3 7.3a8 8 0 1 0 11.4 0"/></svg>No premis el botó d'apagar mentre graves</p>
+    <p class="tn-tip" id="tnTip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v9M6.3 7.3a8 8 0 1 0 11.4 0"/></svg><span id="tnTipT">No premis el botó d'apagar mentre graves</span></p>
     <div class="msg err" id="tripErr" hidden></div>
   </div>
 
@@ -381,7 +377,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=112"></script>
 <script src="app.js?v=115"></script>
-<script src="trip.js?v=114"></script>
+<script src="trip.js?v=115"></script>
 <script src="maps.js?v=105"></script>
 <script src="windmap.js?v=105"></script>
 <script src="prep.js?v=101"></script>
