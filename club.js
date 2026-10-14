@@ -269,7 +269,7 @@ function renderAnuncis(){
   const L = D.anuncis.filter(a => alive(a) && (ui.anCat === "tots" || a.cat === ui.anCat)).sort((a, b) => ms(b.creat) - ms(a.creat));
   return foldFilters("an", ui.anCat === "tots" ? "" : CATS[ui.anCat], ui.anOpen, [["tots", "Tots"]].concat(Object.entries(CATS)).map(([k, t]) => chip("data-acat", k, ui.anCat === k, t)).join(""))
     + `${L.map(a => { const mine = a.userId === uid(), on = !!ui.interest[a.id], names = ui.interested[a.id] || [];
-      return `<article class="card cl-an"><div class="cl-avh"><span class="cl-tag">${esc(CATS[a.cat] || a.cat)}</span><span class="cl-date">Fins al ${esc(dayStr(ms(a.caduca)))}</span></div>
+      return `<article class="card cl-an"><div class="cl-avh"><span class="cl-tag">${esc(CATS[a.cat] || a.cat)}</span><span class="cl-date">Fins al ${esc(dayStr(ms(a.caduca)))}</span>${mine ? `<button type="button" class="cl-pen" data-editan="${esc(a.id)}" aria-label="Edita l'anunci" title="Edita"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button>` : ""}</div>
         <h3 class="cl-atitle">${esc(a.titol)}</h3><p class="cl-text">${esc(a.text)}</p>
         <div class="cl-afoot"><div class="cl-who"><b>${esc(mine ? "Tu" : a.autorNom)}</b>${mine ? `<span>${names.length === 1 ? "1 interessat" : names.length + " interessats"}</span>` : ""}</div>
           ${mine ? `<button type="button" class="btn sm" data-askdel="anuncis" data-id="${esc(a.id)}">Retira</button>` : `<button type="button" class="btn cl-go" data-interest="${esc(a.id)}" aria-pressed="${on}">${on ? "T'interessa ✓" : "M'interessa"}</button>`}</div>
@@ -453,23 +453,31 @@ function avisSheet(a){
     });
   });
 }
-function anunciSheet(){
-  sheet("Nou anunci", `
-    ${field("shCat", "Categoria", `<select class="field" id="shCat">${Object.entries(CATS).map(([k, t]) => `<option value="${k}">${esc(t)}</option>`).join("")}</select>`)}
-    ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="80" style="font-family:var(--f-body)">`)}
-    ${field("shText", "Text", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="400"></textarea>`)}
-    ${field("shCad", "Caduca el dia", `<input class="field" id="shCad" type="date" value="${ymd(new Date(now() + 15*DAY))}" min="${ymd(new Date())}" max="${ymd(new Date(now() + AN_MAX*DAY))}">`)}
-    ${visSelect("anuncis", prefOf("anuncis"))}
-    <button type="button" class="btn cl-pri cl-wide" id="shSave">Publica l'anunci</button>`, () => {
+function anunciSheet(a){
+  const cad0 = a ? ymd(new Date(ms(a.caduca))) : ymd(new Date(now() + 15*DAY));
+  sheet(a ? "Edita l'anunci" : "Nou anunci", `
+    ${field("shCat", "Categoria", `<select class="field" id="shCat">${Object.entries(CATS).map(([k, t]) => `<option value="${k}"${a && a.cat === k ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`)}
+    ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="80" value="${esc(a ? a.titol : "")}" style="font-family:var(--f-body)">`)}
+    ${field("shText", "Text", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="400">${esc(a ? a.text : "")}</textarea>`)}
+    ${field("shCad", "Caduca el dia", `<input class="field" id="shCad" type="date" value="${cad0}" min="${ymd(new Date())}" max="${ymd(new Date(now() + AN_MAX*DAY))}">`)}
+    ${visSelect("anuncis", a ? a.visibilitat : prefOf("anuncis"))}
+    <button type="button" class="btn cl-pri cl-wide" id="shSave">${a ? "Desa els canvis" : "Publica l'anunci"}</button>`, () => {
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
       const titol = $("shTitle").value.trim(), text = $("shText").value.trim();
       if(!titol){ sheetSay("Cal un títol."); return; }
       const v = $("shCad").value, max = ymd(new Date(now() + AN_MAX*DAY));
       if(!v || v < ymd(new Date()) || v > max){ sheetSay(`Tria una data d'avui a ${AN_MAX} dies vista.`); return; }
       const cad = new Date(v + "T23:59:59").getTime();
-      const doc = Object.assign({userId:uid(), clubId:C.member.clubId, cat:$("shCat").value, titol:titol.slice(0, 80), text:text.slice(0, 400), caduca:TS(cad), creat:C.F.serverTimestamp(), autorNom:C.member.nom}, await visFields($("shVis").value));
-      const r = await C.F.addDoc(col("anuncis"), doc);
-      D.anuncis.push(Object.assign({id:r.id}, doc, {caduca:cad, creat:now()})); ui.interested[r.id] = []; closeSheet(); render();
+      const f = Object.assign({cat:$("shCat").value, titol:titol.slice(0, 80), text:text.slice(0, 400), caduca:TS(cad)}, await visFields($("shVis").value));
+      if(a){
+        await C.F.updateDoc(ref("anuncis", a.id), Object.assign({}, f, {editat:true}));
+        Object.assign(a, f, {caduca:cad, editat:true});
+      } else {
+        const doc = Object.assign({userId:uid(), clubId:C.member.clubId, creat:C.F.serverTimestamp(), autorNom:C.member.nom}, f);
+        const r = await C.F.addDoc(col("anuncis"), doc);
+        D.anuncis.push(Object.assign({id:r.id}, doc, {caduca:cad, creat:now()})); ui.interested[r.id] = [];
+      }
+      closeSheet(); render();
     });
   });
 }
@@ -575,6 +583,7 @@ document.addEventListener("click", async e => {
   if(ds.acom){ ui.avisCom = ds.acom; ui.avisOpen = false; render(); return; }
   if(ds.acat){ ui.anCat = ds.acat; ui.anOpen = false; render(); return; }
   if(ds.fold){ const k = ds.fold + "Open"; ui[k] = !ui[k]; render(); return; }
+  if(ds.editan){ const a = D.anuncis.find(x => x.id === ds.editan); if(a) anunciSheet(a); return; }
   if(ds.editavis){ const a = D.avisos.find(x => x.id === ds.editavis); if(a) avisSheet(a); return; }
   if(ds.react){ react(ds.pub, ds.react); return; }
   if(ds.join){ mapToggle("intencions", D.intents, ds.join, "apuntats", C.member.nom); return; }
@@ -588,7 +597,7 @@ document.addEventListener("click", async e => {
   if(ds.resolve){ resolveAlert(ds.resolve); return; }
   if(t.id === "clNewIntent") intentSheet();
   if(t.id === "clNewAvis") avisSheet(null);
-  if(t.id === "clNewAn") anunciSheet();
+  if(t.id === "clNewAn") anunciSheet(null);
 });
 document.addEventListener("change", e => { if(e.target.id === "clAll"){ filt.all = e.target.checked; store.set("ov2_club_filt", Object.assign({}, filt, {open:false})); render(); } });
 $("actSeg").addEventListener("click", () => { if(visible() && tab === "mur") setTimeout(render, 0); });

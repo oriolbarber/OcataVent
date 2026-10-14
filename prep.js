@@ -72,7 +72,7 @@ function ensureMap(){
   windPane = pMap.createPane("prepWind"); windPane.style.zIndex = 450; windPane.style.pointerEvents = "none";
   cvS = document.createElement("canvas"); cvS.className = "prep-cv"; windPane.appendChild(cvS); cs = cvS.getContext("2d");
   cv = document.createElement("canvas"); cv.className = "prep-cv"; windPane.appendChild(cv); cx = cv.getContext("2d");
-  baseM = L.marker(PB, {interactive:false, keyboard:false, icon:L.divIcon({className:"prep-base", iconSize:[0, 0], html:`<div class="pb-pin"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg></div><span class="pb-l">Base</span>`})}).addTo(pMap);
+  baseM = L.marker(PB, {interactive:false, keyboard:false, icon:L.divIcon({className:"prep-base", iconSize:[0, 0], html:`<div class="pb-pin"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg></div>`})}).addTo(pMap);
   flagM = L.marker(PB, {interactive:false, keyboard:false, zIndexOffset:-100, icon:L.divIcon({className:"wm-pin", iconSize:[0, 0],
     html:`<div class="wm-pivot"><div class="wm-flag wave" data-pf="v"><span class="wm-txt"></span></div><div class="wm-flag wind" data-pf="w"><span class="wm-txt"></span></div></div>`})}).addTo(pMap);
   pMap.on("zoomend moveend resize", sizeCanvas);

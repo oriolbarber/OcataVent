@@ -348,7 +348,7 @@ function renderLive(){
   const twa = (cog!=null && w && w.dir!=null && sogNow > 1) ? twaOf(cog, w.dir) : null;
   $("liveStats").innerHTML =
     stat("speed", "Velocitat", r1(sogNow), "kn", "Màxima "+r1(s.maxKn)+" kn") +
-    stat("dist", "Distància", (s.distNm).toFixed(2).replace(".",","), "nm", "Mitjana "+r1(s.avgKn)+" kn") +
+    stat("dist", "Distància", (s.distNm).toFixed(1).replace(".",","), "nm", "Mitjana "+r1(s.avgKn)+" kn") +
     stat("course", "Rumb", cog!=null ? r0(cog)+"°" : "–", "", cogName(cog)) +
     stat("gust", "Vent", w ? r0(w.wind) : "–", "kn", w ? windName(w.dir)+" · ratxa "+r0(w.gust)+" · "+w.src : "Sense dades") +
     stat("course", "Angle al vent", twa!=null ? r0(twa)+"°" : "–", "", twa!=null ? posOf(twa).t : "Navega per calcular-lo") +
@@ -418,16 +418,16 @@ function renderRide(d){
   // tornada: distància i rumb fins al punt de sortida
   const home = P.length > 1 ? {d: hav(last, P[0]) / NM, b: bearing(last, P[0])} : null;
   const cells = [
-    rcell("Distància", s.distNm.toFixed(2).replace(".", ","), "nm", "mitjana " + r1(s.avgKn) + " kn"),
+    rcell("Distància", s.distNm.toFixed(1).replace(".", ","), "nm", "mitjana " + r1(s.avgKn) + " kn"),
     rcell("Rumb", cog != null ? dirArrow(cog, 22) + r0(cog) + "°" : "–", "", cog != null ? cogName(cog) : "&nbsp;"),
     rcell("Vent", w ? arrow(w.dir, 22) + r0(w.wind) : "–", "kn", w ? windAbbr(w.dir) + " · ratxa " + r0(w.gust) : "sense dades"),
-    rcell("Tornada", home ? dirArrow(home.b, 22) + home.d.toFixed(2).replace(".", ",") : "–", "nm", home ? "cap al " + cogName(home.b) + " · " + r0(home.b) + "°" : "&nbsp;")
+    rcell("Tornada", home ? dirArrow(home.b, 22) + home.d.toFixed(1).replace(".", ",") : "–", "nm", home ? "cap al " + cogName(home.b) + " · " + r0(home.b) + "°" : "&nbsp;")
   ];
   if(!eco) cells.push(
     rcell("Angle vent", twa != null ? r0(twa) + "°" : "–", "", twa != null ? posOf(twa).t : "navega per calcular-lo"),
     rcell("En moviment", fmtDurShort(s.movingS*1000).replace(" min", "").replace(" h ", ":"), s.movingS >= 3600 ? "h" : "min", P.length + " punts GPS"));
   $("rideGrid").innerHTML = cells.join("");
-  if(ridePage === "map") $("rideMini").innerHTML = `<b>${sog != null ? r1(sog) : "–"}</b> kn · <b>${s.distNm.toFixed(2).replace(".", ",")}</b> nm${home ? ` · base ${home.d.toFixed(1).replace(".", ",")} nm ${dirArrow(home.b, 14)}` : ""}`;
+  if(ridePage === "map") $("rideMini").innerHTML = `<b>${sog != null ? r1(sog) : "–"}</b> kn · <b>${s.distNm.toFixed(1).replace(".", ",")}</b> nm${home ? ` · base ${home.d.toFixed(1).replace(".", ",")} nm ${dirArrow(home.b, 14)}` : ""}`;
   if(ridePage === "cmp"){
     window.rideCogH = sog != null && sog > 1 && cog != null ? cog : null;   // sense brúixola: la rosa s'orienta amb el rumb
     const c = crit[act];
@@ -437,7 +437,7 @@ function renderRide(d){
     $("rideCgrid").innerHTML =
       rcell(`<i class="lg lg-cog" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 .5 15 8h-4.2v7.5H5.2V8H1z" fill="var(--accent)"/></svg></i>Rumb`, cog != null ? r0(cog) + "°" : "–", "", cog != null ? cogName(cog) : "&nbsp;") +
       rcell(`<i class="lg" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 14L3 2.5A12 12 0 0 1 13 2.5Z" fill="var(--${w ? lvWind(w.wind, c) : "ink"})" fill-opacity=".38" stroke="var(--${w ? lvWind(w.wind, c) : "ink"})" stroke-width="1.6" stroke-linejoin="round"/></svg></i>Vent`, w ? r0(w.wind) : "–", "kn", w ? windAbbr(w.dir) + " · ratxa " + r0(w.gust) : "&nbsp;") +
-      rcell(`<i class="lg" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="var(--ideal)"/><path d="M4.5 8.5 8 5l3.5 3.5M5.5 7.6v3.6h5V7.6" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg></i>Base`, home ? home.d.toFixed(2).replace(".", ",") : "–", "nm", home ? cogName(home.b) : "&nbsp;");
+      rcell(`<i class="lg" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="var(--ideal)"/><path d="M4.5 8.5 8 5l3.5 3.5M5.5 7.6v3.6h5V7.6" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg></i>Base`, home ? home.d.toFixed(1).replace(".", ",") : "–", "nm", home ? cogName(home.b) : "&nbsp;");
   }
   const g = $("liveGap"); $("rideGap").hidden = g.hidden; $("rideGap").innerHTML = g.innerHTML;
 }

@@ -233,8 +233,14 @@ service cloud.firestore {
         && nomOk(request.resource.data.autorNom, 80)
         && request.resource.data.creat == request.time;
       allow update: if signedIn() && resource.data.userId == me()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visibilitat', 'lectors'])
-        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visibilitat', 'lectors', 'cat', 'titol', 'text', 'caduca', 'editat'])
+        && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data)
+        && request.resource.data.cat in ['tripulacio', 'material', 'altres']
+        && nomOk(request.resource.data.titol, 80)
+        && request.resource.data.text is string && request.resource.data.text.size() <= 400
+        && request.resource.data.caduca is timestamp
+        && request.resource.data.caduca < request.time + duration.value(61, 'd')
+        && (!('editat' in request.resource.data) || request.resource.data.editat == true);
       allow delete: if signedIn() && (resource.data.userId == me() || hasPerm('moderar') || expired());
 
       // Qui s'hi ha interessat: només ho veuen l'autor de l'anunci i el mateix soci
