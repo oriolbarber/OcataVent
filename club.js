@@ -199,6 +199,24 @@ function renderMur(){
   return bar + panel + intentsCard() + (L.length ? L.map(card).join("")
     : `<article class="card empty">${D.at.pubs ? (D.pubs.length ? "Cap sortida amb aquests filtres." : "Encara no hi ha cap sortida publicada. Comparteix-ne una des de l'Historial.") : "Carregant…"}</article>`);
 }
+// Idoneïtat d'una sortida anunciada: el mateix càlcul que la previsió (scoreHour) per a l'hora triada i les 2 següents
+function intentFit(dia, hora, a){
+  if(typeof DATA === "undefined" || !DATA || !DATA.hours || typeof scoreHour !== "function") return null;
+  const c = crit[a] || crit.pati, h0 = parseInt(String(hora).slice(0, 2), 10);
+  const P = [0, 1, 2].map(i => { const d = new Date(`${dia}T12:00:00`); d.setHours((isNaN(h0) ? 12 : h0) + i, 0, 0, 0); return DATA.hours[localKey(d)]; }).filter(Boolean);
+  const R = P.map(p => scoreHour(p, c)).filter(r => r.score != null);
+  if(!R.length) return null;
+  const PRI = ["poca llum", "tempesta", "pluja", "terral fort", "ratxes fortes", "massa vent", "onada alta", "poc vent"];
+  const score = Math.round(R.reduce((s, r) => s + r.score, 0) / R.length);
+  const why = [...new Set(R.flatMap(r => r.why))].sort((x, y) => (PRI.includes(x) ? PRI.indexOf(x) : 99) - (PRI.includes(y) ? PRI.indexOf(y) : 99));
+  const W = P.map(p => p.wind).filter(v => v != null), G = P.map(p => p.gust).filter(v => v != null), O = R.map(r => r.hb).filter(v => v != null);
+  return {score, v: verdict({score, why}), wind: W.length ? Math.round(W.reduce((a, b) => a + b, 0) / W.length) : null, gust: G.length ? Math.round(Math.max(...G)) : null, wave: O.length ? Math.max(...O) : null};
+}
+function fitHtml(f){
+  if(!f) return `<span class="cl-fit k-none">Sense previsió encara</span>`;
+  const det = [f.wind != null ? `${f.wind} kn${f.gust != null && f.gust > f.wind + 3 ? " (ratxes " + f.gust + ")" : ""}` : "", f.wave != null ? String(Math.round(f.wave * 10) / 10).replace(".", ",") + " m" : "", f.v.sub].filter(Boolean).join(" · ");
+  return `<span class="cl-fit k-${f.v.k}"><b>${Math.round(f.score / 10)}</b>${esc(f.v.t)}</span>${det ? `<span class="cl-fitd">${esc(det)}</span>` : ""}`;
+}
 function intentsCard(){
   const L = D.intents.filter(alive).sort((a, b) => (a.dia + a.hora).localeCompare(b.dia + b.hora));
   const today = ymd(new Date()), tom = ymd(new Date(now() + DAY));
@@ -206,7 +224,7 @@ function intentsCard(){
   return `<section class="card cl-intents" aria-label="Qui surt a navegar"><div class="card-h"><span class="lbl">Qui surt</span><span class="note">S'esborra l'endemà</span></div>
     ${L.map(it => { const ap = it.apuntats || {}, n = Object.keys(ap).length, on = !!ap[uid()], mine = it.userId === uid();
       return `<div class="cl-int"><div class="cl-when"><b>${esc(dl(it.dia))}</b><span>${esc(it.hora)}</span></div>
-        <div class="cl-who"><b>${esc(it.nom)}</b><span>${esc(boatShort(it.act))} · ${n === 1 ? "1 s'hi apunta" : n + " s'hi apunten"}${n ? ": " + esc(Object.values(ap).join(", ")) : ""}</span></div>
+        <div class="cl-who"><b>${esc(it.nom)}</b><span>${esc(boatShort(it.act))} · ${n === 1 ? "1 s'hi apunta" : n + " s'hi apunten"}${n ? ": " + esc(Object.values(ap).join(", ")) : ""}</span><div class="cl-fitrow">${fitHtml(intentFit(it.dia, it.hora, it.act))}</div></div>
         ${mine ? `<button type="button" class="btn sm" data-askdel="intencions" data-id="${esc(it.id)}">Retira</button>` : `<button type="button" class="btn cl-go" data-join="${esc(it.id)}" aria-pressed="${on}">${on ? "Hi vas ✓" : "Hi vaig"}</button>`}</div>
         ${!mine && canMod() ? modBtn("intencions", it) : ""}<div data-delbox="${esc(it.id)}"></div>`; }).join("")}
     <button type="button" class="btn cl-dash" id="clNewIntent">+ Anuncia que surts</button></section>`;
@@ -424,10 +442,13 @@ function intentSheet(){
         <input class="field" id="shDate" type="date" value="${ymd(d)}" min="${ymd(d)}" max="${ymd(new Date(now() + INT_DIES*DAY))}"></label></div>
     ${field("shHour", "Hora", `<input class="field" id="shHour" type="time" value="${h}">`)}
     ${field("shAct", "Embarcació", `<select class="field" id="shAct">${Object.keys(DEFAULTS).map(k => `<option value="${k}"${k === act ? " selected" : ""}>${esc(DEFAULTS[k].name)}</option>`).join("")}</select>`)}
+    <div class="cl-field"><span class="lbl">Previsió per a aquella hora</span><div class="cl-fitrow" id="shFit"></div></div>
     ${visSelect("intencions", prefOf("intencions"))}
-    <p class="note">Qui ho veu s'hi pot apuntar. S'esborra l'endemà.</p>
+    <p class="note">Qui ho veu s'hi pot apuntar, i veurà aquesta previsió. S'esborra l'endemà.</p>
     <button type="button" class="btn cl-pri cl-wide" id="shSave">Publica</button>`, sh => {
-    const mark = () => { const v = $("shDate").value; sh.querySelectorAll("[data-iday]").forEach(b => b.setAttribute("aria-pressed", String(ymd(new Date(now() + (+b.dataset.iday)*DAY)) === v))); };
+    const fit = () => { const f = $("shFit"); if(f) f.innerHTML = fitHtml(intentFit($("shDate").value, $("shHour").value || "12:00", $("shAct").value)); };
+    const mark = () => { const v = $("shDate").value; sh.querySelectorAll("[data-iday]").forEach(b => b.setAttribute("aria-pressed", String(ymd(new Date(now() + (+b.dataset.iday)*DAY)) === v))); fit(); };
+    ["shHour", "shAct"].forEach(i => $(i).addEventListener("change", fit)); $("shHour").addEventListener("input", fit); fit();
     sh.addEventListener("click", ev => { const b = ev.target.closest("[data-iday]"); if(!b) return; $("shDate").value = ymd(new Date(now() + (+b.dataset.iday)*DAY)); mark(); });
     $("shDate").addEventListener("change", mark);
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
