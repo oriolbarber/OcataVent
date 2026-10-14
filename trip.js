@@ -698,8 +698,15 @@ async function permCheck(){
   else {
     let st = "prompt";
     try{ st = (await navigator.permissions.query({name:"geolocation"})).state; }catch(e){}
+    // A l'app, la WebView no recorda el permís d'Android i diu sempre «prompt»: es comprova demanant una posició
+    if(window.OV_NATIVE && st !== "granted") st = await nativeGeoState();
     $("pmGeoBtn").hidden = st !== "prompt";
-    if(st === "granted") set("pmGeo", "ok", "Concedida. Si Android ho pregunta, tria «Ubicació precisa».");
+    if(window.OV_NATIVE){
+      if(st === "granted") set("pmGeo", "ok", "Concedida. N'hi ha prou amb «Permet només mentre s'utilitza l'aplicació» i «Ubicació precisa»: en gravar, la notificació fixa manté el GPS encès amb la pantalla apagada.");
+      else if(st === "denied") set("pmGeo", "bad", "Denegada. Ajustaments ▸ Aplicacions ▸ Ocata Vent ▸ Permisos ▸ Ubicació ▸ «Permet només mentre s'utilitza l'aplicació» i activa «Ubicació precisa».");
+      else set("pmGeo", "wait", "Encara no l'has concedida. Toca «Permet la ubicació».");
+    }
+    else if(st === "granted") set("pmGeo", "ok", "Concedida. Si Android ho pregunta, tria «Ubicació precisa».");
     else if(st === "denied") set("pmGeo", "bad", "Denegada. Activa-la a Ajustaments ▸ Aplicacions ▸ Chrome ▸ Permisos ▸ Ubicació, i a la icona del cadenat de la web.");
     else set("pmGeo", "wait", "Encara no l'has concedida. Toca «Permet».");
   }
@@ -711,6 +718,15 @@ async function permCheck(){
   // si alguna cosa falta, se n'ensenya el detall sense haver de tocar
   const bad = document.querySelector("#ckRow .ck.bad, #ckRow .ck.wait"); ckShow(bad ? bad.dataset.ck : ckOpen);
 }
+// App Android: demana una posició ràpida per saber si hi ha permís (error 1 = denegat; temps esgotat = permís sí, senyal no)
+let nGeo = null;
+function nativeGeoState(){
+  if(nGeo === "granted") return Promise.resolve(nGeo);
+  return new Promise(res => navigator.geolocation.getCurrentPosition(
+    () => res(nGeo = "granted"),
+    e => res(nGeo = e.code === 1 ? "denied" : e.code === 3 ? "granted" : "prompt"),
+    {enableHighAccuracy:false, maximumAge:600000, timeout:8000}));
+}
 let ckOpen = null;
 function ckShow(k){
   ckOpen = k; const d = $("ckDetail");
@@ -720,7 +736,7 @@ function ckShow(k){
 }
 $("ckRow").addEventListener("click", e => { const b = e.target.closest(".ck"); if(b) ckShow(ckOpen === b.dataset.ck ? null : b.dataset.ck); });
 document.addEventListener("click", e => { if(e.target.id === "pmGeoBtn"){
-  $("pmGeo").querySelector("small").textContent = "Esperant la resposta…"; ckShow("geo");
+  $("pmGeo").querySelector("small").textContent = "Esperant la resposta…"; ckShow("geo"); nGeo = null;
   navigator.geolocation.getCurrentPosition(() => permCheck(), () => permCheck(), {enableHighAccuracy:true, timeout:20000});
 } });
 window.addEventListener("mm-view", e => { if(e.detail === "trip" && !LIVE) permCheck(); });
