@@ -89,14 +89,17 @@ async function getVisible(n){
     [W("lectors", "array-contains", uid())], [W("userId", "==", uid())]];
   const out = new Map();
   (await Promise.all(qs.map(w => getAll(n, ...w).catch(e => { if(e && e.code === "permission-denied") return []; throw e; })))).flat().forEach(x => out.set(x.id, x));
-  return [...out.values()];
+  return [...out.values()].filter(x => !(x.amagat || []).includes(club));   // amagat per al meu club per moderació
 }
 // Qui ho veu: el selector dels formularis i els camps que es desen
 const visSelect = (k, cur) => field("shVis", "Qui ho veu", `<select class="field" id="shVis">${(window.OV_PRIV ? OV_PRIV.options(k) : ["club"]).map(v => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(NIVT(v))}</option>`).join("")}</select>`);
 async function visFields(v){ if(window.OV_PRIV) await OV_PRIV.ready(); return {visibilitat:v, lectors: window.OV_PRIV ? OV_PRIV.lectors(v) : []}; }
 const prefOf = k => window.OV_PRIV ? OV_PRIV.pref(k) : "club";
 const canMod = () => !!(C && (C.perms || []).includes("moderar"));
-const modBtn = (n, id) => `<button type="button" class="btn sm cl-mod" data-askdel="${n}" data-id="${esc(id)}">Retira (moderació)</button>`;
+// Moderació: el contingut del propi club es retira; el d'un altre club (visible per a «tothom») només s'amaga per al meu club
+const modBtn = (n, x) => x.clubId === C.member.clubId || C.isAdm
+  ? `<button type="button" class="btn sm cl-mod" data-askdel="${n}" data-id="${esc(x.id)}">Retira (moderació)</button>`
+  : `<button type="button" class="btn sm cl-mod" data-askhide="${n}" data-id="${esc(x.id)}">Amaga per al club</button>`;
 const NEED = {mur:["pubs", "intents", "avisos"], avisos:["avisos"], anuncis:["anuncis", "avisos"], base:["pres", "avisos"]};
 async function fetchK(k){
   const club = C.member.clubId;
@@ -205,7 +208,7 @@ function intentsCard(){
       return `<div class="cl-int"><div class="cl-when"><b>${esc(dl(it.dia))}</b><span>${esc(it.hora)}</span></div>
         <div class="cl-who"><b>${esc(it.nom)}</b><span>${esc(boatShort(it.act))} · ${n === 1 ? "1 s'hi apunta" : n + " s'hi apunten"}${n ? ": " + esc(Object.values(ap).join(", ")) : ""}</span></div>
         ${mine ? `<button type="button" class="btn sm" data-askdel="intencions" data-id="${esc(it.id)}">Retira</button>` : `<button type="button" class="btn cl-go" data-join="${esc(it.id)}" aria-pressed="${on}">${on ? "Hi vas ✓" : "Hi vaig"}</button>`}</div>
-        ${!mine && canMod() ? modBtn("intencions", it.id) : ""}<div data-delbox="${esc(it.id)}"></div>`; }).join("")}
+        ${!mine && canMod() ? modBtn("intencions", it) : ""}<div data-delbox="${esc(it.id)}"></div>`; }).join("")}
     <button type="button" class="btn cl-dash" id="clNewIntent">+ Anuncia que surts</button></section>`;
 }
 function card(p){
@@ -225,7 +228,7 @@ function card(p){
       <span class="cl-boat">${typeof boatIcon === "function" ? boatIcon(p.act) : ""}</span></div>
     <div class="cl-reacts" role="group" aria-label="Reaccions">${REACTS.map(r => `<button type="button" class="cl-r" data-react="${r.k}" data-pub="${esc(p.id)}" aria-pressed="${my === r.k}" aria-label="${r.l}">${svgI(r.p, 22, r.rot)}${cnt(r.k) ? `<span>${cnt(r.k)}</span>` : ""}</button>`).join("")}
       ${mine ? `<button type="button" class="btn sm cl-edit" data-editpub="${esc(p.id)}">Edita</button>` : ""}</div>
-    ${!mine && canMod() ? modBtn("publicacions", p.id) + `<div data-delbox="${esc(p.id)}"></div>` : ""}
+    ${!mine && canMod() ? modBtn("publicacions", p) + `<div data-delbox="${esc(p.id)}"></div>` : ""}
   </article>`;
 }
 const NO_ROUTE = "Aquesta sortida no té prou recorregut GPS per mostrar-ne la ruta (cal haver-se allunyat almenys 100 m). Treu «Inclou la ruta» per publicar-la sense.";
@@ -285,7 +288,7 @@ function renderAnuncis(){
         <h3 class="cl-atitle">${esc(a.titol)}</h3><p class="cl-text">${esc(a.text)}</p>
         <div class="cl-afoot"><div class="cl-who"><b>${esc(mine ? "Tu" : a.autorNom)}</b>${mine ? `<span>${names.length === 1 ? "1 interessat" : names.length + " interessats"}</span>` : ""}</div>
           ${mine ? `<button type="button" class="btn sm" data-askdel="anuncis" data-id="${esc(a.id)}">Retira</button>` : `<button type="button" class="btn cl-go" data-interest="${esc(a.id)}" aria-pressed="${on}">${on ? "T'interessa ✓" : "M'interessa"}</button>`}</div>
-        ${!mine && canMod() ? modBtn("anuncis", a.id) : ""}
+        ${!mine && canMod() ? modBtn("anuncis", a) : ""}
         ${mine && names.length ? `<div class="cl-names"><span class="lbl">Qui s'hi interessa (només ho veus tu)</span><b>${esc(names.join(" · "))}</b></div>` : ""}
         <div data-delbox="${esc(a.id)}"></div></article>`; }).join("")
       || `<article class="card empty">${D.at.anuncis ? "No hi ha cap anunci." : "Carregant…"}</article>`}
@@ -502,6 +505,11 @@ async function react(pid, k){
   try{ await TO(C.F.updateDoc(ref("publicacions", pid), {["reaccions." + uid()]: nv || C.F.deleteField()})); }
   catch(e){ p.reaccions = before; render(); say(errText(e)); }
 }
+async function hideDoc(n, id){
+  try{ await TO(C.F.updateDoc(ref(n, id), {amagat:C.F.arrayUnion(C.member.clubId)}));
+    const k = {publicacions:"pubs", intencions:"intents", anuncis:"anuncis"}[n]; D[k] = D[k].filter(x => x.id !== id); render(); }
+  catch(e){ say(errText(e)); }
+}
 async function mapToggle(n, list, id, field, val){
   const x = list.find(o => o.id === id); if(!x) return;
   const before = Object.assign({}, x[field]), on = !before[uid()];
@@ -602,6 +610,7 @@ document.addEventListener("click", async e => {
   if(ds.seen){ mapToggle("avisos", D.avisos, ds.seen, "vist", true); return; }
   if(ds.interest){ interest(ds.interest); return; }
   if(ds.editpub){ const p = D.pubs.find(x => x.id === ds.editpub); if(p) pubSheet(null, p); return; }
+  if(ds.askhide){ const box = document.querySelector(`[data-delbox="${CSS.escape(ds.id)}"]`); if(box) slideConfirm(box, "Llisca per amagar-ho al club", () => hideDoc(ds.askhide, ds.id)); return; }
   if(ds.askdel){ const box = document.querySelector(`[data-delbox="${CSS.escape(ds.id)}"]`); if(box) slideConfirm(box, "Llisca per retirar", () => removeDoc(ds.askdel, ds.id)); return; }
   if(t.id === "clPriv"){ window.OV_PRIV?.open(); return; }
   if(t.id === "clHere"){ try{ await setPres(presDoc("base")); render(); loadAlerts(); }catch(err){ say(errText(err)); } return; }

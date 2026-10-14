@@ -28,6 +28,16 @@ service cloud.firestore {
     }
     // Publicar avisos d'una comissió: ser-ne i tenir el permís «avisos» (administració i premium, a qualsevol comissió del club)
     function canAvis(c) { return isAdmin() || isPremium() || (isApproved() && c in memberData().get('comissions', []) && 'avisos' in memberData().get('permisos', [])); }
+    // Moderar: retirar (esborrar) només el contingut del propi club; l'administració, el de qualsevol club
+    function modera(d) { return isAdmin() || (hasPerm('moderar') && d.clubId == myClub()); }
+    // Contingut «tothom» d'un altre club: qui modera només el pot amagar per al seu club (llista «amagat» amb ids de club)
+    function amagaOk() {
+      let a = resource.data.get('amagat', []).toSet(), b = request.resource.data.get('amagat', []).toSet();
+      return hasPerm('moderar') && veu(resource.data) && resource.data.clubId != myClub()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['amagat'])
+        && request.resource.data.amagat is list && request.resource.data.amagat.size() <= 50
+        && b.difference(a).hasOnly([myClub()]) && a.difference(b).hasOnly([myClub()]);
+    }
     function gestor() { return hasPerm('altes') || hasPerm('rols') || hasPerm('permisos'); }
     // Comissions del club (clubs/{clubId}.comissions = {id: nom}); si encara no s'han editat, les de sempre
     function comsClub() {
@@ -171,6 +181,7 @@ service cloud.firestore {
     // ---------- club (Fase 2): només socis aprovats del mateix club ----------
     // Publicacions al mur: <uid>_<id de la sortida>
     match /publicacions/{pid} {
+      allow update: if amagaOk();
       allow read: if (signedIn() && pid.matches(me() + '_[0-9]+')) || veu(resource.data);
       allow create: if newClubOk() && pid == me() + '_' + string(request.resource.data.tripId)
         && request.resource.data.keys().hasOnly(['userId', 'clubId', 'visibilitat', 'tripId', 'nom', 'act', 'inici', 'fi', 'titol', 'comentari', 'ruta',
@@ -192,11 +203,12 @@ service cloud.firestore {
       // Reaccionar: cada soci només la seva
       allow update: if veu(resource.data) && onlyMyKey('reaccions')
         && (!(me() in request.resource.data.reaccions) || request.resource.data.reaccions[me()] in ['up', 'clap', 'wow', 'down']);
-      allow delete: if signedIn() && (resource.data.userId == me() || hasPerm('moderar'));
+      allow delete: if signedIn() && (resource.data.userId == me() || modera(resource.data));
     }
 
     // «Qui surt»: intencions de sortida, caduquen l'endemà
     match /intencions/{id} {
+      allow update: if amagaOk();
       allow read: if veu(resource.data);
       allow create: if newClubOk()
         && request.resource.data.keys().hasOnly(['userId', 'clubId', 'nom', 'act', 'dia', 'hora', 'apuntats', 'caduca', 'creat', 'visibilitat', 'lectors'])
@@ -212,7 +224,7 @@ service cloud.firestore {
       allow update: if signedIn() && resource.data.userId == me()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visibilitat', 'lectors'])
         && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data);
-      allow delete: if signedIn() && (resource.data.userId == me() || hasPerm('moderar') || expired());
+      allow delete: if signedIn() && (resource.data.userId == me() || modera(resource.data) || expired());
     }
 
     // Avisos de la junta i les comissions
@@ -236,11 +248,12 @@ service cloud.firestore {
         && avisOk(request.resource.data);
       allow update: if clubOk() && onlyMyKey('vist')
         && (!(me() in request.resource.data.vist) || request.resource.data.vist[me()] == true);
-      allow delete: if signedIn() && (resource.data.userId == me() || inComissio(resource.data.comissio) || hasPerm('moderar') || expired());
+      allow delete: if signedIn() && (resource.data.userId == me() || inComissio(resource.data.comissio) || modera(resource.data) || expired());
     }
 
     // Anuncis dels socis
     match /anuncis/{id} {
+      allow update: if amagaOk();
       allow read: if veu(resource.data);
       allow create: if newClubOk()
         && request.resource.data.keys().hasOnly(['userId', 'clubId', 'cat', 'titol', 'text', 'caduca', 'creat', 'autorNom', 'visibilitat', 'lectors'])
@@ -261,7 +274,7 @@ service cloud.firestore {
         && request.resource.data.caduca is timestamp
         && request.resource.data.caduca < request.time + duration.value(61, 'd')
         && (!('editat' in request.resource.data) || request.resource.data.editat == true);
-      allow delete: if signedIn() && (resource.data.userId == me() || hasPerm('moderar') || expired());
+      allow delete: if signedIn() && (resource.data.userId == me() || modera(resource.data) || expired());
 
       // Qui s'hi ha interessat: només ho veuen l'autor de l'anunci i el mateix soci
       match /interessats/{uid} {
