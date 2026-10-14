@@ -78,7 +78,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 
 ## Icones (editor «Icones Ocata Vent»)
 - L'Oriol dibuixa les icones a l'artefacte https://claude.ai/artifact/ShKNihk2UBYD68HwRT75wg i prem «Desa per a l'app».
-- Es desen a la base de dades de l'artefacte: col·lecció `icons`, document `boats` (llegeix-lo amb l'eina ArtifactData, acció `get`). Claus: `pati`, `windsurf`, `hobie` (BOAT_IC), `onada` (WAVE_IC), `bandera` (FLAG_IC: traç 1 = pal, la resta farcit), `gps`, `pantalla`, `bateria`, `avisos` (SAFE_IC: caselles de «Nova sortida» i avisos en ruta), `logo` (128×128 amb anella i color), `stroke` (gruix, viewBox 24×24).
+- Es desen a la base de dades de l'artefacte: col·lecció `icons`, document `boats` (llegeix-lo amb l'eina ArtifactData, acció `get`). Claus: `pati`, `windsurf`, `hobie` (BOAT_IC), `onada` (WAVE_IC), `bandera` (FLAG_IC: traç 1 = pal, la resta farcit), `gps`, `pantalla`, `bateria`, `avisos` (SAFE_IC: caselles de «Nova sortida» i avisos en ruta), `armilla`, `emissora`, `navalla`, `xiulet`, `aigua`, `abric`, `guants`, `mobil`, `bossa`, `sol` (KIT_IC de `trip.js`: recordatori «Ho portes tot?» en començar una sortida, gruix 1,7; al document només hi són si l'Oriol ha desat després d'afegir-les), `logo` (128×128 amb anella i color), `stroke` (gruix, viewBox 24×24).
 - `data/icones.json` és una còpia de l'última versió aplicada. Quan l'Oriol digui «aplica les icones», llegeix el document, aplica-les a l'app i actualitza aquesta còpia.
 
 ## Fonts de dades (V1)
