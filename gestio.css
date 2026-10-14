@@ -36,7 +36,6 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 .g-com .field{flex:1;min-width:0}
 .g-n{font-size:.8rem;color:var(--muted);white-space:nowrap}
 .g-grp{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
-.g-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g-back{align-self:flex-start}
 body.g-lock{overflow:hidden}
 .field{font-family:var(--f-body)}
@@ -44,3 +43,16 @@ body.g-lock{overflow:hidden}
 :root[data-size="big"] .g-mail,:root[data-size="big"] .g-tag{font-size:.95rem}
 @media (max-width:420px){.g-stats b{font-size:1.3rem}.g-stats span{font-size:.65rem}}
 .cl-chips{display:flex;flex-wrap:wrap;gap:6px}
+.g-tag.rol{border-color:var(--ideal);color:var(--ideal)}
+.g-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g-rol .cl-chip{min-height:40px;font-size:.85rem}
+.g-tbl-w{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
+.g-tbl{border-collapse:collapse;width:100%;min-width:520px;font-size:.9rem}
+.g-tbl th,.g-tbl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.g-tbl thead th{font-family:var(--f-head);font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.g-tbl tbody th{text-align:left;font-weight:600;position:sticky;left:0;background:var(--surface)}
+.g-tbl thead th:first-child{text-align:left}
+.g-yes{color:var(--ideal);font-weight:700;font-size:1.1rem}
+.g-no{color:var(--line)}
+.g-lnk{all:unset;cursor:pointer;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.g-det summary{cursor:pointer;font-weight:700;padding:6px 0;color:var(--accent)}

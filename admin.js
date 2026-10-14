@@ -92,8 +92,8 @@ function openMember(id){
     <p class="note" style="margin:0">${esc(m.email)} · ${esc(ESTAT[m.estat] || m.estat)}</p>
     ${has("rols") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Comissions i rol</span><div class="acc-roles">${Object.entries(COMS).map(([k, t]) => tog("data-mcom", k, (m.comissions || []).includes(k), t)).join("")}${tog("data-mresp", "1", !!m.responsable, "Responsable")}</div>
       <p class="note">Per publicar avisos d'una comissió cal formar-ne part i tenir el permís «Fer avisos». Les persones responsables i la Junta poden marcar com a resolts els avisos de seguretat.</p></div>` : ""}
-    ${has("permisos") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Permisos</span>${self ? `<p class="note">No pots canviar els teus propis permisos.</p>` :
-      `<div class="adm-perms">${Object.entries(PERMS).map(([k, p]) => `<label class="cl-sw"><span><b>${p.t}</b><small class="note">${esc(p.d)}</small></span><input type="checkbox" class="switch" data-mperm="${k}"${(m.permisos || []).includes(k) ? " checked" : ""}></label>`).join("")}</div>`}</div>` : ""}
+    ${m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Rols i permisos</span><p class="note">${m.premium ? "Premium: ho pot fer tot dins del club." : "Pot: " + esc((m.permisos || []).map(k => PERMS[k]?.t).filter(Boolean).join(", ") || "res especial")}</p>
+      ${C.isAdm || C.isPremium ? `<a class="btn cl-wide" href="gestio.html">Canvia rols i permisos a la web de gestió</a>` : `<p class="note">Els rols i els permisos es gestionen a la web de gestió del club.</p>`}</div>` : ""}
     ${has("altes") && !self ? `<div class="adm-grp"><span class="lbl">Accés</span>${m.estat === "aprovat" ? `<div id="admRevoke"></div>` : `<button class="btn cl-pri cl-wide" type="button" data-mestat="aprovat">Aprova</button>`}</div>` : ""}`, d => {
     const rev = $("admRevoke"); if(rev) slideConfirm(rev, "Llisca per treure l'accés", () => update(id, {estat:"rebutjat", revisatPer:C.user.uid, revisatAt:C.F.serverTimestamp()}, true));
     d.addEventListener("click", e => {
@@ -102,8 +102,6 @@ function openMember(id){
       if(b.dataset.mresp) update(id, {responsable: !m.responsable});
       if(b.dataset.mestat) update(id, {estat:b.dataset.mestat, revisatPer:C.user.uid, revisatAt:C.F.serverTimestamp()}, true);
     });
-    d.addEventListener("change", e => { const k = e.target.dataset.mperm; if(!k) return; const P = m.permisos || [];
-      update(id, {permisos: e.target.checked ? P.filter(x => x !== k).concat([k]) : P.filter(x => x !== k)}); });
   });
 }
 async function update(id, patch, close){

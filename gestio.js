@@ -1,8 +1,8 @@
 "use strict";
 /* ============ Ocata Vent 2 · Web de gestió ============
    Dues pàgines, el mateix codi:
-   · gestio.html — gestió del club: socis, comissions i permisos. Hi entren l'administració i les persones premium.
-   · admin.html  — administració global: tots els clubs i tots els usuaris. Només l'administració.
+   · gestio.html — gestió del club: socis, rols (paquets de permisos), comissions i «qui pot fer què». Hi entren l'administració i les persones premium.
+   · admin.html  — administració global: clubs, plantilles de rol, administradors, catàleg de permisos i tots els usuaris. Només l'administració.
    La sessió és la mateixa que la de l'app (mateix origen i mateix Firebase): si ja hi has entrat, no cal tornar-ho a fer.
    La seguretat real la fan les regles de Firestore (firestore.rules): premium només llegeix i edita el seu club. */
 (() => {
@@ -22,6 +22,9 @@ const PERMS = {
   moderar: {t:"Moderar", d:"Retirar publicacions, «Qui surt» i anuncis d'altres persones."}
 };
 const COMS0 = {junta:"Junta", manteniment:"Manteniment", economica:"Econòmica"};
+// Rols = paquets de permisos amb nom. Plantilles globals (config/global.plantilles) → rols de cada club (clubs/{id}.rols).
+// La web recalcula members/{uid}.permisos (efectius) = permisos dels rols (rolsClub) + permisos extra (permisosExtra). Les regles només miren «permisos».
+const TPL0 = {secretaria:{nom:"Secretaria", permisos:["altes"]}, comunicacio:{nom:"Comunicació", permisos:["avisos", "moderar"]}, coordinacio:{nom:"Coordinació", permisos:["rols", "permisos"]}};
 const ESTAT = {aprovat:"Amb alta", pendent:"Pendent", rebutjat:"No aprovat"};
 const ERRS = {"permission-denied":"El núvol ho ha refusat: no tens permís per fer-ho, o les regles encara no s'han publicat.", "unavailable":"Sense connexió amb el núvol.", "auth/invalid-credential":"Correu o contrasenya incorrectes.", "auth/wrong-password":"Correu o contrasenya incorrectes.", "auth/user-not-found":"No hi ha cap compte amb aquest correu.", "auth/too-many-requests":"Massa intents. Torna-ho a provar d'aquí a una estona.", "auth/popup-closed-by-user":"S'ha tancat la finestra abans d'entrar."};
 const errText = e => ERRS[e && e.code] || "No s'ha pogut fer" + (e && e.code ? " (" + e.code + ")." : ".");
@@ -37,6 +40,12 @@ let clubs = {};            // {id: {nom, comissions}}
 let members = [];          // socis carregats (del club o de tots)
 let club = null;           // club que es mostra
 let view = "socis", flt = {q:"", estat:"tots", com:"totes"}, openId = null;
+let tpl = TPL0, admins = [];
+const rolsOf = id => (clubs[id] && clubs[id].rols) || tpl;
+// Socis d'abans dels rols: els seus permisos solts passen a ser «extra»
+const extraOf = m => (m.permisosExtra || (m.rolsClub ? [] : (m.permisos || []))).filter(k => PERMS[k]);
+const effOf = (m, R) => [...new Set((m.rolsClub || []).filter(r => R[r]).flatMap(r => R[r].permisos || []).concat(extraOf(m)))].filter(k => PERMS[k]);
+const permT = L => L.map(k => PERMS[k]?.t).filter(Boolean).join(", ");
 
 /* ---------- arrencada ---------- */
 async function boot(){
@@ -59,6 +68,7 @@ async function start(){
   }catch(e){ me = null; }
   const prem = !!(me && me.estat === "aprovat" && me.premium);
   if(GLOBAL ? !isAdm : !(isAdm || prem)){ renderNoAccess(); return; }
+  await loadTpl();
   if(GLOBAL){ await loadAll(); club = null; }
   else{ const q = new URLSearchParams(location.search).get("club"); await openClub(isAdm && q ? q : (me ? me.clubId : "ocatavent")); }
   render();
@@ -75,7 +85,14 @@ async function openClub(id){
     catch(e){ members = []; say(errText(e)); }
   }
 }
+async function loadTpl(){
+  try{ const d = await F.getDoc(F.doc(db, "config", "global")); tpl = d.exists() && d.data().plantilles ? d.data().plantilles : TPL0; }catch(e){ tpl = TPL0; }
+}
+async function loadAdmins(){
+  try{ admins = (await F.getDocs(F.collection(db, "admins"))).docs.map(d => Object.assign({uid:d.id}, d.data())); }catch(e){ admins = []; }
+}
 async function loadAll(){
+  await loadAdmins();
   try{
     const [qm, qc] = await Promise.all([F.getDocs(F.collection(db, "members")), F.getDocs(F.collection(db, "clubs"))]);
     members = qm.docs.map(d => d.data());
@@ -125,9 +142,10 @@ function render(){
   shell(`${GLOBAL ? `<button class="btn sm g-back" type="button" id="gBack">← Tots els clubs</button>` : ""}
     <nav class="cl-tabs g-tabs" aria-label="Seccions">
       <button type="button" data-view="socis"${view === "socis" ? ' aria-current="page"' : ""}>Socis${pend ? `<span class="cl-dot" aria-label="${pend} pendents">${pend}</span>` : ""}</button>
+      <button type="button" data-view="rols"${view === "rols" ? ' aria-current="page"' : ""}>Rols</button>
       <button type="button" data-view="coms"${view === "coms" ? ' aria-current="page"' : ""}>Comissions</button>
     </nav>
-    ${view === "socis" ? renderSocis(L) : renderComs(L)}`);
+    ${({socis:renderSocis, rols:renderRols, coms:renderComs})[view](L)}`);
 }
 function stats(L){
   const n = e => L.filter(m => m.estat === e).length;
@@ -145,8 +163,8 @@ function rowHTML(m, showClub){
   return `<article class="card g-m${m.estat === "pendent" ? " pend" : ""}${m.estat === "rebutjat" ? " off" : ""}">
     <button type="button" class="g-open" data-open="${esc(m.userId)}">
       <b>${esc(m.nom)}${m.userId === user.uid ? " (tu)" : ""}</b><span class="g-mail">${esc(m.email)}</span>
-      <span class="g-tags">${m.estat !== "aprovat" ? `<i class="g-tag st-${esc(m.estat)}">${esc(ESTAT[m.estat] || m.estat)}</i>` : ""}${m.premium ? `<i class="g-tag prem">Premium</i>` : ""}${showClub ? `<i class="g-tag">${esc(clubName(m.clubId))}</i>` : ""}${(m.comissions || []).filter(k => C[k]).map(k => `<i class="g-tag com">${esc(C[k])}</i>`).join("")}${m.responsable ? `<i class="g-tag com">Responsable</i>` : ""}</span>
-      ${P.length ? `<small class="note">Permisos: ${esc(P.join(", "))}</small>` : ""}
+      <span class="g-tags">${m.estat !== "aprovat" ? `<i class="g-tag st-${esc(m.estat)}">${esc(ESTAT[m.estat] || m.estat)}</i>` : ""}${m.premium ? `<i class="g-tag prem">Premium</i>` : ""}${showClub ? `<i class="g-tag">${esc(clubName(m.clubId))}</i>` : ""}${(m.comissions || []).filter(k => C[k]).map(k => `<i class="g-tag com">${esc(C[k])}</i>`).join("")}${m.responsable ? `<i class="g-tag com">Responsable</i>` : ""}${(m.rolsClub || []).filter(r => rolsOf(m.clubId)[r]).map(r => `<i class="g-tag rol">${esc(rolsOf(m.clubId)[r].nom)}</i>`).join("")}</span>
+      ${P.length ? `<small class="note">Pot: ${esc(P.join(", "))}</small>` : ""}
     </button>
     ${m.estat === "pendent" && m.userId !== user.uid ? `<div class="g-row"><button class="btn cl-pri" type="button" data-estat="aprovat" data-uid="${esc(m.userId)}">Aprova</button><button class="btn danger" type="button" data-estat="rebutjat" data-uid="${esc(m.userId)}">Rebutja</button></div>` : ""}
   </article>`;
@@ -165,6 +183,31 @@ function renderSocis(L){
         <p><b>Premium:</b> gestiona el seu club des d'aquesta web i té tots els permisos dins del club. Només el dona l'administració.</p>
         <p>Per publicar avisos d'una comissió cal formar-ne part i tenir «Fer avisos». Ningú no pot canviar el seu propi estat ni els seus permisos.</p></div></div>`;
 }
+// Editor de rols: scope "rol" (rols del club) o "tpl" (plantilles globals). Un rol per targeta, permisos com a xips.
+function roleEditor(R, scope, count){
+  return `${Object.entries(R).map(([k, r]) => `<article class="card g-card g-rol">
+      <div class="g-com"><input class="field" type="text" maxlength="40" value="${esc(r.nom)}" data-rname="${esc(k)}" data-scope="${scope}" aria-label="Nom del rol">${count ? `<span class="g-n">${count(k)} pers.</span>` : ""}<button class="btn sm" type="button" data-rdel="${esc(k)}" data-scope="${scope}">Elimina</button></div>
+      <div class="cl-chips">${Object.entries(PERMS).map(([p, d]) => `<button type="button" class="cl-chip" data-rperm="${esc(k)}" data-p="${p}" data-scope="${scope}" aria-pressed="${(r.permisos || []).includes(p)}">${esc(d.t)}</button>`).join("")}</div>
+      <div data-rbox="${scope}-${esc(k)}"></div></article>`).join("") || `<article class="card"><p class="note">Encara no hi ha cap rol.</p></article>`}
+    <article class="card g-card"><div class="g-com"><input class="field" type="text" maxlength="40" id="${scope}New" placeholder="${scope === "tpl" ? "Nova plantilla de rol" : "Nou rol (p. ex. Monitoratge)"}"><button class="btn cl-pri" type="button" data-radd="${scope}">Afegeix</button></div></article>`;
+}
+function whoCan(L){
+  const A = L.filter(m => m.estat === "aprovat").sort((a, b) => String(a.nom).localeCompare(String(b.nom), "ca")), R = rolsOf(club);
+  return `<article class="card g-card"><span class="lbl">Qui pot fer què · ${A.length} persones</span>
+    <div class="g-tbl-w"><table class="g-tbl"><thead><tr><th>Persona</th>${Object.values(PERMS).map(p => `<th>${esc(p.t)}</th>`).join("")}</tr></thead>
+    <tbody>${A.map(m => { const E = m.premium ? Object.keys(PERMS) : effOf(m, R);
+      return `<tr><th><button type="button" class="g-lnk" data-open="${esc(m.userId)}">${esc(m.nom)}</button>${m.premium ? ` <i class="g-tag prem">Premium</i>` : ""}</th>${Object.keys(PERMS).map(p => `<td>${E.includes(p) ? `<span class="g-yes" aria-label="sí">✓</span>` : `<span class="g-no" aria-label="no">·</span>`}</td>`).join("")}</tr>`; }).join("")}</tbody></table></div>
+    <p class="note">Inclou els rols, els permisos extra i premium (que ho té tot dins del club).</p></article>`;
+}
+function renderRols(L){
+  const n = k => L.filter(m => m.estat === "aprovat" && (m.rolsClub || []).includes(k)).length;
+  return `<p class="note">Cada rol és un paquet de permisos. Assigna'ls a les persones des de la seva fitxa a «Socis». Si canvies els permisos d'un rol, s'actualitzen a totes les persones que el tenen.</p>
+    ${roleEditor(rolsOf(club), "rol", n)}
+    ${whoCan(L)}
+    ${catalog()}`;
+}
+const catalog = () => `<article class="card g-card"><span class="lbl">Catàleg de permisos</span>${Object.values(PERMS).map(p => `<p class="note"><b>${esc(p.t)}:</b> ${esc(p.d)}</p>`).join("")}
+  <p class="note">Els permisos els defineix l'app: cadascun té la seva regla de seguretat. Premium i l'administració els tenen tots.</p></article>`;
 function renderComs(L){
   const C = comsOf(club), n = k => L.filter(m => m.estat === "aprovat" && (m.comissions || []).includes(k)).length;
   return `<article class="card g-card"><label class="lbl" for="gClubNom">Nom del club</label>
@@ -188,25 +231,44 @@ function renderGlobal(){
       <input class="field" id="gNewClub" type="text" maxlength="80" placeholder="Nom del club (p. ex. Club Nàutic Badalona)">
       <button class="btn cl-pri g-wide" type="button" id="gAddClub">Crea el club</button>
       <p class="note">Les altes noves de l'app entren de moment al Club Ocata Vent. Per passar algú a un altre club, obre la seva fitxa.</p></article>
+    <span class="lbl">Plantilles de rol · ${Object.keys(tpl).length}</span>
+    <p class="note">Són els rols amb què comença cada club nou. Cada club després els pot canviar.</p>
+    ${roleEditor(tpl, "tpl")}
+    ${adminsCard()}
+    ${catalog()}
     <span class="lbl">Tots els usuaris · ${members.length}</span>
     <input class="field" id="gQ" type="search" placeholder="Cerca a tots els clubs per nom o correu" autocomplete="off" value="${esc(flt.q)}">
     <div class="g-list">${q ? (all.map(m => rowHTML(m, true)).join("") || `<article class="card"><p class="note">Ningú.</p></article>`) : ""}</div>
     <div class="g-row"><button class="btn" type="button" id="gCsv">Descarrega tots els usuaris (CSV)</button><button class="btn" type="button" id="gReload">Actualitza</button></div>`);
 }
 
+function adminsCard(){
+  const owner = user.uid === OWNER_UID, ids = new Set(admins.map(a => a.uid));
+  const cand = members.filter(m => m.estat === "aprovat" && !ids.has(m.userId) && m.userId !== OWNER_UID).sort((a, b) => String(a.nom).localeCompare(String(b.nom), "ca"));
+  const nm = uid => { const m = members.find(x => x.userId === uid); return m ? m.nom + " · " + m.email : uid; };
+  return `<article class="card g-card"><span class="lbl">Administració global · ${admins.length + 1}</span>
+    <div class="g-com"><b style="flex:1">${esc(nm(OWNER_UID))}</b><span class="note">Inicial</span></div>
+    ${admins.map(a => `<div class="g-com"><span style="flex:1">${esc(nm(a.uid))}</span>${owner ? `<button class="btn sm" type="button" data-admdel="${esc(a.uid)}">Treu</button>` : ""}</div><div data-admbox="${esc(a.uid)}"></div>`).join("")}
+    ${owner ? `<div class="g-com"><select class="field" id="gAdmNew"><option value="">Tria una persona…</option>${cand.map(m => `<option value="${esc(m.userId)}">${esc(m.nom)} · ${esc(m.email)}</option>`).join("")}</select><button class="btn cl-pri" type="button" id="gAdmAdd">Afegeix</button></div>
+      <p class="note">L'administració global veu i edita tots els clubs i usuaris. Només l'administració inicial en pot afegir o treure.</p>` : `<p class="note">Només l'administració inicial en pot afegir o treure.</p>`}</article>`;
+}
+
 /* ---------- fitxa d'una persona ---------- */
 function openMember(id){
   const m = members.find(x => x.userId === id); if(!m) return;
   openId = id;
-  const self = id === user.uid, C = comsOf(m.clubId), on = m.estat === "aprovat";
+  const self = id === user.uid, C = comsOf(m.clubId), R = rolsOf(m.clubId), on = m.estat === "aprovat";
   const tog = (attr, k, v, t) => `<button class="btn sm" type="button" ${attr}="${esc(k)}" aria-pressed="${!!v}">${esc(t)}</button>`;
   sheet(m.nom, `
     <p class="note" style="margin:0">${esc(m.email)} · ${esc(ESTAT[m.estat] || m.estat)}${ms(m.creat) ? " · alta demanada el " + esc(dayStr(ms(m.creat))) : ""}</p>
     <div class="g-grp"><label class="lbl" for="mNom">Nom</label><div class="g-com"><input class="field" id="mNom" type="text" maxlength="80" value="${esc(m.nom)}"><button class="btn cl-pri" type="button" id="mNomOk">Desa</button></div></div>
     ${on ? `<div class="g-grp"><span class="lbl">Comissions i rol</span><div class="acc-roles">${Object.entries(C).map(([k, t]) => tog("data-mcom", k, (m.comissions || []).includes(k), t)).join("")}${tog("data-mresp", "1", m.responsable, "Responsable")}</div>
       <p class="note">Les persones responsables i la Junta poden marcar com a resolts els avisos de seguretat.</p></div>
-    <div class="g-grp"><span class="lbl">Permisos</span>${self ? `<p class="note">No pots canviar els teus propis permisos.</p>` : `${m.premium ? `<p class="note">Premium: ja té tots els permisos dins del club.</p>` : ""}
-      ${Object.entries(PERMS).map(([k, p]) => `<label class="cl-sw"><span><b>${p.t}</b><small class="note">${esc(p.d)}</small></span><input type="checkbox" class="switch" data-mperm="${k}"${(m.permisos || []).includes(k) ? " checked" : ""}></label>`).join("")}`}</div>` : ""}
+    <div class="g-grp"><span class="lbl">Rols i permisos</span>${self ? `<p class="note">No pots canviar els teus propis rols ni permisos.</p>` : `
+      <div class="acc-roles">${Object.entries(R).map(([k, r]) => tog("data-mrol", k, (m.rolsClub || []).includes(k), r.nom)).join("") || `<span class="note">El club encara no té rols: crea'n a la pestanya «Rols».</span>`}</div>`}
+      <p class="note">${m.premium ? "Premium: ho pot fer tot dins del club." : "Pot: " + esc(permT(effOf(m, R)) || "res especial")}</p>
+      ${self ? "" : `<details class="g-det"${extraOf(m).length ? " open" : ""}><summary>Permisos extra (excepcions)</summary>
+        ${Object.entries(PERMS).map(([k, p]) => `<label class="cl-sw"><span><b>${p.t}</b><small class="note">${esc(p.d)}</small></span><input type="checkbox" class="switch" data-mextra="${k}"${extraOf(m).includes(k) ? " checked" : ""}></label>`).join("")}</details>`}</div>` : ""}
     ${isAdm && !self ? `<div class="g-grp"><span class="lbl">Només administració</span>
       ${on ? `<label class="cl-sw"><span><b>Premium</b><small class="note">Gestiona el seu club des d'aquesta web.</small></span><input type="checkbox" class="switch" id="mPrem"${m.premium ? " checked" : ""}></label>` : ""}
       <label class="lbl" for="mClub">Club</label><select class="field" id="mClub">${Object.keys(clubs).concat(clubs[m.clubId] ? [] : [m.clubId]).map(c => `<option value="${esc(c)}"${c === m.clubId ? " selected" : ""}>${esc(clubName(c))}</option>`).join("")}</select>
@@ -217,16 +279,18 @@ function openMember(id){
       const b = e.target.closest("button"); if(!b) return;
       if(b.dataset.mcom){ const c = (m.comissions || []).filter(k => C[k]); update(id, {comissions: c.includes(b.dataset.mcom) ? c.filter(x => x !== b.dataset.mcom) : c.concat([b.dataset.mcom])}); }
       if(b.dataset.mresp) update(id, {responsable: !m.responsable});
+      if(b.dataset.mrol){ const cur = (m.rolsClub || []).filter(k => R[k]), k = b.dataset.mrol; setPerms(m, cur.includes(k) ? cur.filter(x => x !== k) : cur.concat([k]), extraOf(m)); }
       if(b.dataset.mestat) update(id, {estat:b.dataset.mestat, revisatPer:user.uid, revisatAt:F.serverTimestamp()}, true);
       if(b.id === "mNomOk"){ const v = $("mNom").value.trim().slice(0, 80); if(v && v !== m.nom) update(id, {nom:v}); }
     });
     d.addEventListener("change", async e => {
       const t = e.target;
-      if(t.dataset.mperm){ const k = t.dataset.mperm, P = (m.permisos || []).filter(x => PERMS[x]); update(id, {permisos: t.checked ? P.filter(x => x !== k).concat([k]) : P.filter(x => x !== k)}); }
+      if(t.dataset.mextra){ const k = t.dataset.mextra, P = extraOf(m); setPerms(m, (m.rolsClub || []).filter(r => R[r]), t.checked ? P.filter(x => x !== k).concat([k]) : P.filter(x => x !== k)); }
       if(t.id === "mPrem") update(id, {premium: t.checked});
       if(t.id === "mClub" && t.value !== m.clubId){
         // Primer es treuen els rols del club vell (regla «rols»), després es canvia de club (regla d'administració)
         if((m.comissions || []).length || m.responsable){ if(!await update(id, {comissions:[], responsable:false}, false, true)) return; }
+        if((m.rolsClub || []).length){ const X = extraOf(m); if(!await update(id, {rolsClub:[], permisosExtra:X, permisos:X}, false, true)) return; }   // els rols són del club vell
         update(id, {clubId:t.value, premium:false});
       }
     });
@@ -243,12 +307,37 @@ async function update(id, patch, close, quiet){
   }catch(e){ const s = $("shMsg"); if(s){ s.textContent = errText(e); s.hidden = false; } else say(errText(e)); return false; }
 }
 
-/* ---------- comissions i clubs ---------- */
+// Rols i permisos extra d'una persona → recalcula «permisos»
+function setPerms(m, rolsClub, extra){
+  const x = Object.assign({}, m, {rolsClub, permisosExtra:extra});
+  return update(m.userId, {rolsClub, permisosExtra:extra, permisos:effOf(x, rolsOf(m.clubId))});
+}
+// Després de canviar els rols del club: recalcula les persones afectades (no a un mateix: les regles no ho deixen)
+async function recalc(id){
+  const R = rolsOf(id), L = members.filter(m => m.clubId === id && (m.rolsClub || []).length);
+  let skipped = false, fails = 0;
+  for(const m of L){
+    const rc = (m.rolsClub || []).filter(r => R[r]), x = Object.assign({}, m, {rolsClub:rc}), P = effOf(x, R);
+    if(rc.length === (m.rolsClub || []).length && P.slice().sort().join() === (m.permisos || []).slice().sort().join()) continue;
+    if(m.userId === user.uid){ skipped = true; continue; }
+    try{ const patch = {rolsClub:rc, permisosExtra:extraOf(m), permisos:P}; await F.updateDoc(F.doc(db, "members", m.userId), patch); Object.assign(m, patch); }catch(e){ fails++; }
+  }
+  say(fails ? `No s'han pogut actualitzar ${fails} persones.` : skipped ? "Els teus propis permisos no s'actualitzen: demana a una altra persona gestora que t'obri la fitxa." : "");
+}
+
+/* ---------- comissions, rols i clubs ---------- */
 async function saveClub(id, patch){
-  const cur = clubs[id] || {nom:"", comissions:COMS0}, next = {nom:cur.nom || clubName(id), comissions:cur.comissions || COMS0, ...patch};
-  try{ await F.setDoc(F.doc(db, "clubs", id), {nom:next.nom, comissions:next.comissions, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid}); clubs[id] = next; say(""); render(); return true; }
+  const cur = clubs[id] || {nom:"", comissions:COMS0}, next = {nom:cur.nom || clubName(id), comissions:cur.comissions || COMS0, rols:cur.rols || tpl, ...patch};
+  try{ await F.setDoc(F.doc(db, "clubs", id), {nom:next.nom, comissions:next.comissions, rols:next.rols, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid}); clubs[id] = next; say(""); if(patch.rols) await recalc(id); render(); return true; }
   catch(e){ say(errText(e)); return false; }
 }
+
+async function saveTpl(next){
+  try{ await F.setDoc(F.doc(db, "config", "global"), {plantilles:next, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid}); tpl = next; say(""); render(); }
+  catch(e){ say(errText(e)); }
+}
+const rolesIn = sc => sc === "tpl" ? tpl : rolsOf(club);
+const saveRoles = (sc, next) => sc === "tpl" ? saveTpl(next) : saveClub(club, {rols:next});
 
 /* ---------- full inferior (fitxa) ---------- */
 function sheet(title, html, onOpen){
@@ -279,7 +368,7 @@ function slideConfirm(el, label, onDone){
 function csv(){
   const L = GLOBAL && !club ? members : filtered(inClub());
   const cell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const rows = [["Nom", "Correu", "Club", "Estat", "Premium", "Comissions", "Responsable", "Permisos", "Alta demanada"]].concat(L.map(m => [m.nom, m.email, clubName(m.clubId), ESTAT[m.estat] || m.estat, m.premium ? "sí" : "", (m.comissions || []).map(k => comsOf(m.clubId)[k]).filter(Boolean).join(", "), m.responsable ? "sí" : "", (m.permisos || []).map(k => PERMS[k]?.t).filter(Boolean).join(", "), ms(m.creat) ? new Date(ms(m.creat)).toISOString().slice(0, 10) : ""]));
+  const rows = [["Nom", "Correu", "Club", "Estat", "Premium", "Comissions", "Responsable", "Rols", "Permisos", "Alta demanada"]].concat(L.map(m => [m.nom, m.email, clubName(m.clubId), ESTAT[m.estat] || m.estat, m.premium ? "sí" : "", (m.comissions || []).map(k => comsOf(m.clubId)[k]).filter(Boolean).join(", "), m.responsable ? "sí" : "", (m.rolsClub || []).map(r => rolsOf(m.clubId)[r]?.nom).filter(Boolean).join(", "), (m.permisos || []).map(k => PERMS[k]?.t).filter(Boolean).join(", "), ms(m.creat) ? new Date(ms(m.creat)).toISOString().slice(0, 10) : ""]));
   const blob = new Blob(["﻿" + rows.map(r => r.map(cell).join(";")).join("\r\n")], {type:"text/csv;charset=utf-8"});
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `socis-${club || "tots"}-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -303,18 +392,30 @@ document.addEventListener("click", async e => {
   if(b.dataset.club){ await openClub(b.dataset.club); render(); window.scrollTo({top:0}); return; }
   if(b.id === "gBack"){ club = null; flt = {q:"", estat:"tots", com:"totes"}; render(); return; }
   if(b.id === "gCsv"){ csv(); return; }
+  if(b.dataset.rperm){ const sc = b.dataset.scope, R = rolesIn(sc), k = b.dataset.rperm, p = b.dataset.p, r = R[k]; if(!r) return;
+    const P = r.permisos || []; saveRoles(sc, Object.assign({}, R, {[k]: {nom:r.nom, permisos: P.includes(p) ? P.filter(x => x !== p) : P.concat([p])}})); return; }
+  if(b.dataset.radd){ const sc = b.dataset.radd, R = rolesIn(sc), n = ($(sc + "New")?.value || "").trim(); if(!n) return;
+    let k = slug(n) || "rol", i = 2; while(R[k]) k = (slug(n) || "rol") + "-" + i++; saveRoles(sc, Object.assign({}, R, {[k]: {nom:n.slice(0, 40), permisos:[]}})); return; }
+  if(b.dataset.rdel){ const sc = b.dataset.scope, R = rolesIn(sc), k = b.dataset.rdel, box = document.querySelector(`[data-rbox="${sc}-${CSS.escape(k)}"]`);
+    if(box) slideConfirm(box, "Llisca per eliminar " + (R[k]?.nom || ""), () => { const n = Object.assign({}, R); delete n[k]; saveRoles(sc, n); }); return; }
+  if(b.id === "gAdmAdd"){ const u = $("gAdmNew")?.value; if(!u) return; const m = members.find(x => x.userId === u);
+    try{ await F.setDoc(F.doc(db, "admins", u), {nom:m?.nom || "", afegit:F.serverTimestamp()}); await loadAdmins(); say(""); render(); }catch(err){ say(errText(err)); } return; }
+  if(b.dataset.admdel){ const u = b.dataset.admdel, box = document.querySelector(`[data-admbox="${CSS.escape(u)}"]`);
+    if(box) slideConfirm(box, "Llisca per treure l'administració", async () => { try{ await F.deleteDoc(F.doc(db, "admins", u)); await loadAdmins(); say(""); render(); }catch(err){ say(errText(err)); } }); return; }
   if(b.id === "gReload"){ b.disabled = true; if(GLOBAL){ const c = club; await loadAll(); club = c; } else await openClub(club); render(); return; }
   if(b.id === "gAddCom"){ const n = ($("gNewCom")?.value || "").trim(); if(!n) return; const C = comsOf(club); let k = slug(n) || "comissio", i = 2; while(C[k]) k = (slug(n) || "comissio") + "-" + i++;
     saveClub(club, {comissions:Object.assign({}, C, {[k]: n.slice(0, 40)})}); return; }
   if(b.dataset.comdel){ const k = b.dataset.comdel, box = document.querySelector(`[data-combox="${CSS.escape(k)}"]`), C = comsOf(club);
     if(box) slideConfirm(box, "Llisca per eliminar " + (C[k] || ""), () => { const n = Object.assign({}, C); delete n[k]; saveClub(club, {comissions:n}); }); return; }
   if(b.id === "gAddClub"){ const n = ($("gNewClub")?.value || "").trim(); if(!n) return; let k = slug(n) || "club", i = 2; while(clubs[k]) k = (slug(n) || "club") + "-" + i++;
-    b.disabled = true; clubs[k] = {nom:n.slice(0, 80), comissions:COMS0}; if(!await saveClub(k, {})){ delete clubs[k]; render(); } return; }
+    b.disabled = true; clubs[k] = {nom:n.slice(0, 80), comissions:COMS0, rols:JSON.parse(JSON.stringify(tpl))}; if(!await saveClub(k, {})){ delete clubs[k]; render(); } return; }
 });
 document.addEventListener("change", e => {
   const t = e.target; if(t.closest && t.closest("#gSheet")) return;
   if(t.dataset && t.dataset.comname){ const k = t.dataset.comname, C = comsOf(club), v = t.value.trim().slice(0, 40);
     if(v && v !== C[k]) saveClub(club, {comissions:Object.assign({}, C, {[k]: v})}); else t.value = C[k]; }
+  if(t.dataset && t.dataset.rname){ const sc = t.dataset.scope, R = rolesIn(sc), k = t.dataset.rname, v = t.value.trim().slice(0, 40);
+    if(R[k] && v && v !== R[k].nom) saveRoles(sc, Object.assign({}, R, {[k]: Object.assign({}, R[k], {nom:v})})); else if(R[k]) t.value = R[k].nom; }
   if(t.id === "gClubNom"){ const v = t.value.trim().slice(0, 80); if(v && v !== clubs[club]?.nom) saveClub(club, {nom:v}); }
 });
 document.addEventListener("input", e => {
