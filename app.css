@@ -1197,3 +1197,27 @@ body.wm-open{overflow:hidden}
 :root[data-size="big"] .tl-days button{font-size:.92rem}
 :root[data-size="big"] .tl-h b{font-size:.78rem}
 @media (orientation:landscape){ .wm.full .wm-now{font-size:.78rem} .wm.full-chart .hc-read{font-size:.8rem} }
+/* pantalla completa en horitzontal: capçalera, lectura i línia del temps en franges primes perquè el gràfic o el mapa tinguin tota l'alçada */
+.wm.full .wm-cwrap{overflow:hidden}
+@media (orientation:landscape){
+  .wm.full{gap:3px;padding-top:calc(4px + env(safe-area-inset-top,0px));padding-bottom:calc(4px + env(safe-area-inset-bottom,0px))}
+  .wm.full .card-h{margin:0;min-height:0}
+  .wm.full .card-h .lbl{font-size:.72rem}
+  .wm.full .wm-cap{font-size:.85rem}
+  .wm.full .wm-x{width:30px;height:30px;font-size:.95rem}
+  /* lectura de l'hora en una sola fila llarga */
+  .wm.full-chart .hc-read{flex-wrap:nowrap;gap:14px;margin:0;padding:3px 10px;min-height:0;white-space:nowrap;overflow:hidden;font-size:.8rem}
+  .wm.full-chart .hc-read .rd-top{flex-basis:auto;flex:none;flex-wrap:nowrap;gap:10px}
+  .wm.full-chart .hc-read .rd-why{flex-basis:auto;margin:0;font-size:.78rem;white-space:nowrap}
+  .wm.full-chart .hc-read .rd-m{margin-left:0;flex:none;font-size:.74rem}
+  .wm.full-chart .hc-read .rd-v{flex-basis:auto;flex-wrap:nowrap;flex:1;min-width:0;gap:12px}
+  .wm.full-chart .hc-read .rd-h b{font-size:.9rem}
+  .wm.full-map .wm-now{flex-wrap:nowrap;white-space:nowrap;overflow:hidden;margin-top:2px;font-size:.76rem}
+  /* línia del temps més baixa */
+  .wm.full .tl-days{padding:0 0 2px;gap:5px}
+  .wm.full .tl-days button{padding:2px 9px;font-size:.68rem}
+  .wm.full .tl-strip{height:32px}
+  .wm.full .tl-h b{height:12px;line-height:12px;font-size:.6rem}
+  .wm.full .tl-h.d0::before{bottom:12px}
+  .wm.full .tl-needle{bottom:10px}
+}

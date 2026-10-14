@@ -244,5 +244,10 @@ window.addEventListener("resize", () => { if(!wmFull()) return; clearTimeout(wmO
   if(wmCard().classList.contains("full-chart")){ renderDayChart(); applySel(); }
   if(wmSel) tlSync(wmSel, true); }, 200); });
 window.addEventListener("mm-theme", () => { if(wmFx) wmFx.reset(); });
+// el gràfic maximitzat es torna a dibuixar quan canvia l'espai lliure (la lectura s'omple després, el mòbil gira…)
+let wmCH = 0;
+new ResizeObserver(() => { const c = wmCard(), cw = $("dayChart")?.parentElement; if(!c || !cw || !c.classList.contains("full-chart")) return;
+  const h = Math.round(cw.clientHeight + cw.clientWidth * 1000); if(Math.abs(h - wmCH) < 4) return; wmCH = h;
+  clearTimeout(wmOpen.r); wmOpen.r = setTimeout(() => { renderDayChart(); applySel(); }, 60); }).observe(document.querySelector("#windMap .wm-cwrap"));
 window.renderWindMap = renderWindMap;
 if(DATA) renderWindMap();
