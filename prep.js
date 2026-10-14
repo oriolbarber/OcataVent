@@ -29,6 +29,7 @@ function render(){
   const dark = set ? new Date(set.getTime() - 30 * 60e3) : null, left = dark ? Math.round((dark - Date.now()) / 60000) : null;
   // hores que queden fins a la posta
   const h0 = new Date().getHours(), h1 = set ? set.getHours() : 20, hrs = [];
+  if(selH != null && (selH <= h0 || selH > h1)) selH = null;   // l'hora triada ja ha passat: torna a «ara»
   for(let h = h0; h <= h1; h++){ const p = hourAt(td, h) || DATA.hours[hourKey(td, h)]; if(p) hrs.push({h, p, v: verdict(scoreHour(p, c))}); }
   // la franja bona més llarga (Ideal o Bo)
   let best = null, run = null;
@@ -47,7 +48,7 @@ function render(){
       <div class="pn-score"><b>${s.score == null ? "–" : Math.round(s.score / 10)}</b><small>/10</small></div>
       <div class="pn-v"><span class="pn-boat">${boatIcon(act, 18)}${esc(DEFAULTS[act].name)} · ara</span><b class="pn-t">${esc(v.t)}</b>${why ? `<span class="pn-why">${esc(why)}</span>` : ""}</div>
     </div>
-    ${hrs.length ? `<div class="pn-hrs" aria-label="Hores fins a la posta">${hrs.map(x => `<div class="pn-h k-${x.v.k}${x.h === h0 ? " now" : ""}" title="${x.h} h · ${esc(x.v.t)}"><span>${x.h}</span><i></i><b>${r0(x.p.wind)}</b>${wmArrow(x.p.dir, 14)}</div>`).join("")}</div>` : ""}
+    ${hrs.length ? `<div class="pn-hrs" aria-label="Hores fins a la posta">${hrs.map(x => `<button type="button" class="pn-h k-${x.v.k}" data-ph="${x.h}" aria-pressed="${x.h === (selH ?? h0)}" aria-label="${x.h} h · ${esc(x.v.t)} · ${r0(x.p.wind)} kn"><span>${x.h} h</span><i></i><b>${r0(x.p.wind)}</b>${wmArrow(x.p.dir, 14)}</button>`).join("")}</div>` : ""}
     <div class="pn-lines">
       ${plan ? `<span>${plan}</span>` : ""}
       ${light ? `<span>${light}</span>` : ""}
@@ -139,7 +140,16 @@ async function loadRadar(){
 }
 
 /* ---------- vent i onades pintats sobre el mapa (com Windy) ---------- */
-function windNow(){ if(!DATA) return null; const n = nowPoint(), fc = DATA.now; return {wind:n.wind, gust:n.gust, dir:n.dir, wave:fc.wave, wdir:fc.wdir, per:tpOf(fc), live:stFresh()}; }
+// Hora triada a la franja (null = ara). El mapa pinta el vent i les onades d'aquella hora.
+let selH = null;
+function windNow(){
+  if(!DATA) return null;
+  if(selH != null){ const td = todayDate(), p = hourAt(td, selH) || DATA.hours[hourKey(td, selH)];
+    if(p) return {wind:p.wind, gust:p.gust, dir:p.dir, wave:p.wave, wdir:p.wdir, per:tpOf(p), live:false, h:selH}; }
+  const n = nowPoint(), fc = DATA.now; return {wind:n.wind, gust:n.gust, dir:n.dir, wave:fc.wave, wdir:fc.wdir, per:tpOf(fc), live:stFresh()};
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("#prepNow [data-ph]"); if(!b) return;
+  const h = +b.dataset.ph; selH = h === new Date().getHours() || h === selH ? null : h; parts = []; crests = []; render(); });
 function setFlag(key, dir, html, bg, off){
   const f = flagM?.getElement()?.querySelector(`[data-pf="${key}"]`); if(!f) return;
   if(dir == null){ f.hidden = true; return; }
@@ -156,7 +166,7 @@ function drawWind(){
   if(dw != null && dv != null){ const d = ((dv - dw + 540) % 360) - 180; if(Math.abs(d) < 40){ dw = dv = dw + d / 2; oW = -15; oV = 14; } }
   setFlag("w", dw, `<b>${r1(w.wind)}</b> kn<small>${windAbbr(w.dir)} · R${r0(w.gust)}</small>`, kw ? `var(--${kw})` : "var(--muted)", oW);
   setFlag("v", dv, `<b>${r1(w.wave)}</b> m<small>${r0(w.per)} s</small>`, kwv ? `var(--${kwv})` : "var(--muted)", oV);
-  $("prepWindT").innerHTML = w.wind == null ? "" : `Vent ${w.live ? "mesurat" : "previst"}: <b>${windName(w.dir)}</b> (${windAbbr(w.dir)}) ${r1(w.wind)} kn, ratxa ${r0(w.gust)}${w.wave != null ? ` · onada ${r1(w.wave)} m de ${windAbbr(w.wdir)}` : ""}`;
+  $("prepWindT").innerHTML = w.wind == null ? "" : `${w.h != null ? `<b>A les ${w.h} h</b> · vent previst` : `Vent ${w.live ? "mesurat" : "previst"}`}: <b>${windName(w.dir)}</b> (${windAbbr(w.dir)}) ${r1(w.wind)} kn, ratxa ${r0(w.gust)}${w.wave != null ? ` · onada ${r1(w.wave)} m de ${windAbbr(w.wdir)}` : ""}`;
   if(!raf && (LY.vent || LY.onades) && visible()) raf = requestAnimationFrame(step);
 }
 const isDark = () => { const th = document.documentElement.dataset.theme; return th === "dark" || (!th && matchMedia("(prefers-color-scheme: dark)").matches); };
