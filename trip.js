@@ -710,10 +710,9 @@ async function permCheck(){
     else if(st === "denied") set("pmGeo", "bad", "Denegada. Activa-la a Ajustaments ▸ Aplicacions ▸ Chrome ▸ Permisos ▸ Ubicació, i a la icona del cadenat de la web.");
     else set("pmGeo", "wait", "Encara no l'has concedida. Toca «Permet».");
   }
-  if(window.OV_NATIVE){   // app Android: el GPS continua amb la pantalla apagada
-    set("pmWake", "ok", "A l'app, la gravació continua encara que la pantalla s'apagui.");
-    const b = $("pmBat"); if(b) b.querySelector("small").innerHTML = "Perquè Android no aturi la gravació: Ajustaments ▸ Aplicacions ▸ Ocata Vent ▸ Bateria ▸ <b>Sense restriccions</b>. En començar, permet la ubicació i les notificacions.";
-  } else if("wakeLock" in navigator) set("pmWake", "ok", "Mentre graves, la pantalla no s'apagarà sola.");
+  await batCheck();
+  if(window.OV_NATIVE) set("pmWake", "ok", "A l'app, la gravació continua encara que la pantalla s'apagui.");   // el GPS continua amb la pantalla apagada
+  else if("wakeLock" in navigator) set("pmWake", "ok", "Mentre graves, la pantalla no s'apagarà sola.");
   else set("pmWake", "bad", "Aquest navegador no pot mantenir la pantalla encesa: allarga el temps d'apagada a Ajustaments del mòbil.");
   // si alguna cosa falta, se n'ensenya el detall sense haver de tocar
   const bad = document.querySelector("#ckRow .ck.bad, #ckRow .ck.wait"); ckShow(bad ? bad.dataset.ck : ckOpen);
@@ -727,6 +726,27 @@ function nativeGeoState(){
     e => res(nGeo = e.code === 1 ? "denied" : e.code === 3 ? "granted" : "prompt"),
     {enableHighAccuracy:false, maximumAge:600000, timeout:8000}));
 }
+// Bateria: a l'APK nou, Android diu si l'app està exclosa de l'optimització (OvBattery); si no es pot saber, ho confirma el soci
+const BAT_K = "ov2_bat_ok";
+async function batCheck(){
+  const b = $("pmBat"), btn = $("pmBatBtn"); if(!b) return;
+  const P = window.OV_NATIVE && window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.OvBattery;
+  const say = (cls, word, html, btxt) => { b.className = "ck " + cls; b.querySelector("em").textContent = word; b.querySelector("small").innerHTML = html; btn.hidden = !btxt; if(btxt) btn.textContent = btxt; };
+  const where = window.OV_NATIVE ? "Ocata Vent" : "Chrome";
+  let ign = null; if(P){ try{ ign = (await P.check()).ignoring; }catch(e){} }
+  let man = false; try{ man = localStorage.getItem(BAT_K) === where; }catch(e){}
+  if(ign === true) say("ok", "A punt", "Android no aturarà la gravació: l'app no té restriccions de bateria.", null);
+  else if(ign === false) say("pm-info", "Revisa", "Android pot aturar la gravació per estalviar bateria. Toca «Treu la restricció» i tria <b>Permet</b>.", "Treu la restricció");
+  else if(man) say("ok", "A punt", `Has confirmat que ${where} no té restriccions de bateria.`, null);
+  else say("pm-info", "Revisa", `Perquè Android no aturi la gravació: Ajustaments ▸ Aplicacions ▸ ${where} ▸ Bateria ▸ <b>Sense restriccions</b>. Quan ho tinguis, toca «Ja ho he fet».`, "Ja ho he fet");
+}
+document.addEventListener("click", e => { if(e.target.id !== "pmBatBtn") return;
+  const P = window.OV_NATIVE && window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.OvBattery;
+  if(P && e.target.textContent === "Treu la restricció"){ P.open().catch(() => {}); return; }   // en tornar a l'app es torna a comprovar
+  try{ localStorage.setItem(BAT_K, window.OV_NATIVE ? "Ocata Vent" : "Chrome"); }catch(_){}
+  permCheck();
+});
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible" && !LIVE && $("pmBat")) permCheck(); });
 let ckOpen = null;
 function ckShow(k){
   ckOpen = k; const d = $("ckDetail");
