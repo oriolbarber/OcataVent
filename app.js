@@ -596,12 +596,12 @@ document.addEventListener("click", e => { if(e.target.closest && e.target.closes
 // Amplada real disponible (px) perquè el gràfic hi càpiga sencer, sense lliscar, i les lletres no s'encongeixin
 function chartW(el){ const w = el && el.clientWidth ? el.clientWidth - (parseFloat(getComputedStyle(el).paddingLeft)||0) - (parseFloat(getComputedStyle(el).paddingRight)||0) : 0;
   return Math.round(Math.min(760, Math.max(300, w || (innerWidth - 40)))); }
-function hourChart(date, h0, h1, wide, Wpx){
+function hourChart(date, h0, h1, wide, Wpx, Hpx){
   const c = crit[act], hrs = [];
   for(let h=h0; h<=h1; h++){ const p = hourAt(date,h); if(p) hrs.push({h, p, s:scoreHour(p,c)}); }
   if(hrs.length < 2) return "";
   const big = document.documentElement.dataset.size === "big";
-  const W = wide ? (Wpx || 760) : 380, Hh = wide ? (big ? 200 : 170) : 108, L = wide ? 26 : 6, R = wide ? 30 : 6, T = wide ? 22 : 22, B = wide ? 36 : 20;
+  const W = wide ? (Wpx || 760) : 380, Hh = Hpx || (wide ? (big ? 200 : 170) : 108), L = wide ? 26 : 6, R = wide ? 30 : 6, T = wide ? 22 : 22, B = wide ? 36 : 20;
   const pw = W-L-R, ph = Hh-T-B, n = hrs.length, dx = pw/(n-1);
   // escala ajustada a les dades que es veuen (no als criteris), perquè el gràfic sigui baixet i aprofiti l'alçada
   const maxK = Math.max(10, Math.ceil(Math.max(...hrs.map(x=>Math.max(x.p.gust||0, x.p.wind||0)))*1.1/5)*5);
@@ -665,7 +665,9 @@ let chartDate = null;
 function renderDayChart(){
   const host = $("dayChart"); if(!host || !DATA) return;
   const k = selKey(), d = DATA.daily.time.includes(k.slice(0,10)) ? k.slice(0,10) : viewDay();
-  chartDate = d; host.innerHTML = hourChart(d, 7, 21, true, chartW($("windMap")));
+  const card = $("windMap"), full = card && card.classList.contains("full-chart"), cw = host.parentElement;
+  // a pantalla completa, el gràfic ocupa tot l'espai lliure (amplada i alçada reals, sense deformar les lletres)
+  chartDate = d; host.innerHTML = full ? hourChart(d, 7, 21, true, Math.max(300, cw.clientWidth), Math.max(170, cw.clientHeight - 6)) : hourChart(d, 7, 21, true, chartW(card));
   $("dayLegend").innerHTML = chartLegend(true);
 }
 function readout(k){

@@ -1148,3 +1148,33 @@ footer #iSrc{text-align:left;margin:8px 0}
 /* Previsió dins la pantalla de ruta: la targeta «Vent per hores» s'hi trasllada */
 .ride-fc{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:4px}
 .ride-fc .card{margin:0}
+
+/* ---------- Previsió: gràfic i mapa a pantalla completa ---------- */
+.wm-cwrap,.wm-mbox{position:relative}
+.wm-maxb{position:absolute;top:6px;right:6px;z-index:700;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb, var(--surface) 88%, transparent);color:var(--ink);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 8px #0003}
+.wm-cwrap .wm-maxb{top:-4px;right:-4px;width:34px;height:34px;box-shadow:none}
+.wm-x,.wm-leg{display:none}
+body.wm-open{overflow:hidden}
+.wm.full{position:fixed;inset:0;z-index:2500;margin:0;border-radius:0;border:0;display:flex;flex-direction:column;gap:6px;padding:calc(8px + env(safe-area-inset-top,0px)) 10px calc(8px + env(safe-area-inset-bottom,0px));overflow:hidden;background:var(--surface)}
+.wm.full .card-h{align-items:center;flex:none}
+.wm.full .wm-x{display:grid;place-items:center;margin-left:10px;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-size:1.25rem;font-weight:700;cursor:pointer;flex:none}
+.wm.full .wm-maxb{display:none}
+.wm.full .wm-scroll{flex:none;margin-top:0}
+.wm.full #wmTable tr.x-full{display:none}
+/* gràfic */
+.wm.full-chart .wm-wrap{display:none}
+.wm.full-chart .wm-cwrap{flex:1;min-height:0}
+.wm.full-chart #dayChart{height:100%;margin:0}
+.wm.full-chart #dayLegend,.wm.full-chart .hc-read{flex:none}
+/* mapa */
+.wm.full-map .wm-cwrap,.wm.full-map #dayLegend,.wm.full-map .hc-read{display:none}
+.wm.full-map .wm-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.wm.full-map .wm-mbox{flex:1;min-height:0}
+.wm.full-map .wm-map{height:100%;touch-action:none;border-radius:12px}
+.wm.full-map .wm-now{flex:none}
+.wm.full-map .wm-leg{display:flex;flex-direction:column;gap:3px;position:absolute;left:8px;bottom:8px;z-index:700;padding:7px 10px;border-radius:10px;background:color-mix(in srgb, var(--surface) 90%, transparent);box-shadow:0 2px 8px #0004;font-size:.78rem;font-weight:600;color:var(--ink);pointer-events:none;max-width:70%}
+.wm-leg span{display:flex;align-items:center;gap:6px}
+.wm-leg svg{flex:none}
+.wm-leg .ks{display:flex;gap:8px;flex-wrap:wrap}
+.wm-leg .vd{display:inline-block;width:10px;height:10px;border-radius:50%}
+:root[data-size="big"] .wm.full-map .wm-leg{font-size:.95rem}

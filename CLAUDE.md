@@ -67,6 +67,12 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Capes (es desen a `ov2_prep_ly`): Vent (ratlles en un canvas a la capa `prepWind` + etiqueta), Onades (crestes + etiqueta, només sobre el mar) i Pluja (últim fotograma de RainViewer). Les etiquetes s'ancoren a la posició. El (i) explica els colors.
 - Màscara del mar: les rajoles d'OSM es carreguen amb `crossOrigin` i es marquen els píxels del color d'aigua (#aad3df). Serveix per a qualsevol platja (V3) sense dibuixar la costa a mà. Si canvia el mapa base, cal revisar aquest color.
 - L'app crida `window.renderPrep()` quan arriben dades noves.
+- L'efecte de vent i onades (canvas + màscara del mar) és a `fx.js` (`OV_FX(map, tiles, {get, active, onMask})`) i el fan servir «Nova sortida» i el mapa maximitzat de la Previsió.
+
+## Previsió: pantalla completa (`windmap.js`)
+- Botó de maximitzar al gràfic per hores i al mapa (`data-wmfull="chart|map"`): la targeta `#windMap` passa a `.full` (fixa, a tota la pantalla). El botó enrere d'Android la tanca (`history.pushState` + `popstate`).
+- Gràfic: es redibuixa amb l'amplada i l'alçada lliures (`hourChart(…, Wpx, Hpx)`).
+- Mapa: es pot moure i ampliar amb els dits, porta l'efecte de vent i onades de l'hora triada i una llegenda. A sota, la franja d'hores de tots els dies de previsió (taula `#wmTable` reduïda: les files `x-full` s'amaguen).
 
 ## Avisos de seguretat i tasques programades (Fase 3, part 1)
 - **Avisos en ruta** (`avisos.js`, al mòbil de qui navega, cada 20 s): sense vent i lluny (< 1 kn 10 min, > 0,5 nm de la base, estació < 4 kn i previsió < mínim de l'embarcació 2 h), vent massa fort (estació per sobre del màxim o de la ratxa màxima de l'embarcació), onades perilloses (previsió de les properes 3 h per sobre de `wMax`). Avís a pantalla amb vibració i so; es desa a `alertes/{uid}_{inici}_{tipus}` perquè el vegi qui el soci tria a Confidencialitat (per defecte, el club i la gent a la base). El marquen com a resolt la Junta, els responsables o qui és a la base.

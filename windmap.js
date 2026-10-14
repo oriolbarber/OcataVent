@@ -6,7 +6,7 @@ const WM_H0 = 6, WM_H1 = 22;             // hores que es mostren cada dia
 const WM_GAP = 40;                       // separació mínima (°) entre les dues etiquetes perquè no es tapin
 // Colors: el mateix codi de 3 colors de tota l'app (verd / taronja / vermell segons l'embarcació triada)
 const kv = k => k ? `var(--${k})` : "var(--muted)";
-let wmMap = null, wmPin = null, wmSel = null, wmDrag = false, wmProg = 0;
+let wmMap = null, wmPin = null, wmSel = null, wmDrag = false, wmProg = 0, wmTiles = null, wmFx = null, wmZoomC = null;
 const wmAng = {w: null, v: null};        // angle acumulat de cada etiqueta (per girar sempre pel camí curt)
 
 function wmKeys(){
@@ -26,10 +26,11 @@ function wmEnsureMap(){
   wmMap = L.map(el, {zoomControl:false, attributionControl:true, dragging:false, touchZoom:false, doubleClickZoom:false,
     scrollWheelZoom:false, boxZoom:false, keyboard:false, tap:false, zoomSnap:0.25, inertia:false}).setView(WM_BEACH, WM_ZOOM);
   wmMap.attributionControl.setPrefix(false);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:16, className:"base-tiles", attribution:"© OpenStreetMap"}).addTo(wmMap);
+  // crossOrigin: el mapa maximitzat llegeix els píxels de les rajoles per saber on és el mar (onades)
+  wmTiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:16, className:"base-tiles", attribution:"© OpenStreetMap", crossOrigin:"anonymous"}).addTo(wmMap);
   wmPin = L.marker(WM_BEACH, {interactive:false, keyboard:false, icon: L.divIcon({className:"wm-pin", iconSize:[0, 0], html:
     `<div class="wm-pivot"><div class="wm-flag wave" data-f="v"><span class="wm-txt"></span></div><div class="wm-flag wind" data-f="w"><span class="wm-txt"></span></div><i class="wm-dot"></i></div>`})}).addTo(wmMap);
-  new ResizeObserver(() => { wmMap.invalidateSize(false); wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); }).observe(el);
+  new ResizeObserver(() => { wmMap.invalidateSize(false); if(!wmFull()) wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); if(wmFx) wmFx.size(); }).observe(el);
   return true;
 }
 // Gira cap al nou angle pel camí més curt (sense voltes de 300°)
@@ -77,6 +78,8 @@ function wmShow(k, scroll){
   }
   if(scroll){ const td = document.querySelector(`#wmTable th[data-k="${k}"]`); const box = $("wmScroll");
     if(td && box){ wmProg = Date.now(); box.scrollLeft = Math.max(0, td.offsetLeft - box.clientWidth / 2 + td.offsetWidth / 2); } }
+  if(wmFx) wmFx.kick();
+  if(wmFull()) wmLegend();
   if(window.mmSel) mmSel(k);
 }
 window.wmSelect = (k, scroll) => { if(DATA && DATA.hours[k] && document.querySelector(`#wmTable th[data-k="${k}"]`)) wmShow(k, scroll); };
@@ -90,7 +93,7 @@ function renderWindMap(){
   const dayRow = days.map((d, i) => { const dd = new Date(d.date + "T12:00:00"); return `<th colspan="${d.n}" class="wm-day"><span class="wm-dayl">${i === 0 ? "Avui" : DAYS_L[dd.getDay()]} ${dd.getDate()}</span></th>`; }).join("");
   const cols = keys.map(x => ({...x, p: hourAt(x.date, x.h) || DATA.hours[x.k]}));
   const cell = (x, inner, style, cls) => `<td data-k="${x.k}"${style ? ` style="${style}"` : ""} class="${(x.p.obs ? "obs " : "") + (cls || "")}">${inner}</td>`;
-  const row = (label, fn) => `<tr><th class="wm-lbl">${label}</th>${cols.map(fn).join("")}</tr>`;
+  const row = (label, fn, cls) => `<tr${cls ? ` class="${cls}"` : ""}><th class="wm-lbl">${label}</th>${cols.map(fn).join("")}</tr>`;
   const html = `<table id="wmTable"><thead><tr><th class="wm-lbl"></th>${dayRow}</tr>
     <tr><th class="wm-lbl">h</th>${cols.map(x => `<th data-k="${x.k}" class="wm-h${x.p.obs ? " obs" : ""}">${x.h}</th>`).join("")}</tr></thead><tbody>
     ${row("Dir.", x => cell(x, wmArrow(x.p.dir, 16)))}
@@ -98,16 +101,16 @@ function renderWindMap(){
     ${row("Vent kn", x => cell(x, r0(x.p.wind), "", "wm-col k-" + (lvWind(x.p.wind, c) || "none")))}
     ${row("Ratxa", x => cell(x, r0(x.p.gust), "", "wm-col soft k-" + (lvGust(x.p.gust, c) || "none")))}
     ${row("Onada m", x => cell(x, r1(x.p.wave), "", "wm-col k-" + (lvWave(x.p.wave, c) || "none")))}
-    ${row("Màx. m", x => cell(x, x.p.hmax != null ? r1(x.p.hmax) : "–", "", "soft-t"))}
-    ${row("Per. s", x => cell(x, r0(x.p.tp ?? x.p.per)))}
-    ${row("°C", x => cell(x, r0(x.p.temp)))}
-    ${row("Pluja", x => cell(x, x.p.pp != null ? x.p.pp + "%" : "–"))}
+    ${row("Màx. m", x => cell(x, x.p.hmax != null ? r1(x.p.hmax) : "–", "", "soft-t"), "x-full")}
+    ${row("Per. s", x => cell(x, r0(x.p.tp ?? x.p.per)), "x-full")}
+    ${row("°C", x => cell(x, r0(x.p.temp)), "x-full")}
+    ${row("Pluja", x => cell(x, x.p.pp != null ? x.p.pp + "%" : "–"), "x-full")}
     </tbody></table>`;
   $("wmScroll").innerHTML = html;
   const nk = nowKey(), def = keys.find(x => x.k === nk)?.k || keys.find(x => x.k > nk)?.k || keys[0].k;
   const want = (window.SEL_K && window.SEL_K()) || wmSel, keep = want && keys.some(x => x.k === want) ? want : def;
   wmShow(keep, true);
-  setTimeout(() => { if(wmMap){ wmMap.invalidateSize(false); wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); } }, 0);
+  setTimeout(() => { if(wmMap){ wmMap.invalidateSize(false); if(!wmFull()) wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); } }, 0);
 }
 // Tocar o lliscar el dit per la taula canvia l'hora del mapa
 function wmPick(e, center){ const t = document.elementFromPoint(e.clientX, e.clientY)?.closest?.("[data-k]"); if(t && (t.dataset.k !== wmSel || center)) wmShow(t.dataset.k, !!center); }
@@ -127,5 +130,59 @@ document.addEventListener("keydown", e => { if(!e.target.closest || !e.target.cl
   if(e.key === "ArrowRight" && i < keys.length - 1){ e.preventDefault(); wmShow(keys[i + 1], true); }
   if(e.key === "ArrowLeft" && i > 0){ e.preventDefault(); wmShow(keys[i - 1], true); } });
 window.addEventListener("mm-theme", () => wmSel && wmShow(wmSel, false));
+
+/* ---------- pantalla completa: gràfic o mapa (amb el vent i les onades pintats, llegenda i franja d'hores de tota la previsió) ---------- */
+const wmCard = () => $("windMap");
+const wmFull = () => !!wmCard()?.classList.contains("full");
+function wmPoint(){
+  if(!DATA || !wmSel) return null;
+  const p = hourAt(wmSel.slice(0, 10), +wmSel.slice(11, 13)) || DATA.hours[wmSel]; if(!p) return null;
+  return {wind:p.wind, dir:p.dir, wave:p.wave, wdir:p.wdir, per:p.tp ?? p.per};
+}
+const LG_W = `<svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true"><path d="M1 4h12M6 9h15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".7"/></svg>`;
+const LG_V = `<svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true"><path d="M3 2q8 4 0 9M12 2q8 4 0 9" fill="none" stroke="#0a5abe" stroke-width="2" stroke-linecap="round"/></svg>`;
+function wmLegend(){
+  const el = $("wmLeg"); if(!el) return;
+  el.innerHTML = `<span>${LG_W}Vent: les ratlles van cap on bufa (més ràpides, més vent)</span>
+    <span>${LG_V}Onades: crestes sobre el mar, cap on avancen</span>
+    <span class="ks"><span><i class="vd" style="background:var(--ideal)"></i>Bo</span><span><i class="vd" style="background:var(--marg)"></i>Limitat</span><span><i class="vd" style="background:var(--no)"></i>No recomanat</span></span>
+    <span>Etiquetes: vent (kn, R = ratxa) i onada (m, període) per a ${esc(DEFAULTS[act]?.name || "")}</span>`;
+}
+function wmOpen(kind){
+  const c = wmCard(); if(!c || wmFull()) return;
+  c.classList.add("full", "full-" + kind); document.body.classList.add("wm-open");
+  try{ history.pushState({wmFull:1}, ""); }catch(e){}
+  if(kind === "chart"){ setTimeout(() => { renderDayChart(); applySel(); }, 0); }
+  else if(wmEnsureMap()){
+    // a pantalla completa el mapa es pot moure i ampliar amb els dits
+    wmMap.dragging.enable(); wmMap.touchZoom.enable(); wmMap.doubleClickZoom.enable();
+    if(!wmZoomC) wmZoomC = L.control.zoom({position:"topright"}); wmZoomC.addTo(wmMap);
+    if(!wmFx) wmFx = OV_FX(wmMap, wmTiles, {pane:"wmWind", get: wmPoint, active: () => wmFull() && wmCard().classList.contains("full-map") && document.visibilityState === "visible"});
+    wmLegend();
+    setTimeout(() => { wmMap.invalidateSize(false); wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); wmFx.size(); wmFx.buildMask(); wmFx.reset(); }, 0);
+  }
+  setTimeout(() => wmSel && wmShow(wmSel, true), 50);
+}
+function wmClose(){
+  const c = wmCard(); if(!c || !wmFull()) return;
+  const wasChart = c.classList.contains("full-chart");
+  c.classList.remove("full", "full-chart", "full-map"); document.body.classList.remove("wm-open");
+  if(wmMap){ wmMap.dragging.disable(); wmMap.touchZoom.disable(); wmMap.doubleClickZoom.disable(); if(wmZoomC) wmZoomC.remove();
+    if(wmFx) wmFx.stop(); setTimeout(() => { wmMap.invalidateSize(false); wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); }, 0); }
+  if(wasChart) setTimeout(() => { renderDayChart(); applySel(); }, 0);
+  setTimeout(() => wmSel && wmShow(wmSel, true), 50);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("[data-wmfull], [data-wmclose]"); if(!b) return;
+  if(b.dataset.wmfull) wmOpen(b.dataset.wmfull);
+  else if(history.state && history.state.wmFull) history.back(); else wmClose();
+});
+// el botó enrere d'Android tanca la pantalla completa
+window.addEventListener("popstate", () => { if(wmFull()) wmClose(); });
+window.addEventListener("mm-view", () => { if(wmFull()) wmClose(); });
+document.addEventListener("visibilitychange", () => { if(wmFx && document.visibilityState === "visible") wmFx.kick(); });
+// en girar el mòbil o canviar la mida, el gràfic es torna a dibuixar a la mida nova
+window.addEventListener("resize", () => { if(wmCard()?.classList.contains("full-chart")){ clearTimeout(wmOpen.t); wmOpen.t = setTimeout(() => { renderDayChart(); applySel(); }, 150); } });
+window.addEventListener("mm-theme", () => { if(wmFx) wmFx.reset(); });
 window.renderWindMap = renderWindMap;
 if(DATA) renderWindMap();
