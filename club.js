@@ -662,7 +662,7 @@ function tabBtn(){
 }
 window.addEventListener("ov-coms", () => { publishEvents(); if(visible()) render(); });
 window.addEventListener("ov-cloud", async () => {
-  await ctx(); tabBtn(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
+  await ctx(); tabBtn(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { navDot(); window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
   if(C && visible()) load(true); else if(!C && visible()) render();
 });
