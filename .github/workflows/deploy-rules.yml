@@ -1,0 +1,41 @@
+# Publica les regles de Firestore cada cop que canvia firestore.rules (o a mà des de la pestanya Actions).
+# Cal el secret FIREBASE_SERVICE_ACCOUNT amb el JSON de la clau del compte de servei de Firebase.
+name: Publica les regles de Firestore
+
+on:
+  push:
+    branches: [main]
+    paths: [firestore.rules, firebase.json]
+  workflow_dispatch:
+
+concurrency:
+  group: firestore-rules
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comprova el secret
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Falta el secret FIREBASE_SERVICE_ACCOUNT: les regles NO s'han publicat."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Publica les regles
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx -y firebase-tools@latest deploy --only firestore:rules --project ocatavent --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"

@@ -41,7 +41,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Firebase es descarrega des de gstatic només si ja s'havia entrat en aquest mòbil (`ov2_cloud`), si s'obre un enllaç d'accés o si es prem «Entra». Sense compte, l'app és la V1.
 - El mòbil (IndexedDB) continua sent el magatzem principal; el núvol n'és la còpia. Cada sortida local porta `owner` (UID) i `synced`.
 - Col·leccions: `members/{uid}` (nom, correu, `estat`: pendent | aprovat | rebutjat, consentiment), `admins/{uid}`, `sortides/{uid}_{id}` (fitxa) + `sortides/…/trams/{i}` (la sortida sencera en JSON trossejat).
-- Regles: `firestore.rules` (es publiquen a mà a la consola o amb `firebase deploy --only firestore:rules`). Els administradors no veuen les sortides privades.
+- Regles: `firestore.rules`. Es publiquen soles amb GitHub Actions (`deploy-rules.yml`) en fer push si canvia el fitxer; cal el secret `FIREBASE_SERVICE_ACCOUNT` (JSON de la clau del compte de servei). Si l'acció falla (creu vermella a Actions), les regles NO són al núvol: avisa l'Oriol. Alternativa manual: consola ▸ Firestore ▸ Regles ▸ Publica. Els administradors no veuen les sortides privades.
 - Versió del text de consentiment: `CONSENT_V` a `cloud.js`.
 
 ## Club (Fase 2, `club.js`)
