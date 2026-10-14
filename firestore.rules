@@ -333,7 +333,7 @@ service cloud.firestore {
       // «Vaig a ajudar»: qui veu l'avís s'hi afegeix (o se'n treu) a «ajudants» amb el seu nom i la seva posició
       allow update: if (veu(resource.data) || (resource.data.get('base', false) == true && isApproved() && resource.data.clubId == myClub() && aLaBase()))
         && resource.data.userId != me() && resource.data.resolta == false
-        && onlyMyKey('ajudants')
+        && onlyMyKey('ajudants') && request.resource.data.ajudants.size() <= 3   // com a màxim 3 persones hi van
         && (!(me() in request.resource.data.ajudants)
           || (request.resource.data.ajudants[me()].keys().hasOnly(['nom', 'lat', 'lon', 'at'])
             && nomOk(request.resource.data.ajudants[me()].nom, 80)

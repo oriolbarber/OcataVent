@@ -10,7 +10,8 @@
    La sessió es desa a ov2_sos per continuar si es recarrega l'app. */
 (() => {
 const KEY = "ov2_sos";
-let S = null;               // {id, role:"navegant"|"ajudant", seen:[uids]}
+const MAX_HELP = 3;         // com a màxim 3 persones hi van (també ho limiten les regles)
+let S = null;               // {id, role:"navegant"|"ajudant", names:{uid: nom} (qui socorre, per detectar qui arriba i qui marxa)}
 let unsub = null, doc = null, map = null, lay = null, fitted = false, geoT = null, posT = null, myPos = null, lastPush = 0;
 const ctx = () => window.OV_CLUB?.ctx?.() || null;
 const live = () => (typeof LIVE !== "undefined" ? LIVE : null);
@@ -99,11 +100,11 @@ function draw(){
   const P = points(), nav = P.find(x => x.k === "nav"), helpers = P.filter(x => x.k !== "nav");
   // text de capçalera
   const t = $("sosTitle"), inf = $("sosInfo");
-  if(t) t.textContent = S.role === "navegant" ? (helpers.length ? "Venen a ajudar-te" : "Avís enviat al club") : `Vas a ajudar ${doc.nom}`;
+  if(t) t.textContent = S.role === "navegant" ? (helpers.length ? `Et socorren ${helpers.length} de ${MAX_HELP}` : "Avís enviat al club") : `Vas a ajudar ${doc.nom}`;
   if(inf){
     if(S.role === "navegant") inf.textContent = helpers.length ? helpers.map(h => `${h.nom}: a ${distTxt(hav(h, nav || h))}`).join(" · ") : "Encara no hi va ningú. Si cal: VHF canal 16 o 112.";
-    else { const me = helpers.find(h => h.me);
-      inf.textContent = nav ? (me ? `És a ${distTxt(hav(me, nav))}, cap ${cap(bearing(me, nav))} · posició ${agoTxt(nav.t)}` : `Posició ${agoTxt(nav.t)} · buscant la teva ubicació…`) : "Sense posició del navegant"; }
+    else { const me = helpers.find(h => h.me), others = helpers.filter(h => !h.me).map(h => h.nom);
+      inf.textContent = (others.length ? `També hi va: ${others.join(", ")} · ` : "") + (nav ? (me ? `És a ${distTxt(hav(me, nav))}, cap ${cap(bearing(me, nav))} · posició ${agoTxt(nav.t)}` : `Posició ${agoTxt(nav.t)} · buscant la teva ubicació…`) : "Sense posició del navegant"); }
   }
   if(!map || !lay) return;
   lay.clearLayers();
@@ -128,13 +129,18 @@ function listen(){
       end(); return;
     }
     doc = snap.data();
+    const H = Object.entries(doc.ajudants || {}), names = H.map(([, h]) => h.nom);
     if(S.role === "navegant"){
-      const seen = new Set(S.seen || []), fresh = Object.entries(doc.ajudants || {}).filter(([u]) => !seen.has(u));
+      const prev = S.names || {}, fresh = H.filter(([u]) => !prev[u]), gone = Object.keys(prev).filter(u => !(doc.ajudants || {})[u]);
+      S.names = Object.fromEntries(H.map(([u, h]) => [u, h.nom])); save();
+      window.OV_AVISOS?.helpers?.(names);   // la caixa «Avís enviat» diu qui et socorre
       if(fresh.length){
-        fresh.forEach(([u]) => seen.add(u)); S.seen = [...seen]; save();
         fitted = false; open();
-        msg(`<b>MISSATGE REBUT</b> per ${fresh.map(([, h]) => esc(h.nom)).join(", ")}<br><span>Ve a ajudar-te. Al mapa veus on és.</span>`);
+        msg(`<b>MISSATGE REBUT</b> per ${fresh.map(([, h]) => esc(h.nom)).join(", ")}<br><span>${fresh.length > 1 ? "Venen" : "Ve"} a ajudar-te. Et socorren: ${esc(names.join(", "))}.</span>`);
         alarm();
+      } else if(gone.length){
+        msg(`${gone.map(u => esc(prev[u])).join(", ")} ja no hi va.${names.length ? ` Et socorren: ${esc(names.join(", "))}.` : " Ara no hi va ningú: si cal, VHF canal 16 o 112."}`);
+        try{ navigator.vibrate?.([200]); }catch(e){}
       }
       schedulePos();
     }
@@ -171,14 +177,23 @@ function startGeo(){ clearInterval(geoT); pushMine(); geoT = setInterval(() => {
 /* ---------- accions ---------- */
 function help(a){
   if(!window.OV_CLUB?.sheet) return;
+  const n = Object.keys(a.ajudants || {}).length;
+  if(n >= MAX_HELP){ toast(`Ja hi van ${MAX_HELP} persones a ajudar ${a.nom}.`); return; }
   OV_CLUB.sheet("Vaig a ajudar", `<p>${esc(a.nom)} ha avisat el club. Si hi vas, li arribarà <b>«Missatge rebut per ${esc(ctx()?.member?.nom || "")}»</b> i tots dos veureu on és l'altre al mapa.</p>
+    ${n ? `<p class="note">Ja hi va: ${esc(Object.values(a.ajudants).map(h => h.nom).join(", "))}. Hi poden anar ${MAX_HELP} persones com a màxim.</p>` : ""}
     <p class="note">La teva posició només es comparteix amb qui veu aquest avís, mentre ajudes. Si és greu: VHF canal 16 o 112.</p>
     <button type="button" class="btn cl-pri cl-wide" id="sosGo">Hi vaig</button>`, d => {
     d.querySelector("#sosGo").onclick = async () => {
       window.OV_CLUB.closeSheet();
       if(S && S.id !== a.id) await leave(true);
+      const C = ctx();
+      try{   // s'apunta abans d'obrir el mapa: si ja n'hi ha 3, les regles ho refusen
+        const p = await getPos().catch(() => null), c = p && (p.coords || p);
+        await C.F.updateDoc(C.F.doc(C.db, "alertes", a.id), {["ajudants." + C.user.uid]: {nom:C.member.nom, lat:c ? c.latitude : a.lat, lon:c ? c.longitude : a.lon, at:C.F.serverTimestamp()}});
+        if(c) myPos = {lat:c.latitude, lon:c.longitude, t:nowMs()};
+      }catch(e){ toast(e && e.code === "permission-denied" ? `No t'hi has pogut afegir: potser ja hi van ${MAX_HELP} persones.` : "No t'hi has pogut afegir. Comprova la connexió."); window.OV_CLUB?.loadAlerts?.(); return; }
       S = {id:a.id, role:"ajudant"}; doc = a; save(); fitted = false;
-      listen(); startGeo(); open();
+      listen(); startGeo(); open(); window.OV_CLUB?.loadAlerts?.();
     };
   });
 }
@@ -209,7 +224,7 @@ function toast(t){
 
 /* ---------- interfície pública ---------- */
 window.OV_SOS = {
-  own(id){ if(S && S.id === id) return; S = {id, role:"navegant", seen:[]}; save(); listen(); schedulePos(); showTri(true); },
+  own(id){ if(S && S.id === id) return; S = {id, role:"navegant", names:{}}; save(); listen(); schedulePos(); showTri(true); },
   ownEnd(id){ if(S && S.id === id) end(); },
   help, open, active: () => S
 };
