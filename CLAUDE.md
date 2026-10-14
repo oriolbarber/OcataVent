@@ -76,6 +76,11 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - **Encerts dels models** (`encerts.yml`, 4 crons UTC per cobrir horari d'estiu i d'hivern): `scripts/encerts.mjs` desa la previsió de cada model al matí (`data/previsio-avui.json`) i al vespre la compara amb l'estació de 8 a 20 h → `data/encerts.json` (error per model, vent mitjà, tipus: terral, marinada, llevant, garbí, calma). L'app ho mostra al panell de models i ho fa servir quan avui encara no hi ha 3 hores mesurades.
 - `scripts/llocs.mjs` duplica LOCS/STATIONS/MODELS d'`app.js`: si canvien, cal canviar-los als dos llocs.
 
+## Icones (editor «Icones Ocata Vent»)
+- L'Oriol dibuixa les icones a l'artefacte https://claude.ai/artifact/ShKNihk2UBYD68HwRT75wg i prem «Desa per a l'app».
+- Es desen a la base de dades de l'artefacte: col·lecció `icons`, document `boats` (llegeix-lo amb l'eina ArtifactData, acció `get`). Claus: `pati`, `windsurf`, `hobie` (BOAT_IC), `onada` (WAVE_IC), `bandera` (FLAG_IC: traç 1 = pal, la resta farcit), `gps`, `pantalla`, `bateria`, `avisos` (SAFE_IC: caselles de «Nova sortida» i avisos en ruta), `logo` (128×128 amb anella i color), `stroke` (gruix, viewBox 24×24).
+- `data/icones.json` és una còpia de l'última versió aplicada. Quan l'Oriol digui «aplica les icones», llegeix el document, aplica-les a l'app i actualitza aquesta còpia.
+
 ## Fonts de dades (V1)
 - **Previsió:** Open-Meteo forecast i marine. Ús no comercial.
 - **Estacions:** meteoelmasnou.cat (Meteotemplate). Cal demanar permís per a la V2.
