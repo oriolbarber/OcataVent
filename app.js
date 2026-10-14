@@ -702,9 +702,28 @@ function hcPick(svg, clientX){
   const j = Math.max(0, Math.min(hs.length-1, Math.round((x - (+d.l)) / (+d.dx))));
   const k = hourKey(d.date, +hs[j]); if(k !== SEL) selectHour(k, "chart");
 }
-document.addEventListener("pointerdown", e => { const svg = e.target.closest && e.target.closest("svg.hc"); if(!svg) return; hcDrag = svg; hcPick(svg, e.clientX); });
-document.addEventListener("pointermove", e => { if(hcDrag) hcPick(hcDrag, e.clientX); });
-["pointerup","pointercancel"].forEach(t => document.addEventListener(t, () => { hcDrag = null; }));
+// Zona tàctil: de la primera a l'última hora, amb un marge de 0,35 hores; els laterals (eixos) no responen
+function hcIn(svg, clientX){
+  const r = svg.getBoundingClientRect(), d = svg.dataset, n = d.hs.split(",").length;
+  const x = (clientX - r.left) * (+d.w) / r.width, m = (+d.dx) * 0.35;
+  return x >= (+d.l) - m && x <= (+d.l) + (+d.dx) * (n - 1) + m;
+}
+// Al dit: un toc tria l'hora; arrossegar en horitzontal la mou; si el dit va amunt o avall és scroll i no es toca res
+let hcT = null;
+document.addEventListener("pointerdown", e => {
+  const svg = e.target.closest && e.target.closest("svg.hc"); if(!svg || !hcIn(svg, e.clientX)) return;
+  if(e.pointerType === "mouse"){ hcDrag = svg; hcPick(svg, e.clientX); }
+  else hcT = {svg, x:e.clientX, y:e.clientY};
+});
+document.addEventListener("pointermove", e => {
+  if(hcDrag){ hcPick(hcDrag, e.clientX); return; }
+  if(!hcT) return;
+  const ax = Math.abs(e.clientX - hcT.x), ay = Math.abs(e.clientY - hcT.y);
+  if(ay > 8 && ay >= ax) hcT = null;                                       // scroll vertical
+  else if(ax > 8){ hcDrag = hcT.svg; hcT = null; hcPick(hcDrag, e.clientX); }
+});
+document.addEventListener("pointerup", e => { if(hcT) hcPick(hcT.svg, e.clientX); hcT = null; hcDrag = null; });
+document.addEventListener("pointercancel", () => { hcT = null; hcDrag = null; });
 document.addEventListener("click", e => { const tr = e.target.closest && e.target.closest("tr[data-k]"); if(tr) selectHour(tr.dataset.k, "table"); });
 const chartLegend = wide => `<details class="legend-d"><summary>Què és cada línia?</summary><div class="legend"><span><span class="sw" style="background:var(--accent-2)"></span>Vent mesurat</span><span><span class="sw" style="background:var(--ink)"></span>Vent previst (kn)</span><span><span class="sw" style="background:var(--muted)"></span>Ratxa</span>${wide?`<span><span class="sw" style="background:var(--wave-l)"></span>Onada (m)</span>`:""}<span><span class="sw" style="background:var(--ideal-t);height:10px"></span>Vent ideal ${esc(DEFAULTS[act].short)}</span></div>
   <div class="legend lv-legend"><span><span class="vd" style="background:var(--ideal)"></span>Bo</span><span><span class="vd" style="background:var(--marg)"></span>Limitat</span><span><span class="vd" style="background:var(--no)"></span>No recomanat</span></div>
