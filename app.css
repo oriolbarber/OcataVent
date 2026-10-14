@@ -1229,3 +1229,17 @@ body.wm-open{overflow:hidden}
   .wm.full .tl-needle{top:auto;bottom:0;height:3px;width:20px;margin-left:-10px}
   .wm.full .tl-needle::before{display:none}
 }
+/* gràfic maximitzat en horitzontal: sense títol ni barres d'hores (només els dies, amb la ✕ al costat); lectura en dues files */
+.tl-row{display:flex;align-items:center;gap:8px}
+.tl-row .tl-days{flex:1;min-width:0}
+.tl-x{display:none}
+@media (orientation:landscape){
+  .wm.full-chart .card-h{display:none}
+  .wm.full-chart .tl-box{display:none}
+  .wm.full-chart .tl-x{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-size:.95rem;font-weight:700;cursor:pointer}
+  .wm.full-chart .tl-days{padding:2px 0}
+  .wm.full-chart .tl-days button{padding:4px 11px;font-size:.74rem}
+  .wm.full-chart .hc-read{flex-wrap:wrap;gap:1px 14px;padding:3px 10px}
+  .wm.full-chart .hc-read .rd-top{flex-basis:100%}
+  .wm.full-chart .hc-read .rd-v{flex-basis:100%;flex:none}
+}

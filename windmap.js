@@ -161,7 +161,7 @@ function tlRender(){
   const el = $("wmTl"); if(!el || !DATA) return;
   const keys = wmKeys(), c = crit[act], days = [];
   keys.forEach(x => { if(!days.length || days[days.length - 1] !== x.date) days.push(x.date); });
-  el.innerHTML = `<div class="tl-days">${days.map((d, i) => `<button type="button" data-tld="${d}" aria-pressed="false">${dayLbl(d, i)}</button>`).join("")}</div>
+  el.innerHTML = `<div class="tl-row"><div class="tl-days">${days.map((d, i) => `<button type="button" data-tld="${d}" aria-pressed="false">${dayLbl(d, i)}</button>`).join("")}</div><button type="button" class="tl-x" data-wmclose aria-label="Tanca la pantalla completa">✕</button></div>
     <div class="tl-box"><div class="tl-track" id="tlTrack"><div class="tl-strip">${keys.map((x, i) => {
       const p = hourAt(x.date, x.h) || DATA.hours[x.k], v = verdict(scoreHour(p, c)), hg = Math.round(18 + Math.min(1, (p.wind || 0) / 25) * 82);
       return `<span class="tl-h${i && keys[i - 1].date !== x.date ? " d0" : ""}" data-tk="${x.k}" title="${x.h} h · ${v.t}"><i style="height:calc((100% - 14px) * ${hg / 100});background:var(--${v.k})"></i><b${x.h % 3 === 0 ? ' class="m3"' : ""}>${x.h}</b></span>`; }).join("")}</div></div><div class="tl-needle"></div></div>`;
