@@ -27,6 +27,9 @@ const WARN = svgI('<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>', 22)
 const F0 = {open:false, date:"mes", person:"tots", order:"recents", vent:false, onada:false, all:false};
 let filt = Object.assign({}, F0, store.get("ov2_club_filt") || {}, {open:false});
 const ui = {avisCom:"totes", anCat:"tots", avisOpen:false, anOpen:false, interest:{}, interested:{}};
+const EYE = svgI('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 22);
+const SEEN = svgI('<path d="M2 13l4 4L16 7"/><path d="M10 15l2 2L22 7"/>', 22);
+const EYE_S = svgI('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 14);
 const CAL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
 const dayLong = d => new Date(d + "T12:00").toLocaleDateString("ca", {weekday:"long", day:"numeric", month:"long"});
 // Filtres plegats (avisos i anuncis): botó «Filtres» + resum; en obrir-lo, les opcions
@@ -64,7 +67,15 @@ async function ctx(){ C = window.OV_CLOUD?.ctx ? await window.OV_CLOUD.ctx().cat
 const visible = () => !$("view-club").hidden;
 
 /* ---------- avisos amb data: es mostren a la previsió de 7 dies (app.js, renderWeek) ---------- */
+// Puntet vermell a la pestanya «Club» del menú principal si hi ha avisos sense llegir
+const unreadN = () => C ? D.avisos.filter(a => alive(a) && !(a.vist || {})[uid()]).length : 0;
+function navDot(){
+  const d = $("clubDot"); if(!d) return;
+  const n = unreadN(); d.hidden = !n;
+  $("tabClub")?.setAttribute("aria-label", n ? `Club, ${n} avisos sense llegir` : "Club");
+}
 function publishEvents(){
+  navDot();
   window.OV_EVENTS = D.avisos.filter(a => a.data && alive(a)).map(a => ({data:a.data, titol:a.titol, text:a.text, comissio:COMSm()[a.comissio] || a.comissio}));
   window.dispatchEvent(new CustomEvent("ov-events"));
 }
@@ -139,10 +150,10 @@ document.addEventListener("click", async e => {
 });
 function render(){
   const el = $("clubView"); if(!el) return;
-  if(!C){ if(accSt()) renderWait(); return; }
+  if(!C){ navDot(); if(accSt()) renderWait(); return; }
   if(mapObj){ mapObj.remove(); mapObj = null; }
   clearRouteMaps();
-  const unread = D.avisos.filter(a => alive(a) && !(a.vist || {})[uid()]).length;
+  const unread = unreadN(); navDot();
   const tabs = [["mur", "Mur"], ["avisos", "Avisos"], ["anuncis", "Anuncis"], ["base", "Base"]];
   el.innerHTML = `<nav class="cl-tabs" aria-label="Seccions del club">${tabs.map(([k, t]) => `<button type="button" data-ctab="${k}"${k === tab ? ' aria-current="page"' : ""}>${t}${k === "avisos" && unread ? `<span class="cl-dot" aria-label="${unread} sense llegir">${unread}</span>` : ""}</button>`).join("")}</nav>
     <div class="msg err" id="clubMsg" hidden></div>
@@ -257,8 +268,8 @@ function renderAvisos(){
         <h3 class="cl-atitle">${esc(a.titol)}</h3>
         ${a.data ? `<div class="cl-event">${CAL}<b>${esc(dayLong(a.data))}</b></div>` : ""}
         <p class="cl-text">${esc(a.text)}</p>
-        <div class="cl-afoot"><div class="cl-who"><span>${esc(a.autorNom || "")} · ${esc(COMSm()[a.comissio] || "")}${a.editat ? " · editat" : ""}</span><span>${a.data ? "Desapareix l'endemà" : "Fins que es retiri"} · vist per ${n}</span></div>
-          <button type="button" class="btn cl-go" data-seen="${esc(a.id)}" aria-pressed="${seen}">${seen ? "Vist ✓" : "Marca com a vist"}</button></div>
+        <div class="cl-afoot"><div class="cl-who"><span>${esc(a.autorNom || "")} · ${esc(COMSm()[a.comissio] || "")}${a.editat ? " · editat" : ""}</span><span>${a.data ? "Desapareix l'endemà" : "Fins que es retiri"} · <span class="cl-nv" aria-label="vist per ${n}">${EYE_S}${n}</span></span></div>
+          <button type="button" class="btn cl-seen" data-seen="${esc(a.id)}" aria-pressed="${seen}" aria-label="${seen ? "Vist. Toca per desmarcar" : "Marca com a vist"}">${seen ? SEEN : EYE}<small>${seen ? "Vist" : "Marca"}</small></button></div>
         ${own || del ? `<div class="cl-row2">${own ? `<button type="button" class="btn sm" data-editavis="${esc(a.id)}">Edita</button>` : "<span></span>"}${del ? `<button type="button" class="btn sm" data-askdel="avisos" data-id="${esc(a.id)}">Retira l'avís</button>` : ""}</div><div data-delbox="${esc(a.id)}"></div>` : ""}</article>`; }).join("")
       || `<article class="card empty">${D.at.avisos ? "No hi ha cap avís." : "Carregant…"}</article>`}
     ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Només hi publiquen les comissions${mine.length ? ". Tu hi publiques com a: " + esc(mine.map(k => COMSm()[k]).join(", ")) : ""}.</p>` : ""}`;
