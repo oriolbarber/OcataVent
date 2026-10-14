@@ -47,14 +47,21 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 ## Club (Fase 2, `club.js`)
 - Pestanya «Club» (5a): els socis aprovats hi veuen Mur · Avisos · Anuncis · Base. Amb sessió però sense aprovar (sense alta, pendent o rebutjat), la pestanya hi és i només explica què falta (`renderWait`, `OV_CLOUD.status()`). Fa servir `window.OV_CLOUD.ctx()` i l'esdeveniment `ov-cloud`.
 - `publicacions/{uid}_{tripId}`: còpia del resum (no enllaç a la sortida privada), ruta opcional simplificada i sense els 200 m inicials i finals, `reaccions` = mapa {uid: up|clap|wow|down}.
-- `intencions` (avui, demà o fins a 15 dies vista; s'apunten amb el mapa `apuntats`), `avisos` (només hi publiquen membres de la comissió; l'autor els edita; `data` opcional de l'activitat: amb data caduquen l'endemà i surten amb una icona a la previsió de 7 dies via `window.OV_EVENTS`; sense data no caduquen; mapa `vist`), `anuncis` (data de caducitat, per defecte +15 dies, màxim 60; + subcol·lecció `interessats`, només la veu l'autor), `presencia/{uid}` (base o aigua).
+- `intencions` (avui, demà o fins a 15 dies vista; s'apunten amb el mapa `apuntats`), `avisos` (hi publiquen membres de la comissió amb el permís `avisos`; administració i premium, a qualsevol comissió; l'autor els edita; `data` opcional de l'activitat: amb data caduquen l'endemà i surten amb una icona a la previsió de 7 dies via `window.OV_EVENTS`; sense data no caduquen; mapa `vist`), `anuncis` (data de caducitat, per defecte +15 dies, màxim 60; + subcol·lecció `interessats`, només la veu l'autor), `presencia/{uid}` (base o aigua).
 - Base nàutica del Club Ocata Vent: 41.479804, 2.324024 (`LOCS.masnou.home` a `app.js`).
 - Rols al document del soci: `comissions` (ids de `clubs/{clubId}.comissions`) i `responsable`; s'assignen a Configuració ▸ Administració (`admin.js`).
 
 ## Administració (`admin.js`)
-- Configuració ▸ Administració, visible per a qui té algun permís. Permisos delegables a `members/{uid}.permisos`: `altes` (aprovar, rebutjar, treure l'accés), `rols` (comissions i responsable, i crear/reanomenar/eliminar comissions), `permisos` (donar-los), `moderar` (retirar publicacions, «Qui surt» i anuncis d'altres). Els administradors (`admins/` i l'inicial) els tenen tots. Ningú no es canvia l'estat ni els permisos a si mateix.
+- Configuració ▸ Administració, visible per a qui té algun permís. Permisos delegables a `members/{uid}.permisos`: `avisos` (publicar avisos de les comissions de què forma part), `altes` (aprovar, rebutjar, treure l'accés), `rols` (comissions i responsable, i crear/reanomenar/eliminar comissions), `permisos` (donar-los), `moderar` (retirar publicacions, «Qui surt» i anuncis d'altres). Els administradors (`admins/` i l'inicial) els tenen tots. Ningú no es canvia l'estat ni els permisos a si mateix.
 - Comissions editables a `clubs/{clubId}.comissions` = {id: nom}; si no existeix, Junta, Manteniment i Econòmica. La Junta (`junta`) no es pot eliminar: la fan servir els avisos de seguretat.
 - El que caduca (`caduca`) ho esborra qualsevol soci que ho vegi. En esborrar el compte, `OV_CLUB.purge()` treu tot el que el soci ha publicat o marcat.
+
+## Web de gestió (`gestio.html`, `admin.html`, `gestio.js`, `gestio.css`)
+- Pàgines a banda, mateix Firebase i mateixa sessió que l'app (mateix origen). S'hi arriba des de Configuració ▸ Administració (enllaç només per a administració i premium) o directament per URL.
+- `gestio.html`: el club propi (l'administració pot passar `?club=id`). Socis (comptadors, cerca, filtres per estat i comissió, aprovar/rebutjar, fitxa amb nom, comissions, responsable, permisos, treure l'accés lliscant; CSV) i Comissions (nom del club; crear, reanomenar, eliminar; la Junta és fixa).
+- `admin.html`: només administració. Tots els clubs (crear-ne), tots els usuaris, i a la fitxa: Premium i canviar de club (abans treu comissions i responsable).
+- Rol **premium** (`members/{uid}.premium`, només el dona l'administració): gestiona el seu club i hi té tots els permisos. Les regles limiten premium i els permisos de gestió al propi club (`sameClub`).
+- Les altes noves de l'app entren a `ocatavent` (regla de `members` create); el multiclub de l'app és per a la V3.
 
 ## Confidencialitat i amics (`amics.js`)
 - Configuració ▸ Confidencialitat: per a «mur», «presencia», «avisos», «intencions» i «anuncis», el soci tria tothom (qualsevol soci aprovat de l'app), club, amics o ningú (només presència i avisos). Avisos de seguretat: a més, «+ gent a la base nàutica» (`avisosBase`, per defecte sí; camp `base` a l'alerta). Es desa a `members/{uid}.privacitat`. Els avisos de les comissions sempre són per a tot el club.

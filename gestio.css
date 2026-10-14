@@ -1,0 +1,46 @@
+/* Ocata Vent 2 · Web de gestió (gestio.html i admin.html). Fa servir els colors i components d'app.css. */
+.g-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.g-top .t{display:flex;flex-direction:column;min-width:0;flex:1}
+.g-top .t b{font-family:var(--f-head);font-size:1.3rem;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-top .t span{font-size:.85rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-main{max-width:960px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:14px}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:inherit}
+.g-wide{width:100%;min-height:50px}
+.g-row{display:flex;flex-wrap:wrap;gap:10px}
+.g-row .btn{flex:1 1 160px;min-height:48px}
+.g-login{display:flex;flex-direction:column;gap:10px;max-width:440px;margin:0 auto;width:100%}
+.g-login h2,.g-card h2{margin:0}
+.g-or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem}
+.g-or::before,.g-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.g-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.g-stats div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center}
+.g-stats b{display:block;font-family:var(--f-mono);font-size:1.6rem}
+.g-stats span{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.g-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.g-m{display:flex;flex-direction:column;gap:10px;padding:0;overflow:hidden}
+.g-m.pend{border-color:var(--marg)}
+.g-m.off{opacity:.7}
+.g-open{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;padding:14px;cursor:pointer;min-width:0}
+.g-open:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.g-open b{font-size:1.1rem}
+.g-mail{font-size:.85rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.g-tag{font-style:normal;font-size:.75rem;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink)}
+.g-tag.com{border-color:var(--accent);color:var(--accent)}
+.g-tag.prem{background:var(--accent-2);border-color:var(--accent-2);color:#fff}
+.g-tag.st-pendent{border-color:var(--marg);color:var(--marg)}
+.g-tag.st-rebutjat{border-color:var(--no);color:var(--no)}
+.g-m .g-row{padding:0 14px 14px}
+.g-card{display:flex;flex-direction:column;gap:10px}
+.g-com{display:flex;align-items:center;gap:8px}
+.g-com .field{flex:1;min-width:0}
+.g-n{font-size:.8rem;color:var(--muted);white-space:nowrap}
+.g-grp{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.g-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g-back{align-self:flex-start}
+body.g-lock{overflow:hidden}
+.field{font-family:var(--f-body)}
+:root[data-size="big"] .g-open b{font-size:1.3rem}
+:root[data-size="big"] .g-mail,:root[data-size="big"] .g-tag{font-size:.95rem}
+@media (max-width:420px){.g-stats b{font-size:1.3rem}.g-stats span{font-size:.65rem}}
+.cl-chips{display:flex;flex-wrap:wrap;gap:6px}

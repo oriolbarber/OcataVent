@@ -11,10 +11,11 @@ const PERMS = {
   altes:   {t:"Altes",    d:"Aprovar o rebutjar altes i treure l'accés."},
   rols:    {t:"Rols i comissions", d:"Crear, reanomenar i eliminar comissions, assignar-hi persones i nomenar responsables."},
   permisos:{t:"Permisos", d:"Donar i treure aquests permisos a altres persones sòcies."},
-  moderar: {t:"Moderar",  d:"Retirar publicacions, «Qui surt» i anuncis d'altres persones."}
+  moderar: {t:"Moderar",  d:"Retirar publicacions, «Qui surt» i anuncis d'altres persones."},
+  avisos:  {t:"Fer avisos", d:"Publicar avisos al Club en nom de les comissions de què forma part."}
 };
 const COMS0 = {junta:"Junta", manteniment:"Manteniment", economica:"Econòmica"};
-let COMS = COMS0;
+let COMS = COMS0, CLUBNOM = "";
 const slug = t => String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "comissio";
 const ESTAT = {aprovat:"Aprovat", pendent:"Pendent", rebutjat:"No aprovat"};
 let C = null, members = [], cerca = "", loadedAt = 0;
@@ -29,13 +30,13 @@ async function ctx(){ C = window.OV_CLOUD?.ctx ? await window.OV_CLOUD.ctx().cat
 // Comissions del club: les llegeix qualsevol soci aprovat (club.js les fa servir als avisos)
 async function loadComs(){
   if(!C) return;
-  try{ const d = await C.F.getDoc(C.F.doc(C.db, "clubs", C.member.clubId)); COMS = d.exists() && d.data().comissions ? d.data().comissions : COMS0; }
+  try{ const d = await C.F.getDoc(C.F.doc(C.db, "clubs", C.member.clubId)); COMS = d.exists() && d.data().comissions ? d.data().comissions : COMS0; CLUBNOM = d.exists() ? d.data().nom || "" : ""; }
   catch(e){ COMS = COMS0; }
   window.OV_COMS = COMS; window.dispatchEvent(new CustomEvent("ov-coms")); render();
 }
 async function saveComs(next){
   try{
-    await C.F.setDoc(C.F.doc(C.db, "clubs", C.member.clubId), {comissions:next, actualitzat:C.F.serverTimestamp(), actualitzatPer:C.user.uid});
+    await C.F.setDoc(C.F.doc(C.db, "clubs", C.member.clubId), {...(CLUBNOM ? {nom:CLUBNOM} : {}), comissions:next, actualitzat:C.F.serverTimestamp(), actualitzatPer:C.user.uid});
     COMS = next; window.OV_COMS = next; window.dispatchEvent(new CustomEvent("ov-coms")); render();
   }catch(e){ say(errText(e)); }
 }
@@ -59,10 +60,10 @@ function rolesTxt(m){
 }
 function render(){
   const sec = $("admSec"), body = $("admBody"); if(!sec || !body) return;
-  sec.hidden = !(C && (gestor() || has("moderar"))); if(sec.hidden) return;
+  sec.hidden = !(C && (gestor() || has("moderar") || has("avisos"))); if(sec.hidden) return;
   const pend = members.filter(m => m.estat === "pendent");
   $("peekAdm").textContent = C.isAdm ? "Administració" + (pend.length ? " · " + pend.length + " pendents" : "") : "Permisos: " + C.perms.map(k => PERMS[k]?.t).join(", ");
-  if(!gestor()){ body.innerHTML = `<p class="note" style="margin:0">Tens el permís de moderar: al Club, a les publicacions, «Qui surt» i anuncis d'altres persones hi veuràs el botó «Retira».</p>`; return; }
+  if(!gestor()){ body.innerHTML = [has("moderar") ? `Tens el permís de moderar: al Club, a les publicacions, «Qui surt» i anuncis d'altres persones hi veuràs el botó «Retira».` : "", has("avisos") ? `Tens el permís de fer avisos: al Club ▸ Avisos hi veuràs «+ Nou avís» per a les teves comissions.` : ""].filter(Boolean).map(t => `<p class="note" style="margin:0">${t}</p>`).join(""); return; }
   const q = cerca.trim().toLowerCase(), L = members.filter(m => m.estat !== "pendent" && (!q || String(m.nom).toLowerCase().includes(q) || String(m.email).toLowerCase().includes(q)));
   const row = (m, extra) => `<div class="acc-row adm-row"><button type="button" class="adm-open" data-adm="${esc(m.userId)}"><b>${esc(m.nom)}${m.userId === C.user.uid ? " (tu)" : ""}</b><span>${esc(m.email)}</span><small>${esc(rolesTxt(m))}</small></button>${extra || ""}</div>`;
   body.innerHTML = `<div class="msg err" id="admMsg" hidden></div>
@@ -79,7 +80,8 @@ function render(){
       <p class="note">El nom nou es desa en sortir del camp. Si elimines una comissió, desapareix de la llista; els seus avisos es queden fins que caduquen.</p>` : ""}
     <div class="vp-more"><button class="ib-i" type="button" data-info="iAdm" aria-label="Què permet cada permís" aria-expanded="false">i</button>
       <div class="vp-info" id="iAdm" hidden>${Object.values(PERMS).map(p => `<p><b>${p.t}:</b> ${esc(p.d)}</p>`).join("")}<p>Toca una persona per canviar-ne l'estat, les comissions i els permisos. Ningú no pot canviar el seu propi estat ni els seus permisos. L'administració inicial els té tots.</p></div></div>
-    <button class="btn sm" type="button" id="admReload">Actualitza la llista</button>`;
+    <button class="btn sm" type="button" id="admReload">Actualitza la llista</button>
+    ${C.isAdm || C.isPremium ? `<a class="btn cl-pri cl-wide" href="gestio.html">Obre la web de gestió del club</a>${C.isAdm ? `<a class="btn cl-wide" href="admin.html">Administració global (tots els clubs)</a>` : ""}` : ""}`;
 }
 
 /* ---------- fitxa d'un soci ---------- */
@@ -89,7 +91,7 @@ function openMember(id){
   OV_CLUB.sheet(m.nom, `
     <p class="note" style="margin:0">${esc(m.email)} · ${esc(ESTAT[m.estat] || m.estat)}</p>
     ${has("rols") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Comissions i rol</span><div class="acc-roles">${Object.entries(COMS).map(([k, t]) => tog("data-mcom", k, (m.comissions || []).includes(k), t)).join("")}${tog("data-mresp", "1", !!m.responsable, "Responsable")}</div>
-      <p class="note">Les comissions poden publicar avisos al Club. Les persones responsables i la Junta poden marcar com a resolts els avisos de seguretat.</p></div>` : ""}
+      <p class="note">Per publicar avisos d'una comissió cal formar-ne part i tenir el permís «Fer avisos». Les persones responsables i la Junta poden marcar com a resolts els avisos de seguretat.</p></div>` : ""}
     ${has("permisos") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Permisos</span>${self ? `<p class="note">No pots canviar els teus propis permisos.</p>` :
       `<div class="adm-perms">${Object.entries(PERMS).map(([k, p]) => `<label class="cl-sw"><span><b>${p.t}</b><small class="note">${esc(p.d)}</small></span><input type="checkbox" class="switch" data-mperm="${k}"${(m.permisos || []).includes(k) ? " checked" : ""}></label>`).join("")}</div>`}</div>` : ""}
     ${has("altes") && !self ? `<div class="adm-grp"><span class="lbl">Accés</span>${m.estat === "aprovat" ? `<div id="admRevoke"></div>` : `<button class="btn cl-pri cl-wide" type="button" data-mestat="aprovat">Aprova</button>`}</div>` : ""}`, d => {

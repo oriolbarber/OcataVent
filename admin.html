@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Administració global · Ocata Vent</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="icons/logo.svg?v=3" type="image/svg+xml">
+<script>
+  try{ if(JSON.parse(localStorage.getItem("ov2_size")) === "big") document.documentElement.dataset.size = "big"; }catch(e){}
+  try{ const t = localStorage.getItem("ov2_theme"); if(t === "dark" || t === "light") document.documentElement.dataset.theme = t; }catch(e){}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
+<link rel="stylesheet" href="app.css?v=129">
+<link rel="stylesheet" href="gestio.css?v=1">
+</head>
+<body data-mode="global">
+<header class="g-top">
+  <a href="./" aria-label="Torna a l'app"><img src="icons/logo.svg?v=3" alt="Club Ocata Vent" width="36" height="36"></a>
+  <div class="t"><b id="gTitle">Administració global</b><span id="gWho"></span></div>
+  <a class="btn sm" href="./">App</a>
+  <button class="btn sm" type="button" id="gOut" hidden>Surt</button>
+</header>
+<main class="g-main" id="gMain"><article class="card"><p class="note">Carregant…</p></article></main>
+<script src="gestio.js?v=1"></script>
+</body>
+</html>

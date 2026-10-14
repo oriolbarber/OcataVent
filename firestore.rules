@@ -15,8 +15,19 @@ service cloud.firestore {
     function mySortida(sid) { return signedIn() && sid.matches(me() + '_[0-9]+'); }
     function memberData() { return get(memberPath()).data; }
     function inComissio(c) { return isAdmin() || (isApproved() && c in memberData().get('comissions', [])); }
-    // Permisos delegables (members/{uid}.permisos): altes, rols, permisos, moderar. Els administradors els tenen tots.
-    function hasPerm(p) { return isAdmin() || (isApproved() && p in memberData().get('permisos', [])); }
+    // Premium (members/{uid}.premium, només el dona l'administració): gestiona el seu club, amb tots els permisos dins del club
+    function isPremium() { return isApproved() && memberData().get('premium', false) == true; }
+    // Permisos delegables (members/{uid}.permisos): altes, rols, permisos, moderar, avisos. Administració i premium els tenen tots.
+    function hasPerm(p) { return isAdmin() || isPremium() || (isApproved() && p in memberData().get('permisos', [])); }
+    function permList() { return ['altes', 'rols', 'permisos', 'moderar', 'avisos']; }
+    // Gestionar un soci (o un club): l'administració, qualsevol; la resta, només el seu club
+    function sameClub(club) { return isAdmin() || club == myClub(); }
+    function comsOf(club) {
+      let p = /databases/$(database)/documents/clubs/$(club);
+      return exists(p) ? get(p).data.comissions.keys() : ['junta', 'manteniment', 'economica'];
+    }
+    // Publicar avisos d'una comissió: ser-ne i tenir el permís «avisos» (administració i premium, a qualsevol comissió del club)
+    function canAvis(c) { return isAdmin() || isPremium() || (isApproved() && c in memberData().get('comissions', []) && 'avisos' in memberData().get('permisos', [])); }
     function gestor() { return hasPerm('altes') || hasPerm('rols') || hasPerm('permisos'); }
     // Comissions del club (clubs/{clubId}.comissions = {id: nom}); si encara no s'han editat, les de sempre
     function comsClub() {
@@ -61,7 +72,7 @@ service cloud.firestore {
 
     // ---------- socis ----------
     match /members/{uid} {
-      allow read: if signedIn() && (uid == me() || gestor());
+      allow read: if signedIn() && (uid == me() || (gestor() && sameClub(resource.data.clubId)));
 
       // Sol·licitud d'alta: només la pròpia, pendent (un administrador es pot donar d'alta aprovat), amb consentiment
       allow create: if signedIn() && uid == me()
@@ -77,7 +88,7 @@ service cloud.firestore {
         && request.resource.data.creat == request.time;
 
       // Aprovar, rebutjar o treure l'accés: permís «altes» (no a un mateix)
-      allow update: if hasPerm('altes') && uid != me()
+      allow update: if hasPerm('altes') && uid != me() && sameClub(resource.data.clubId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estat', 'revisatPer', 'revisatAt'])
         && request.resource.data.estat in ['pendent', 'aprovat', 'rebutjat']
         && request.resource.data.revisatPer == me()
@@ -95,16 +106,25 @@ service cloud.firestore {
         && request.resource.data.privacitat.get('avisosBase', true) is bool
         && request.resource.data.privacitat.get('autoBase', false) is bool;
       // Comissions i responsables: permís «rols»
-      allow update: if hasPerm('rols')
+      allow update: if hasPerm('rols') && sameClub(resource.data.clubId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comissions', 'responsable'])
         && request.resource.data.get('comissions', []) is list
-        && request.resource.data.get('comissions', []).toSet().difference(comsClub().toSet()).size() == 0
+        && request.resource.data.get('comissions', []).toSet().difference(comsOf(resource.data.clubId).toSet()).size() == 0
         && request.resource.data.get('responsable', false) is bool;
       // Permisos: permís «permisos» (no a un mateix, perquè ningú no se'ls pugi sol)
-      allow update: if hasPerm('permisos') && uid != me()
+      allow update: if hasPerm('permisos') && uid != me() && sameClub(resource.data.clubId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['permisos'])
         && request.resource.data.permisos is list
-        && request.resource.data.permisos.toSet().difference(['altes', 'rols', 'permisos', 'moderar'].toSet()).size() == 0;
+        && request.resource.data.permisos.toSet().difference(permList().toSet()).size() == 0;
+      // Web de gestió: dades bàsiques (nom) per a qui gestiona altes al club
+      allow update: if hasPerm('altes') && sameClub(resource.data.clubId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom'])
+        && nomOk(request.resource.data.nom, 80);
+      // Només l'administració: fer premium i canviar de club (a un club que existeixi)
+      allow update: if isAdmin() && uid != me()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['premium', 'clubId'])
+        && request.resource.data.get('premium', false) is bool
+        && (request.resource.data.clubId == 'ocatavent' || exists(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)));
 
       // Esborrar: el mateix soci (esborrar el compte) o un administrador
       allow delete: if signedIn() && (uid == me() || isAdmin());
@@ -204,7 +224,7 @@ service cloud.firestore {
     match /avisos/{id} {
       allow read: if clubOk();
       // Data opcional de l'activitat (AAAA-MM-DD): amb data, caduca l'endemà; sense data, no caduca (caduca = null)
-      allow create: if newClubOk() && inComissio(request.resource.data.comissio)
+      allow create: if newClubOk() && canAvis(request.resource.data.comissio)
         && request.resource.data.keys().hasOnly(['userId', 'clubId', 'comissio', 'titol', 'text', 'fixat', 'data', 'caduca', 'creat', 'autorNom', 'vist'])
         && request.resource.data.comissio in comsClub()
         && avisOk(request.resource.data)
@@ -293,10 +313,12 @@ service cloud.firestore {
 
     // ---------- configuració del club (Administració): comissions ----------
     // La Junta no es pot eliminar (la seguretat en depèn); sí reanomenar. Ho edita qui té el permís «rols».
+    // L'administració veu i crea tots els clubs (nom); premium i «rols» editen el seu.
     match /clubs/{club} {
-      allow read: if isApproved() && club == myClub();
-      allow create, update: if hasPerm('rols') && club == myClub()
-        && request.resource.data.keys().hasOnly(['comissions', 'actualitzat', 'actualitzatPer'])
+      allow read: if isAdmin() || (isApproved() && club == myClub());
+      allow create, update: if (isAdmin() || (hasPerm('rols') && club == myClub()))
+        && request.resource.data.keys().hasOnly(['nom', 'comissions', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.get('nom', '') is string && request.resource.data.get('nom', '').size() <= 80
         && request.resource.data.comissions is map && request.resource.data.comissions.size() <= 20
         && 'junta' in request.resource.data.comissions.keys()
         && request.resource.data.actualitzatPer == me() && request.resource.data.actualitzat == request.time;

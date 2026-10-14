@@ -56,7 +56,8 @@ const ago = t => { const m = Math.max(0, Math.round((now() - t)/MIN)); return m 
 const boatShort = k => DEFAULTS[k]?.short || DEFAULTS[k]?.name || k || "";
 const vis = () => window.OV_PRIV ? OV_PRIV.pref("presencia") : "club";   // Configuració ▸ Confidencialitat (amics.js)
 const NIVT = v => (window.OV_PRIV?.NIV || {})[v] || v;
-const canPost = () => C && (C.isAdm ? Object.keys(COMSm()) : (C.member.comissions || []).filter(k => COMSm()[k]));
+// Publicar avisos: administració i premium, a qualsevol comissió; la resta, a les seves i amb el permís «avisos»
+const canPost = () => !C ? [] : (C.isAdm || C.isPremium) ? Object.keys(COMSm()) : C.perms.includes("avisos") ? (C.member.comissions || []).filter(k => COMSm()[k]) : [];
 const ERRS = {"permission-denied":"El núvol ho ha refusat (permís). Comprova que les regles estan publicades.", "unavailable":"Sense connexió amb el núvol.", "timeout":"El núvol no respon."};
 const errText = e => ERRS[e && e.code] || "No s'ha pogut fer" + (e && e.code ? " (" + e.code + ")." : ".");
 function say(t){ const m = $("clubMsg"); if(m){ m.textContent = t || ""; m.hidden = !t; } }
@@ -272,7 +273,7 @@ function renderAvisos(){
           <button type="button" class="btn cl-seen" data-seen="${esc(a.id)}" aria-pressed="${seen}" aria-label="${seen ? "Vist. Toca per desmarcar" : "Marca com a vist"}">${seen ? SEEN : EYE}<small>${seen ? "Vist" : "Marca"}</small></button></div>
         ${own || del ? `<div class="cl-row2">${own ? `<button type="button" class="btn sm" data-editavis="${esc(a.id)}">Edita</button>` : "<span></span>"}${del ? `<button type="button" class="btn sm" data-askdel="avisos" data-id="${esc(a.id)}">Retira l'avís</button>` : ""}</div><div data-delbox="${esc(a.id)}"></div>` : ""}</article>`; }).join("")
       || `<article class="card empty">${D.at.avisos ? "No hi ha cap avís." : "Carregant…"}</article>`}
-    ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Només hi publiquen les comissions${mine.length ? ". Tu hi publiques com a: " + esc(mine.map(k => COMSm()[k]).join(", ")) : ""}.</p>` : ""}`;
+    ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Hi publiquen les comissions amb permís per fer avisos${mine.length ? ". Tu hi publiques com a: " + esc(mine.map(k => COMSm()[k]).join(", ")) : ""}.</p>` : ""}`;
 }
 
 /* ---------- ANUNCIS ---------- */
