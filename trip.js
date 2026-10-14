@@ -715,7 +715,9 @@ async function permCheck(){
   else if("wakeLock" in navigator) set("pmWake", "ok", "Mentre graves, la pantalla no s'apagarà sola.");
   else set("pmWake", "bad", "Aquest navegador no pot mantenir la pantalla encesa: allarga el temps d'apagada a Ajustaments del mòbil.");
   // si alguna cosa falta, se n'ensenya el detall sense haver de tocar
-  const bad = document.querySelector("#ckRow .ck.bad, #ckRow .ck.wait"); ckShow(bad ? bad.dataset.ck : ckOpen);
+  // el detall només surt si el soci toca una casella, i es tanca sol quan aquella casella ja està bé
+  const op = ckOpen && document.querySelector(`#ckRow .ck[data-ck="${ckOpen}"]`);
+  ckShow(op && !op.classList.contains("ok") ? ckOpen : null);
 }
 // App Android: demana una posició ràpida per saber si hi ha permís (error 1 = denegat; temps esgotat = permís sí, senyal no)
 let nGeo = null;

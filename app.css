@@ -718,8 +718,9 @@ body.cam-open{overflow:hidden}
 .tn-h{font-size:1.4rem;text-transform:uppercase;margin:0}
 .trip-new .vp-info{margin-bottom:10px}
 .ck-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.ck{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface-2);color:var(--ink);cursor:pointer;font:inherit;min-width:0}
-.ck .pm-ic{width:30px;height:30px;font-size:16px}
+.ck{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface-2);color:var(--ink);cursor:pointer;font:inherit;min-width:0}
+.ck .pm-ic{width:24px;height:24px;font-size:14px}
+.ck.ok em{display:none}
 .ck b{font-family:var(--f-head);font-size:1rem;text-transform:uppercase;letter-spacing:.05em}
 .ck em{font-style:normal;font-size:.8rem;font-weight:700;color:var(--muted)}
 .ck small{display:none}
