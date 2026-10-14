@@ -1249,3 +1249,7 @@ body.wm-open{overflow:hidden}
   .wm.full-chart .hc-read .rd-top{flex-basis:100%}
   .wm.full-chart .hc-read .rd-v{flex-basis:100%;flex:none}
 }
+.la-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.la-item .la-btns .btn{align-self:auto;flex:1 1 140px}
+.la-item .btn.la-pri{background:#03121c;color:#fff;border:2px solid #fff}
+.la-item.sent{background:var(--marg)}

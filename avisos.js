@@ -5,16 +5,18 @@
      i la previsió no dona vent suficient les properes 2 h.
    · Vent massa fort: l'estació marca ratxes per sobre del màxim de l'embarcació (o vent per sobre del màxim).
    · Onades perilloses: la previsió dona onades per sobre del màxim de l'embarcació les properes 3 h.
-   · Tornada a la base: dins del radi de la base i aturat 2 min, després d'haver-ne sortit → desa la sortida sola.
-   Els tres primers es mostren a dalt de tot, amb vibració i so, i es desen a «alertes» perquè els vegi
-   qui el soci tria a Confidencialitat (per defecte, la junta i els responsables; «Ningú» = no es desen). Fa servir els criteris de cada embarcació (crit).
+   · Tornada a la base: dins del radi de la base 10 min seguits, després d'haver-ne sortit → desa la sortida sola.
+   Els tres primers es mostren a dalt de tot, amb vibració i so, i PROPOSEN avisar el club: només es desen a «alertes»
+   si el navegant prem «Avisa el club» (decisió de l'Oriol, 14/10/2026: els avisos els autoritza qui navega, perquè siguin fiables).
+   Un cop enviat, el navegant el pot anul·lar. Fa servir els criteris de cada embarcació (crit).
    No hi ha avís per no tornar a l'hora prevista: decisió de l'Oriol (13/10/2026). */
 (() => {
 const BASE_R = 50;            // m: radi de la base nàutica (pendent de la junta)
 const FORA_M = 150;           // m: cal haver-se allunyat això de la base perquè compti la tornada
-const SNOOZE = 20*60e3;       // «D'acord» amaga l'avís 20 min (l'avís als responsables continua)
+const SNOOZE = 20*60e3;       // «No cal» amaga la proposta 20 min
+const AT_BASE_MS = 10*60e3;   // temps dins de la base per tancar la sortida sola
 const KINDS = ["sense-vent", "vent-fort", "onades"];
-let active = {}, snooze = {}, atBase = 0, wasOut = false, lastLive = null, closing = false;
+let active = {}, snooze = {}, sent = {}, atBase = 0, wasOut = false, lastLive = null, closing = false;   // sent[k]: "enviant" | "enviat" 
 
 const home = () => ({lat:HOME[0], lon:HOME[1]});
 const CAP = ["al nord", "al nord-est", "a l'est", "al sud-est", "al sud", "al sud-oest", "a l'oest", "al nord-oest"];
@@ -62,13 +64,28 @@ function beep(){
 }
 function box(){ let b = $("liveAlert"); if(!b){ b = document.createElement("div"); b.id = "liveAlert"; b.className = "live-alert"; b.setAttribute("role", "alert"); document.body.appendChild(b); } return b; }
 function render(){
-  const b = box(), now = Date.now(), L = KINDS.filter(k => active[k] && !(snooze[k] > now));
+  const b = box(), now = Date.now(), L = KINDS.filter(k => sent[k] || (active[k] && !(snooze[k] > now)));
   b.hidden = !L.length;
-  b.innerHTML = L.map(k => `<div class="la-item"><b>${esc(active[k].title)}</b><p>${esc(active[k].text)}</p>
-    <button type="button" class="btn" data-snooze="${k}">D'acord</button></div>`).join("");
+  b.innerHTML = L.map(k => sent[k] ? `<div class="la-item sent"><b>${esc(active[k]?.title || "Avís enviat")}</b>
+      <p>${sent[k] === "enviant" ? (navigator.onLine === false ? "Sense connexió: l'avís s'enviarà quan en tinguis." : "Enviant l'avís al club…") : "Avís enviat al club."}</p>
+      <div class="la-btns"><button type="button" class="btn" data-cancel="${k}">Estic bé · anul·la'l</button></div></div>`
+    : `<div class="la-item"><b>${esc(active[k].title)}</b><p>${esc(active[k].text)}</p>
+      <div class="la-btns"><button type="button" class="btn" data-snooze="${k}">No cal</button><button type="button" class="btn la-pri" data-send="${k}">Avisa el club</button></div></div>`).join("");
 }
+async function send(k){
+  if(!lastLive || sent[k]) return;
+  sent[k] = "enviant"; render();
+  const ok = await window.OV_CLUB?.raiseAlert(k, active[k]?.val, LIVE && LIVE.pts[LIVE.pts.length-1], lastLive);
+  if(ok){ sent[k] = "enviat"; render(); } else { delete sent[k]; toast("No s'ha pogut enviar l'avís. Si cal ajuda: VHF canal 16 o 112."); }
+}
+function cancel(k){ if(lastLive) window.OV_CLUB?.clearAlert(k, lastLive); delete sent[k]; snooze[k] = Date.now() + SNOOZE; render(); }
 function toast(t){ const b = box(); b.hidden = false; b.innerHTML = `<div class="la-item ok"><b>${esc(t)}</b><button type="button" class="btn" data-snooze="ok">D'acord</button></div>`; }
-document.addEventListener("click", e => { const k = e.target.closest && e.target.closest("[data-snooze]")?.dataset.snooze; if(!k) return; if(k !== "ok") snooze[k] = Date.now() + SNOOZE; else box().hidden = true; render(); });
+document.addEventListener("click", e => {
+  const t = e.target.closest && e.target.closest("#liveAlert [data-snooze], #liveAlert [data-send], #liveAlert [data-cancel]"); if(!t) return;
+  if(t.dataset.send){ send(t.dataset.send); return; }
+  if(t.dataset.cancel){ cancel(t.dataset.cancel); return; }
+  const k = t.dataset.snooze; if(k !== "ok") snooze[k] = Date.now() + SNOOZE; else box().hidden = true; render();
+});
 
 async function autoReturn(){
   if(closing || !LIVE) return; closing = true;
@@ -78,25 +95,24 @@ async function autoReturn(){
 
 function check(){
   if(!LIVE){   // la sortida s'ha acabat: es treuen els avisos
-    if(lastLive){ for(const k of Object.keys(active)) window.OV_CLUB?.clearAlert(k, lastLive); active = {}; snooze = {}; atBase = 0; wasOut = false; lastLive = null; render(); }
+    if(lastLive){ for(const k of Object.keys(sent)) window.OV_CLUB?.clearAlert(k, lastLive); active = {}; snooze = {}; sent = {}; atBase = 0; wasOut = false; lastLive = null; render(); }
     return;
   }
-  if(lastLive && lastLive.id !== LIVE.id){ active = {}; snooze = {}; atBase = 0; wasOut = false; }
+  if(lastLive && lastLive.id !== LIVE.id){ active = {}; snooze = {}; sent = {}; atBase = 0; wasOut = false; }
   lastLive = {id:LIVE.id, start:LIVE.start};
   const found = evaluate(), last = LIVE.pts[LIVE.pts.length-1];
   let fresh = false;
-  for(const k of KINDS){
-    if(found[k] && !active[k]){ fresh = true; window.OV_CLUB?.raiseAlert(k, found[k].val, last, lastLive); }
-    if(!found[k] && active[k]) window.OV_CLUB?.clearAlert(k, lastLive);
-    if(found[k]) active[k] = found[k]; else delete active[k];
+  for(const k of KINDS){   // només es proposa; l'avís al club l'envia el navegant (i el retira ell, o en acabar la sortida)
+    if(found[k] && !active[k]) fresh = true;
+    if(found[k]) active[k] = found[k]; else if(!sent[k]) delete active[k];
   }
-  if(fresh && KINDS.some(k => found[k] && !(snooze[k] > Date.now()))) beep();
+  if(fresh && KINDS.some(k => found[k] && !sent[k] && !(snooze[k] > Date.now()))) beep();
   render();
   // Tornada a la base
   if(last){
     const d = hav(home(), last);
     if(d > FORA_M) wasOut = true;
-    if(wasOut && d < BASE_R){ if(!atBase) atBase = Date.now(); if(Date.now() - atBase >= 2*60e3) autoReturn(); }
+    if(wasOut && d < BASE_R){ if(!atBase) atBase = Date.now(); if(Date.now() - atBase >= AT_BASE_MS) autoReturn(); }
     else atBase = 0;
   }
 }

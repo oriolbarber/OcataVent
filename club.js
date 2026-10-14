@@ -702,15 +702,16 @@ const OV_CLUB = window.OV_CLUB = {
   },
   async tripEnd(){ if(!C || !D.myPres) return; try{ await delPres(); }catch(e){} },
   async arrived(){ if(!C || vis() === "ningu") return; try{ await setPres(presDoc("base")); }catch(e){} },   // tornada a la base detectada pel GPS
-  // Avisos de seguretat de la sortida en curs: es desen perquè els vegin els responsables (només si es comparteix la presència)
+  // Avís de seguretat que el navegant ha decidit enviar (avisos.js). Si a Confidencialitat té «Ningú», s'envia al club:
+  // prémer «Avisa el club» és un consentiment explícit. Retorna true quan el núvol l'ha desat.
   async raiseAlert(tipus, valor, p, Lv){
-    const v = prefOf("avisos");
-    if(!C || v === "ningu" || !Lv) return;
+    const v0 = prefOf("avisos"), v = v0 === "ningu" ? "club" : v0;
+    if(!C || !Lv) return false;
     try{ await C.F.setDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus), Object.assign({clubId:C.member.clubId, tipus, userId:uid(), nom:C.member.nom,
       act:String(D.myPres?.act || act), desde:Lv.start, lat:p ? p.lat : HOME[0], lon:p ? p.lon : HOME[1], posAt:now(), valor:num(valor), resolta:false, creat:C.F.serverTimestamp(),
-      base: window.OV_PRIV ? OV_PRIV.avisosBase() : true}, await visFields(v))); }catch(e){}
+      base: window.OV_PRIV ? OV_PRIV.avisosBase() : true}, await visFields(v))); return true; }catch(e){ return false; }
   },
-  async clearAlert(tipus, Lv){   // la sortida ja no té aquest avís: s'esborra (no cal guardar on era ningú)
+  async clearAlert(tipus, Lv){   // el navegant l'anul·la o acaba la sortida: s'esborra (no cal guardar on era ningú)
     if(!C || !Lv) return;
     C.F.deleteDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus)).catch(() => {});
   },
