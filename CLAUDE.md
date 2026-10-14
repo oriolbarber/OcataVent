@@ -72,7 +72,9 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 ## Previsió: pantalla completa (`windmap.js`)
 - Botó de maximitzar al gràfic per hores i al mapa (`data-wmfull="chart|map"`): la targeta `#windMap` passa a `.full` (fixa, a tota la pantalla). El botó enrere d'Android la tanca (`history.pushState` + `popstate`).
 - Gràfic: es redibuixa amb l'amplada i l'alçada lliures (`hourChart(…, Wpx, Hpx)`).
-- Mapa: es pot moure i ampliar amb els dits, porta l'efecte de vent i onades de l'hora triada i una llegenda. A sota, la franja d'hores de tots els dies de previsió (taula `#wmTable` reduïda: les files `x-full` s'amaguen).
+- S'obre en horitzontal: a l'APK amb `@capacitor/screen-orientation`; al navegador, Fullscreen API + `screen.orientation.lock` (a l'iPhone es queda vertical).
+- A baix, la línia del temps (`#wmTl`, `tlRender`/`tlSync`): xips de dia i franja d'hores de tota la previsió amb barres del color del veredicte (alçada = vent); l'agulla del mig marca l'hora triada. La taula `#wmScroll` s'amaga a pantalla completa.
+- Mapa: es pot moure i ampliar amb els dits i porta l'efecte de vent i onades de l'hora triada. La llegenda és dins del botó (i) de baix a l'esquerra.
 
 ## Avisos de seguretat i tasques programades (Fase 3, part 1)
 - **Avisos en ruta** (`avisos.js`, al mòbil de qui navega, cada 20 s): sense vent i lluny (< 1 kn 10 min, > 0,5 nm de la base, estació < 4 kn i previsió < mínim de l'embarcació 2 h), vent massa fort (estació per sobre del màxim o de la ratxa màxima de l'embarcació), onades perilloses (previsió de les properes 3 h per sobre de `wMax`). Avís a pantalla amb vibració i so; es desa a `alertes/{uid}_{inici}_{tipus}` perquè el vegi qui el soci tria a Confidencialitat (per defecte, el club i la gent a la base). El marquen com a resolt la Junta, els responsables o qui és a la base.

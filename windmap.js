@@ -79,7 +79,7 @@ function wmShow(k, scroll){
   if(scroll){ const td = document.querySelector(`#wmTable th[data-k="${k}"]`); const box = $("wmScroll");
     if(td && box){ wmProg = Date.now(); box.scrollLeft = Math.max(0, td.offsetLeft - box.clientWidth / 2 + td.offsetWidth / 2); } }
   if(wmFx) wmFx.kick();
-  if(wmFull()) wmLegend();
+  if(wmFull()){ wmLegend(); tlSync(k, scroll); }
   if(window.mmSel) mmSel(k);
 }
 window.wmSelect = (k, scroll) => { if(DATA && DATA.hours[k] && document.querySelector(`#wmTable th[data-k="${k}"]`)) wmShow(k, scroll); };
@@ -109,6 +109,7 @@ function renderWindMap(){
   $("wmScroll").innerHTML = html;
   const nk = nowKey(), def = keys.find(x => x.k === nk)?.k || keys.find(x => x.k > nk)?.k || keys[0].k;
   const want = (window.SEL_K && window.SEL_K()) || wmSel, keep = want && keys.some(x => x.k === want) ? want : def;
+  if(wmFull()) tlRender();
   wmShow(keep, true);
   setTimeout(() => { if(wmMap){ wmMap.invalidateSize(false); if(!wmFull()) wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); } }, 0);
 }
@@ -148,10 +149,66 @@ function wmLegend(){
     <span class="ks"><span><i class="vd" style="background:var(--ideal)"></i>Bo</span><span><i class="vd" style="background:var(--marg)"></i>Limitat</span><span><i class="vd" style="background:var(--no)"></i>No recomanat</span></span>
     <span>Etiquetes: vent (kn, R = ratxa) i onada (m, període) per a ${esc(DEFAULTS[act]?.name || "")}</span>`;
 }
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-wmleg]"); const leg = $("wmLeg");
+  if(b){ const on = !leg.classList.contains("open"); leg.classList.toggle("open", on); b.setAttribute("aria-expanded", String(on)); return; }
+  if(leg && leg.classList.contains("open") && !e.target.closest(".wm-leg")){ leg.classList.remove("open"); document.querySelector("[data-wmleg]")?.setAttribute("aria-expanded", "false"); } });
+
+/* ---------- línia del temps (pantalla completa): xips de dia + franja d'hores amb el color del veredicte; l'agulla del mig marca l'hora ---------- */
+const TL_W = 22;                         // amplada de cada hora (px), igual que a l'estil .tl-h
+let tlProg = 0, tlRaf = 0;
+const dayLbl = (date, i) => { const d = new Date(date + "T12:00:00"); return i === 0 && date === todayDate() ? "Avui" : DAYS_S[d.getDay()] + " " + d.getDate(); };
+function tlRender(){
+  const el = $("wmTl"); if(!el || !DATA) return;
+  const keys = wmKeys(), c = crit[act], days = [];
+  keys.forEach(x => { if(!days.length || days[days.length - 1] !== x.date) days.push(x.date); });
+  el.innerHTML = `<div class="tl-days">${days.map((d, i) => `<button type="button" data-tld="${d}" aria-pressed="false">${dayLbl(d, i)}</button>`).join("")}</div>
+    <div class="tl-box"><div class="tl-track" id="tlTrack"><div class="tl-strip">${keys.map((x, i) => {
+      const p = hourAt(x.date, x.h) || DATA.hours[x.k], v = verdict(scoreHour(p, c)), hg = Math.round(18 + Math.min(1, (p.wind || 0) / 25) * 82);
+      return `<span class="tl-h${i && keys[i - 1].date !== x.date ? " d0" : ""}" data-tk="${x.k}" title="${x.h} h · ${v.t}"><i style="height:calc((100% - 14px) * ${hg / 100});background:var(--${v.k})"></i><b>${x.h % 3 === 0 ? x.h : ""}</b></span>`; }).join("")}</div></div><div class="tl-needle"></div></div>`;
+  $("tlTrack").addEventListener("scroll", tlOnScroll, {passive:true});
+}
+function tlSync(k, center){
+  const tr = $("tlTrack"); if(!tr) return;
+  tr.querySelectorAll(".tl-h.sel").forEach(x => x.classList.remove("sel"));
+  const h = tr.querySelector(`[data-tk="${k}"]`); if(h) h.classList.add("sel");
+  const date = k.slice(0, 10);
+  document.querySelectorAll("#wmTl [data-tld]").forEach(b => { const on = b.dataset.tld === date; b.setAttribute("aria-pressed", String(on)); if(on && center) b.scrollIntoView({block:"nearest", inline:"center"}); });
+  if(center && h){ tlProg = Date.now(); tr.scrollTo({left: h.offsetLeft - tr.clientWidth / 2 + TL_W / 2, behavior: "auto"}); }
+}
+// en lliscar, l'hora que queda sota l'agulla passa a ser la triada (mapa o gràfic s'actualitzen al moment)
+function tlOnScroll(){
+  if(Date.now() - tlProg < 400 || tlRaf) return;
+  tlRaf = requestAnimationFrame(() => { tlRaf = 0; const tr = $("tlTrack"); if(!tr) return;
+    const hs = tr.querySelectorAll(".tl-h"), i = Math.max(0, Math.min(hs.length - 1, Math.round(tr.scrollLeft / TL_W)));
+    const k = hs[i]?.dataset.tk; if(k && k !== wmSel) wmShow(k, false); });
+}
+document.addEventListener("click", e => {
+  const h = e.target.closest && e.target.closest("#wmTl [data-tk]"); if(h){ wmShow(h.dataset.tk, true); return; }
+  const d = e.target.closest && e.target.closest("#wmTl [data-tld]"); if(!d) return;
+  const keys = wmKeys().filter(x => x.date === d.dataset.tld), hh = wmSel ? +wmSel.slice(11, 13) : 12;
+  const x = keys.find(y => y.h === hh) || keys.find(y => y.h === 12) || keys[0]; if(x) wmShow(x.k, true);
+});
+// En horitzontal: a l'APK, connector natiu ScreenOrientation; al navegador, pantalla completa + bloqueig d'orientació. Si no es pot (iPhone), es queda vertical.
+async function wmLand(on){
+  const SO = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.ScreenOrientation;
+  try{
+    if(SO){ await (on ? SO.lock({orientation:"landscape"}) : SO.unlock()); return; }
+    if(on){
+      if(!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({navigationUI:"hide"});
+      if(screen.orientation && screen.orientation.lock) await screen.orientation.lock("landscape");
+    } else {
+      try{ screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); }catch(e){}
+      if(document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+    }
+  }catch(e){}
+}
+// si el navegador surt de la pantalla completa (botó enrere), també es tanca la vista
+document.addEventListener("fullscreenchange", () => { if(!document.fullscreenElement && wmFull()){ if(history.state && history.state.wmFull) history.back(); else wmClose(); } });
 function wmOpen(kind){
   const c = wmCard(); if(!c || wmFull()) return;
   c.classList.add("full", "full-" + kind); document.body.classList.add("wm-open");
   try{ history.pushState({wmFull:1}, ""); }catch(e){}
+  wmLand(true); tlRender();
   if(kind === "chart"){ setTimeout(() => { renderDayChart(); applySel(); }, 0); }
   else if(wmEnsureMap()){
     // a pantalla completa el mapa es pot moure i ampliar amb els dits
@@ -167,6 +224,7 @@ function wmClose(){
   const c = wmCard(); if(!c || !wmFull()) return;
   const wasChart = c.classList.contains("full-chart");
   c.classList.remove("full", "full-chart", "full-map"); document.body.classList.remove("wm-open");
+  $("wmLeg")?.classList.remove("open"); wmLand(false);
   if(wmMap){ wmMap.dragging.disable(); wmMap.touchZoom.disable(); wmMap.doubleClickZoom.disable(); if(wmZoomC) wmZoomC.remove();
     if(wmFx) wmFx.stop(); setTimeout(() => { wmMap.invalidateSize(false); wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); }, 0); }
   if(wasChart) setTimeout(() => { renderDayChart(); applySel(); }, 0);
@@ -182,7 +240,9 @@ window.addEventListener("popstate", () => { if(wmFull()) wmClose(); });
 window.addEventListener("mm-view", () => { if(wmFull()) wmClose(); });
 document.addEventListener("visibilitychange", () => { if(wmFx && document.visibilityState === "visible") wmFx.kick(); });
 // en girar el mòbil o canviar la mida, el gràfic es torna a dibuixar a la mida nova
-window.addEventListener("resize", () => { if(wmCard()?.classList.contains("full-chart")){ clearTimeout(wmOpen.t); wmOpen.t = setTimeout(() => { renderDayChart(); applySel(); }, 150); } });
+window.addEventListener("resize", () => { if(!wmFull()) return; clearTimeout(wmOpen.t); wmOpen.t = setTimeout(() => {
+  if(wmCard().classList.contains("full-chart")){ renderDayChart(); applySel(); }
+  if(wmSel) tlSync(wmSel, true); }, 200); });
 window.addEventListener("mm-theme", () => { if(wmFx) wmFx.reset(); });
 window.renderWindMap = renderWindMap;
 if(DATA) renderWindMap();
