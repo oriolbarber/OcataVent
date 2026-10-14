@@ -2,16 +2,17 @@
 /* ============ Ocata Vent 2 · Administració: socis, rols i permisos ============
    Configuració ▸ Administració. La veu qui té algun permís de gestió (o és administrador):
    · altes     — aprovar, rebutjar o treure l'accés a socis
-   · rols      — comissions (Junta, Manteniment, Econòmica) i responsable
+   · rols      — comissions (Junta, Manteniment, Econòmica)
    · permisos  — donar i treure aquests permisos a altres socis
    · moderar   — retirar publicacions, «Qui surt» i anuncis d'altres socis
    Ningú no es pot canviar l'estat ni els permisos a si mateix. Les regles de Firestore ho controlen. */
 (() => {
 const PERMS = {
   altes:   {t:"Altes",    d:"Aprovar o rebutjar altes i treure l'accés."},
-  rols:    {t:"Rols i comissions", d:"Crear, reanomenar i eliminar comissions, assignar-hi persones i nomenar responsables."},
+  rols:    {t:"Rols i comissions", d:"Crear, reanomenar i eliminar comissions i rols, i assignar-hi persones."},
   permisos:{t:"Permisos", d:"Donar i treure aquests permisos a altres persones sòcies."},
   moderar: {t:"Moderar",  d:"Retirar publicacions, «Qui surt» i anuncis d'altres persones."},
+  seguretat:{t:"Seguretat", d:"Marcar com a resolts els avisos de seguretat en ruta (sense vent, vent fort, onades)."},
   avisos:  {t:"Fer avisos", d:"Publicar avisos al Club en nom de les comissions de què forma part."}
 };
 const COMS0 = {junta:"Junta", manteniment:"Manteniment", economica:"Econòmica"};
@@ -54,7 +55,6 @@ function badge(){ const n = has("altes") ? members.filter(m => m.estat === "pend
 /* ---------- secció de la configuració ---------- */
 function rolesTxt(m){
   const r = (m.comissions || []).map(k => COMS[k]).filter(Boolean);
-  if(m.responsable) r.push("Responsable");
   const p = (m.permisos || []).map(k => PERMS[k]?.t).filter(Boolean);
   return [ESTAT[m.estat] || m.estat].concat(r).concat(p.length ? ["Permisos: " + p.join(", ")] : []).join(" · ");
 }
@@ -90,8 +90,8 @@ function openMember(id){
   const self = id === C.user.uid, tog = (attr, k, on, t) => `<button class="btn sm" type="button" ${attr}="${k}" aria-pressed="${on}">${esc(t)}</button>`;
   OV_CLUB.sheet(m.nom, `
     <p class="note" style="margin:0">${esc(m.email)} · ${esc(ESTAT[m.estat] || m.estat)}</p>
-    ${has("rols") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Comissions i rol</span><div class="acc-roles">${Object.entries(COMS).map(([k, t]) => tog("data-mcom", k, (m.comissions || []).includes(k), t)).join("")}${tog("data-mresp", "1", !!m.responsable, "Responsable")}</div>
-      <p class="note">Per publicar avisos d'una comissió cal formar-ne part i tenir el permís «Fer avisos». Les persones responsables i la Junta poden marcar com a resolts els avisos de seguretat.</p></div>` : ""}
+    ${has("rols") && m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Comissions i rol</span><div class="acc-roles">${Object.entries(COMS).map(([k, t]) => tog("data-mcom", k, (m.comissions || []).includes(k), t)).join("")}</div>
+      <p class="note">Per publicar avisos d'una comissió cal formar-ne part i tenir el permís «Fer avisos».</p></div>` : ""}
     ${m.estat === "aprovat" ? `<div class="adm-grp"><span class="lbl">Rols i permisos</span><p class="note">${m.premium ? "Premium: ho pot fer tot dins del club." : "Pot: " + esc((m.permisos || []).map(k => PERMS[k]?.t).filter(Boolean).join(", ") || "res especial")}</p>
       ${C.isAdm || C.isPremium ? `<a class="btn cl-wide" href="gestio.html">Canvia rols i permisos a la web de gestió</a>` : `<p class="note">Els rols i els permisos es gestionen a la web de gestió del club.</p>`}</div>` : ""}
     ${has("altes") && !self ? `<div class="adm-grp"><span class="lbl">Accés</span>${m.estat === "aprovat" ? `<div id="admRevoke"></div>` : `<button class="btn cl-pri cl-wide" type="button" data-mestat="aprovat">Aprova</button>`}</div>` : ""}`, d => {
@@ -99,7 +99,6 @@ function openMember(id){
     d.addEventListener("click", e => {
       const b = e.target.closest("button"); if(!b) return;
       if(b.dataset.mcom){ const c = (m.comissions || []).filter(k => COMS[k]);   /* les comissions eliminades es treuen */ update(id, {comissions: c.includes(b.dataset.mcom) ? c.filter(x => x !== b.dataset.mcom) : c.concat([b.dataset.mcom])}); }
-      if(b.dataset.mresp) update(id, {responsable: !m.responsable});
       if(b.dataset.mestat) update(id, {estat:b.dataset.mestat, revisatPer:C.user.uid, revisatAt:C.F.serverTimestamp()}, true);
     });
   });

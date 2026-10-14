@@ -432,8 +432,8 @@ window.OV_CLOUD = {
   approved,
   // Estat del compte per a la pestanya Club: null (sense sessió), "sense-alta", "pendent", "rebutjat" o "aprovat"
   status(){ return !user ? null : !member ? "sense-alta" : member.estat; },
-  async ctx(){ if(!approved()) return null; const f = await fs(); const prem = !!member.premium, perms = isAdm || prem ? ["altes", "rols", "permisos", "moderar", "avisos"] : (member.permisos || []);
-    return {F:f, db, user, member, isAdm, isPremium:prem, perms, isResp: isAdm || !!member.responsable || (member.comissions || []).includes("junta")}; },
+  async ctx(){ if(!approved()) return null; const f = await fs(); const prem = !!member.premium, perms = isAdm || prem ? ["altes", "rols", "permisos", "moderar", "avisos", "seguretat"] : (member.permisos || []);
+    return {F:f, db, user, member, isAdm, isPremium:prem, perms, isResp: isAdm || prem || perms.includes("seguretat") || !!member.responsable || (member.comissions || []).includes("junta")}; },
   async reread(){ if(!user) return; try{ await readMember(); }catch(e){} render(); emit(); },
   renderCard,
   async saved(t){ if(!approved()) return; t.owner = user.uid; t.synced = false; try{ await DB.put(t); }catch(e){} sync(); },

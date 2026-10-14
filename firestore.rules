@@ -19,7 +19,7 @@ service cloud.firestore {
     function isPremium() { return isApproved() && memberData().get('premium', false) == true; }
     // Permisos delegables (members/{uid}.permisos): altes, rols, permisos, moderar, avisos. Administració i premium els tenen tots.
     function hasPerm(p) { return isAdmin() || isPremium() || (isApproved() && p in memberData().get('permisos', [])); }
-    function permList() { return ['altes', 'rols', 'permisos', 'moderar', 'avisos']; }
+    function permList() { return ['altes', 'rols', 'permisos', 'moderar', 'avisos', 'seguretat']; }
     // Gestionar un soci (o un club): l'administració, qualsevol; la resta, només el seu club
     function sameClub(club) { return isAdmin() || club == myClub(); }
     function comsOf(club) {
@@ -59,7 +59,8 @@ service cloud.firestore {
     // Nivells: tothom (qualsevol soci aprovat de l'app), club, amics (els que el propietari ha posat a «lectors»:
     // els seus amics en el moment de desar-ho). «Ningú» = no es desa.
     // Avisos de seguretat: a més, «base» = també els socis que en aquell moment són a la base nàutica.
-    function isJunta() { return isAdmin() || (isApproved() && ('junta' in memberData().get('comissions', []) || memberData().get('responsable', false) == true)); }
+    // Resoldre avisos de seguretat: Junta, permís «seguretat», premium (o l'antic camp «responsable», mentre quedi)
+    function isJunta() { return isAdmin() || isPremium() || (isApproved() && ('junta' in memberData().get('comissions', []) || 'seguretat' in memberData().get('permisos', []) || memberData().get('responsable', false) == true)); }
     function nivellOk(v) { return v in ['tothom', 'club', 'amics']; }
     function aLaBase() {
       let p = /databases/$(database)/documents/presencia/$(me());
@@ -314,7 +315,7 @@ service cloud.firestore {
 
     // Avisos de seguretat en ruta (sense vent i lluny, vent massa fort, onades perilloses).
     // Els crea el mòbil de qui navega; els veu qui el soci tria a Confidencialitat (per defecte, el club i la gent a la base).
-    // Els pot marcar com a resolts la junta, els responsables o qui és a la base.
+    // Els pot marcar com a resolts la Junta, qui té el permís «seguretat» o qui és a la base.
     // Identificador: <uid>_<inici de la sortida>_<tipus>.
     function alertaOk(id) {
       return request.resource.data.keys().hasOnly(['clubId', 'tipus', 'userId', 'nom', 'act', 'desde', 'lat', 'lon', 'posAt', 'valor', 'resolta', 'creat', 'resoltaPer', 'resoltaAt', 'visibilitat', 'lectors', 'base'])
