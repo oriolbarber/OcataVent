@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=130">
+<link rel="stylesheet" href="app.css?v=131">
 </head>
 <body>
 <div class="app">
@@ -257,6 +257,7 @@
     <span class="ride-rec"><span class="dot"></span><span id="rideAct">Patí</span></span>
     <span class="ride-time" id="rideTime">0:00</span>
     <span class="ride-gps" id="rideGps">GPS…</span>
+    <button type="button" class="ride-help" id="rideHelp" aria-label="Demana ajuda al club" hidden>Ajuda</button>
   </div>
   <div class="seg ride-seg" role="group" aria-label="Què vols veure" id="rideSeg">
     <button type="button" data-rp="data" aria-pressed="true">Dades</button><button type="button" data-rp="map" aria-pressed="false">Mapa</button><button type="button" data-rp="cmp" aria-pressed="false">Brúixola</button>
@@ -384,15 +385,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=113"></script>
 <script src="app.js?v=116"></script>
-<script src="trip.js?v=121"></script>
+<script src="trip.js?v=122"></script>
 <script src="maps.js?v=105"></script>
 <script src="fx.js?v=1"></script>
 <script src="windmap.js?v=109"></script>
 <script src="prep.js?v=103"></script>
 <script src="cloud.js?v=119"></script>
 <script src="amics.js?v=113"></script>
-<script src="club.js?v=116"></script>
+<script src="club.js?v=117"></script>
 <script src="admin.js?v=109"></script>
-<script src="avisos.js?v=106"></script>
+<script src="avisos.js?v=107"></script>
+<script src="sos.js?v=1"></script>
 </body>
 </html>

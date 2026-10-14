@@ -51,7 +51,7 @@ service cloud.firestore {
     // Un soci només pot afegir, canviar o treure la seva pròpia clau d'un mapa (reaccions, apuntats, vist)
     function onlyMyKey(f) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([f])
-        && request.resource.data[f].diff(resource.data[f]).affectedKeys().hasOnly([me()]);
+        && request.resource.data.get(f, {}).diff(resource.data.get(f, {})).affectedKeys().hasOnly([me()]);
     }
     function nomOk(v, n) { return v is string && v.size() > 0 && v.size() <= n; }
 
@@ -318,17 +318,27 @@ service cloud.firestore {
     // Els pot marcar com a resolts la Junta, qui té el permís «seguretat» o qui és a la base.
     // Identificador: <uid>_<inici de la sortida>_<tipus>.
     function alertaOk(id) {
-      return request.resource.data.keys().hasOnly(['clubId', 'tipus', 'userId', 'nom', 'act', 'desde', 'lat', 'lon', 'posAt', 'valor', 'resolta', 'creat', 'resoltaPer', 'resoltaAt', 'visibilitat', 'lectors', 'base'])
+      return request.resource.data.keys().hasOnly(['clubId', 'tipus', 'userId', 'nom', 'act', 'desde', 'lat', 'lon', 'posAt', 'valor', 'resolta', 'creat', 'resoltaPer', 'resoltaAt', 'visibilitat', 'lectors', 'base', 'ajudants'])
         && nivellOk(request.resource.data.visibilitat) && lectorsOk(request.resource.data)
         && request.resource.data.get('base', false) is bool
         && request.resource.data.userId == me() && request.resource.data.clubId == myClub()
-        && request.resource.data.tipus in ['sense-vent', 'vent-fort', 'onades']
+        && request.resource.data.tipus in ['sense-vent', 'vent-fort', 'onades', 'ajuda']
         && id == me() + '_' + string(request.resource.data.desde) + '_' + request.resource.data.tipus
         && nomOk(request.resource.data.nom, 80) && request.resource.data.lat is number && request.resource.data.lon is number;
     }
     match /alertes/{id} {
       allow read: if veu(resource.data) || (resource.data.get('base', false) == true && isApproved() && resource.data.clubId == myClub() && aLaBase());
-      allow create: if isApproved() && alertaOk(id) && request.resource.data.resolta == false && request.resource.data.creat == request.time;
+      allow create: if isApproved() && alertaOk(id) && request.resource.data.resolta == false && request.resource.data.creat == request.time
+        && request.resource.data.get('ajudants', {}) == {};
+      // «Vaig a ajudar»: qui veu l'avís s'hi afegeix (o se'n treu) a «ajudants» amb el seu nom i la seva posició
+      allow update: if (veu(resource.data) || (resource.data.get('base', false) == true && isApproved() && resource.data.clubId == myClub() && aLaBase()))
+        && resource.data.userId != me() && resource.data.resolta == false
+        && onlyMyKey('ajudants')
+        && (!(me() in request.resource.data.ajudants)
+          || (request.resource.data.ajudants[me()].keys().hasOnly(['nom', 'lat', 'lon', 'at'])
+            && nomOk(request.resource.data.ajudants[me()].nom, 80)
+            && request.resource.data.ajudants[me()].lat is number && request.resource.data.ajudants[me()].lon is number
+            && request.resource.data.ajudants[me()].at == request.time));
       allow update: if isApproved() && resource.data.userId == me() && alertaOk(id);
       allow update: if (veu(resource.data) || (resource.data.get('base', false) == true && isApproved() && resource.data.clubId == myClub() && aLaBase()))
         && (isJunta() || aLaBase())

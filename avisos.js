@@ -15,7 +15,8 @@ const BASE_R = 50;            // m: radi de la base nàutica (pendent de la junt
 const FORA_M = 150;           // m: cal haver-se allunyat això de la base perquè compti la tornada
 const SNOOZE = 20*60e3;       // «No cal» amaga la proposta 20 min
 const AT_BASE_MS = 10*60e3;   // temps dins de la base per tancar la sortida sola
-const KINDS = ["sense-vent", "vent-fort", "onades"];
+const KINDS = ["sense-vent", "vent-fort", "onades"];   // els detecta l'app
+const ALL = KINDS.concat(["ajuda"]);                    // + «Demana ajuda», que el navegant demana a mà (botó a la pantalla de navegació)
 let active = {}, snooze = {}, sent = {}, atBase = 0, wasOut = false, lastLive = null, closing = false;   // sent[k]: "enviant" | "enviat" 
 
 const home = () => ({lat:HOME[0], lon:HOME[1]});
@@ -64,13 +65,13 @@ function beep(){
 }
 function box(){ let b = $("liveAlert"); if(!b){ b = document.createElement("div"); b.id = "liveAlert"; b.className = "live-alert"; b.setAttribute("role", "alert"); document.body.appendChild(b); } return b; }
 function render(){
-  const b = box(), now = Date.now(), L = KINDS.filter(k => sent[k] || (active[k] && !(snooze[k] > now)));
+  const b = box(), now = Date.now(), L = ALL.filter(k => sent[k] || (active[k] && !(snooze[k] > now)));
   b.hidden = !L.length;
   b.innerHTML = L.map(k => sent[k] ? `<div class="la-item sent"><b>${esc(active[k]?.title || "Avís enviat")}</b>
-      <p>${sent[k] === "enviant" ? (navigator.onLine === false ? "Sense connexió: l'avís s'enviarà quan en tinguis." : "Enviant l'avís al club…") : "Avís enviat al club."}</p>
+      <p>${sent[k] === "enviant" ? (navigator.onLine === false ? "Sense connexió: l'avís s'enviarà quan en tinguis." : "Enviant l'avís al club…") : "Avís enviat al club. Quan algú hi vagi, t'arribarà un missatge i el veuràs al mapa."}</p>
       <div class="la-btns"><button type="button" class="btn" data-cancel="${k}">Estic bé · anul·la'l</button></div></div>`
     : `<div class="la-item"><b>${esc(active[k].title)}</b><p>${esc(active[k].text)}</p>
-      <div class="la-btns"><button type="button" class="btn" data-snooze="${k}">No cal</button><button type="button" class="btn la-pri" data-send="${k}">Avisa el club</button></div></div>`).join("");
+      <div class="la-btns"><button type="button" class="btn" data-snooze="${k}">${k === "ajuda" ? "Cancel·la" : "No cal"}</button><button type="button" class="btn la-pri" data-send="${k}">${k === "ajuda" ? "Demana ajuda" : "Avisa el club"}</button></div></div>`).join("");
 }
 async function send(k){
   if(!lastLive || sent[k]) return;
@@ -78,13 +79,20 @@ async function send(k){
   const ok = await window.OV_CLUB?.raiseAlert(k, active[k]?.val, LIVE && LIVE.pts[LIVE.pts.length-1], lastLive);
   if(ok){ sent[k] = "enviat"; render(); } else { delete sent[k]; toast("No s'ha pogut enviar l'avís. Si cal ajuda: VHF canal 16 o 112."); }
 }
-function cancel(k){ if(lastLive) window.OV_CLUB?.clearAlert(k, lastLive); delete sent[k]; snooze[k] = Date.now() + SNOOZE; render(); }
+function askHelp(){   // botó «Ajuda» de la pantalla de navegació
+  if(!LIVE) return;
+  if(sent.ajuda){ window.OV_SOS?.open(); return; }
+  active.ajuda = {val:0, title:"Demanes ajuda al club?", text:"S'enviarà un avís amb la teva posició a qui tens triat a Confidencialitat. Quan algú hi vagi, t'arribarà un missatge i el veuràs al mapa. Si és greu: VHF canal 16 o 112."};
+  delete snooze.ajuda; render();
+}
+function cancel(k){ if(lastLive) window.OV_CLUB?.clearAlert(k, lastLive); delete sent[k]; if(k === "ajuda") delete active.ajuda; snooze[k] = Date.now() + SNOOZE; render(); }
 function toast(t){ const b = box(); b.hidden = false; b.innerHTML = `<div class="la-item ok"><b>${esc(t)}</b><button type="button" class="btn" data-snooze="ok">D'acord</button></div>`; }
 document.addEventListener("click", e => {
+  if(e.target.closest && e.target.closest("#rideHelp")){ askHelp(); return; }
   const t = e.target.closest && e.target.closest("#liveAlert [data-snooze], #liveAlert [data-send], #liveAlert [data-cancel]"); if(!t) return;
   if(t.dataset.send){ send(t.dataset.send); return; }
   if(t.dataset.cancel){ cancel(t.dataset.cancel); return; }
-  const k = t.dataset.snooze; if(k !== "ok") snooze[k] = Date.now() + SNOOZE; else box().hidden = true; render();
+  const k = t.dataset.snooze; if(k === "ajuda") delete active.ajuda; else if(k !== "ok") snooze[k] = Date.now() + SNOOZE; else box().hidden = true; render();
 });
 
 async function autoReturn(){
@@ -117,5 +125,7 @@ function check(){
   }
 }
 setInterval(check, 20000);
-window.OV_AVISOS = {sog10, check};
+window.OV_AVISOS = {sog10, check,
+  cancelled(id){ const k = ALL.find(x => id.endsWith("_" + x)); if(k){ delete sent[k]; if(k === "ajuda") delete active.ajuda; snooze[k] = Date.now() + SNOOZE; render(); } }   // anul·lat des del mapa (sos.js)
+};
 })();

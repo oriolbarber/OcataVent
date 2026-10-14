@@ -794,7 +794,7 @@ document.addEventListener("pointerdown", e => {
 document.addEventListener("click", e => { if(e.target && e.target.id === "rideSleep"){ e.preventDefault(); e.stopPropagation(); } }, true);
 setInterval(() => {
   if(!LIVE || !rideVisible || document.visibilityState !== "visible"){ sleepSet(false); return; }
-  const al = $("liveAlert"); if(al && !al.hidden){ sleepSet(false); return; }   // un avís de seguretat sempre es veu
+  const al = $("liveAlert"), sm = $("sosMap"); if((al && !al.hidden) || (sm && !sm.hidden)){ sleepSet(false); return; }   // un avís de seguretat sempre es veu
   if(document.querySelector(".gear")){ lastTouch = Date.now(); return; }
   if(!sleeping && Date.now() - lastTouch > SLEEP_S * 1000) sleepSet(true);
 }, 1000);

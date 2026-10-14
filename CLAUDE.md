@@ -87,6 +87,8 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 
 ## Avisos de seguretat i tasques programades (Fase 3, part 1)
 - **Avisos en ruta** (`avisos.js`, al mòbil de qui navega, cada 20 s): sense vent i lluny (< 1 kn 10 min, > 0,5 nm de la base, estació < 4 kn i previsió < mínim de l'embarcació 2 h), vent massa fort (estació per sobre del màxim o de la ratxa màxima de l'embarcació), onades perilloses (previsió de les properes 3 h per sobre de `wMax`). Avís a pantalla amb vibració i so que **proposa** avisar el club: només es desa a `alertes/{uid}_{inici}_{tipus}` si el navegant prem «Avisa el club» (decisió de l'Oriol: avisos fiables, els autoritza qui navega). Un cop enviat, «Estic bé · anul·la'l» l'esborra; també s'esborra en acabar la sortida. Ho veu qui el soci tria a Confidencialitat (per defecte, el club i la gent a la base); amb «Ningú», en prémer el botó s'envia al club. El marquen com a resolt la Junta, qui té el permís `seguretat` (o premium) o qui és a la base.
+- **Demana ajuda** (botó «Ajuda» a dalt de la pantalla de navegació, només amb compte aprovat): demana confirmació i envia un avís tipus `ajuda` (mateix flux que els altres).
+- **Ajuda en curs** (`sos.js`): qui veu un avís prem «Vaig a ajudar» al Club → s'afegeix a `alertes/{id}.ajudants.{uid}` = {nom, lat, lon, at} i hi envia la posició cada 20 s. El navegant escolta el seu avís en directe (`onSnapshot`): surt «MISSATGE REBUT per NOM» i un mapa amb tots dos mòbils; mentre l'avís és actiu, el navegant hi puja la posició (20 s si algú hi va, si no 60 s). El mapa es minimitza i es torna a obrir amb el triangle d'emergència sobre el logo (i a la pantalla de navegació). S'acaba quan el navegant anul·la (lliscant), acaba la sortida, algú el resol o qui ajuda ho deixa. Sessió a `ov2_sos`.
 - **Tornada a la base:** dins de 50 m de la base durant 10 min seguits, després d'haver-se allunyat 150 m → la sortida es desa sola i la presència passa a «a la base».
 - **Arribada i sortida de la base sense sortida gravada** (`autoTick` a `club.js`): opcional (`privacitat.autoBase`, per defecte no). Amb l'app oberta: a menys de 50 m durant 10 min seguits → «a la base»; a més de 200 m durant 2 min → deixa d'estar-hi (precisió GPS ≤ 60 m). Freqüència segons la distància: > 2 km cada 10 min amb ubicació aproximada; 200 m–2 km cada 3 min; més a prop o comptant temps, cada minut. Per a l'APK: `window.OV_GEO.getPosition({high, maxAge})` substitueix la lectura, i un geofence natiu pot cridar `OV_CLUB.autoTick(true)`. Sense notificacions: els amics ho veuen a Club ▸ Base.
 - **No hi ha avís per no tornar a l'hora prevista** (decisió de l'Oriol). Sense servidor de pagament, els responsables veuen els avisos en obrir l'app (no hi ha notificacions).
@@ -110,6 +112,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
   - Carta nàutica: OpenSeaMap.
 
 ## Decisions preses
+- V3: el logo del club ha de ser editable per a cada club (ara és fix a `icons/logo.svg`).
 - La V3 serà oberta a qualsevol club de Catalunya i les Balears.
 - No hi haurà menors d'edat com a usuaris.
 - Text de consentiment RGPD i botó per esborrar el compte.

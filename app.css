@@ -1253,3 +1253,25 @@ body.wm-open{overflow:hidden}
 .la-item .la-btns .btn{align-self:auto;flex:1 1 140px}
 .la-item .btn.la-pri{background:#03121c;color:#fff;border:2px solid #fff}
 .la-item.sent{background:var(--marg)}
+/* Ajuda en curs (sos.js) */
+.sos-btn{position:absolute;z-index:5;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:var(--bg);cursor:pointer;animation:sosPulse 1.4s ease-in-out infinite}
+.sos-btn svg{width:100%;height:100%}
+.sos-btn.in-ride{position:static;width:40px;height:40px;flex:none}
+@keyframes sosPulse{50%{transform:scale(1.12)}}
+@media (prefers-reduced-motion:reduce){.sos-btn{animation:none}}
+.ride-help{min-height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--no);background:none;color:var(--no);font:700 .95rem var(--f-head);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.sos{position:fixed;inset:0;z-index:3900;background:var(--bg);display:flex;flex-direction:column;gap:8px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px))}
+.sos-h{display:flex;align-items:center;gap:10px}
+.sos-tri{width:34px;height:34px;flex:none}.sos-tri svg{width:100%;height:100%}
+.sos-t{display:flex;flex-direction:column;flex:1;min-width:0}
+.sos-t b{font-family:var(--f-head);font-size:1.35rem;letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
+.sos-t span{font-size:1rem;font-weight:600;color:var(--ink)}
+.sos-h .btn{min-height:46px}
+.sos-msg{background:var(--ideal);color:#03121c;border-radius:14px;padding:12px 14px;font-size:1.1rem;font-weight:600}
+.sos-msg b{font-family:var(--f-head);font-size:1.5rem;letter-spacing:.05em}
+.sos-mapel{flex:1;min-height:200px;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.sos-f{display:flex;flex-direction:column;gap:8px}
+.sos-tip{font-weight:700;font-size:.9rem}
+.cl-helpers{align-self:center}
+:root[data-size="big"] .sos-t b{font-size:1.6rem}
+:root[data-size="big"] .sos-t span,:root[data-size="big"] .sos-msg{font-size:1.2rem}

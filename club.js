@@ -616,6 +616,8 @@ document.addEventListener("click", async e => {
   if(t.id === "clHere"){ try{ await setPres(presDoc("base")); render(); loadAlerts(); }catch(err){ say(errText(err)); } return; }
   if(t.id === "clLeave"){ try{ await delPres(); render(); loadAlerts(); }catch(err){ say(errText(err)); } return; }
   if(ds.resolve){ resolveAlert(ds.resolve); return; }
+  if(ds.help){ const a = D.alertes.find(x => x.id === ds.help); if(a) window.OV_SOS?.help(a); return; }
+  if(ds.sosopen){ window.OV_SOS?.open(); return; }
   if(t.id === "clNewIntent") intentSheet();
   if(t.id === "clNewAvis") avisSheet(null);
   if(t.id === "clNewAn") anunciSheet(null);
@@ -624,7 +626,7 @@ document.addEventListener("change", e => { if(e.target.id === "clAll"){ filt.all
 $("actSeg").addEventListener("click", () => { if(visible() && tab === "mur") setTimeout(render, 0); });
 
 /* ---------- avisos de seguretat (els detecta avisos.js al mòbil de qui navega) ---------- */
-const ALERT_T = {"sense-vent":"Sense vent i lluny", "vent-fort":"Vent massa fort", "onades":"Onades perilloses"};
+const ALERT_T = {"sense-vent":"Sense vent i lluny", "vent-fort":"Vent massa fort", "onades":"Onades perilloses", "ajuda":"Demana ajuda"};
 let atBase = false;
 async function loadAlerts(){
   if(!C) return;
@@ -632,7 +634,10 @@ async function loadAlerts(){
     const L = await getVisible("alertes"), mine = await C.F.getDoc(ref("presencia", uid())).catch(() => null);
     atBase = !!(mine && mine.exists() && mine.data().estat === "base");
     if(atBase) L.push(...await getAll("alertes", W("clubId", "==", C.member.clubId), W("base", "==", true)).catch(() => []));   // ets a la base: també els avisos «+ gent a la base»
-    const seen = new Set(); D.alertes = L.filter(a => ALERT_T[a.tipus] && !a.resolta && a.userId !== uid() && !seen.has(a.id) && seen.add(a.id));
+    const seen = new Set(), before = new Set(D.alertes.map(a => a.id));
+    D.alertes = L.filter(a => ALERT_T[a.tipus] && !a.resolta && a.userId !== uid() && !seen.has(a.id) && seen.add(a.id));
+    if(D.at.alertes && D.alertes.some(a => !before.has(a.id))){ try{ navigator.vibrate?.([300, 150, 300]); }catch(e){} }   // avís nou d'algú
+    D.at.alertes = now();
   }
   catch(e){ D.alertes = []; }
   alertDot(); if(visible()) render();
@@ -647,6 +652,7 @@ function alertDot(){
 function alertText(a){
   const v = a.valor, b = boatShort(a.act);
   if(a.tipus === "sense-vent") return `${b} · sense vent a ${String(v).replace(".", ",")} nm de la base`;
+  if(a.tipus === "ajuda") return `${b} · ha demanat ajuda des de l'aigua`;
   if(a.tipus === "vent-fort") return `${b} · és a l'aigua amb ratxes de ${v} kn`;
   return `${b} · és a l'aigua i s'esperen onades de ${String(v).replace(".", ",")} m`;
 }
@@ -655,13 +661,13 @@ function alertBanner(){
   return L.map(a => `<div class="cl-alert" role="alert">${WARN}<div class="cl-who">
       <b>${esc(a.nom)}: ${esc((ALERT_T[a.tipus] || "").toLowerCase())}</b>
       <span>${esc(alertText(a))} · posició ${esc(ago(ms(a.posAt) || now()))}</span></div>
-      <div class="cl-abtns"><button type="button" class="btn sm" data-ctab="base">Base</button>${C.isResp || atBase ? `<button type="button" class="btn sm" data-resolve="${esc(a.id)}">Resolta</button>` : ""}</div></div>`).join("");
+      <div class="cl-abtns">${(a.ajudants || {})[uid()] ? `<button type="button" class="btn sm cl-pri" data-sosopen="${esc(a.id)}">Mapa</button>` : `<button type="button" class="btn sm cl-pri" data-help="${esc(a.id)}">Vaig a ajudar</button>`}${Object.keys(a.ajudants || {}).length ? `<span class="note cl-helpers">Hi va: ${esc(Object.values(a.ajudants).map(h => h.nom).join(", "))}</span>` : ""}<button type="button" class="btn sm" data-ctab="base">Base</button>${C.isResp || atBase ? `<button type="button" class="btn sm" data-resolve="${esc(a.id)}">Resolta</button>` : ""}</div></div>`).join("");
 }
 async function resolveAlert(id){
   try{ await TO(C.F.updateDoc(ref("alertes", id), {resolta:true, resoltaPer:uid(), resoltaAt:C.F.serverTimestamp()})); D.alertes = D.alertes.filter(a => a.id !== id); alertDot(); render(); }
   catch(e){ say(errText(e)); }
 }
-setInterval(() => { if(C && document.visibilityState === "visible") loadAlerts(); }, 120000);
+setInterval(() => { if(C && document.visibilityState === "visible") loadAlerts(); }, 60000);
 document.addEventListener("visibilitychange", () => { if(C && document.visibilityState === "visible") loadAlerts(); });
 
 /* ---------- pestanya i sessió ---------- */
@@ -680,7 +686,8 @@ window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load()
 
 /* ---------- connexió amb trip.js i cloud.js ---------- */
 const OV_CLUB = window.OV_CLUB = {
-  sheet, closeSheet, autoTick,
+  sheet, closeSheet, autoTick, loadAlerts,
+  ctx: () => C,
   async shareBtn(el, t){
     shareEl = el; shareTrip = t; el.innerHTML = "";
     if(!C || !t || t.owner !== uid()) return;
@@ -707,13 +714,15 @@ const OV_CLUB = window.OV_CLUB = {
   async raiseAlert(tipus, valor, p, Lv){
     const v0 = prefOf("avisos"), v = v0 === "ningu" ? "club" : v0;
     if(!C || !Lv) return false;
-    try{ await C.F.setDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus), Object.assign({clubId:C.member.clubId, tipus, userId:uid(), nom:C.member.nom,
+    const id = uid() + "_" + Lv.start + "_" + tipus;
+    try{ await C.F.setDoc(ref("alertes", id), Object.assign({clubId:C.member.clubId, tipus, userId:uid(), nom:C.member.nom, ajudants:{},
       act:String(D.myPres?.act || act), desde:Lv.start, lat:p ? p.lat : HOME[0], lon:p ? p.lon : HOME[1], posAt:now(), valor:num(valor), resolta:false, creat:C.F.serverTimestamp(),
-      base: window.OV_PRIV ? OV_PRIV.avisosBase() : true}, await visFields(v))); return true; }catch(e){ return false; }
+      base: window.OV_PRIV ? OV_PRIV.avisosBase() : true}, await visFields(v))); window.OV_SOS?.own(id); return id; }catch(e){ return false; }
   },
   async clearAlert(tipus, Lv){   // el navegant l'anul·la o acaba la sortida: s'esborra (no cal guardar on era ningú)
     if(!C || !Lv) return;
-    C.F.deleteDoc(ref("alertes", uid() + "_" + Lv.start + "_" + tipus)).catch(() => {});
+    const id = uid() + "_" + Lv.start + "_" + tipus; window.OV_SOS?.ownEnd(id);
+    C.F.deleteDoc(ref("alertes", id)).catch(() => {});
   },
   // Confidencialitat: s'ha canviat una preferència (amics.js)
   async privChanged(k){
