@@ -1275,3 +1275,6 @@ body.wm-open{overflow:hidden}
 .cl-helpers{align-self:center}
 :root[data-size="big"] .sos-t b{font-size:1.6rem}
 :root[data-size="big"] .sos-t span,:root[data-size="big"] .sos-msg{font-size:1.2rem}
+.la-slide .slc{background:#fff;border-color:#fff}
+.la-slide .slc-t{color:#03121c}
+.la-slide .slc-k{background:#03121c}

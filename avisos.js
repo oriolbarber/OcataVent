@@ -17,7 +17,7 @@ const SNOOZE = 20*60e3;       // «No cal» amaga la proposta 20 min
 const AT_BASE_MS = 10*60e3;   // temps dins de la base per tancar la sortida sola
 const KINDS = ["sense-vent", "vent-fort", "onades"];   // els detecta l'app
 const ALL = KINDS.concat(["ajuda"]);                    // + «Demana ajuda», que el navegant demana a mà (botó a la pantalla de navegació)
-let helpersTxt = "";   // qui socorre l'avís enviat (sos.js)
+let helpersTxt = "", lastHtml = null;   // qui socorre l'avís enviat (sos.js)
 let active = {}, snooze = {}, sent = {}, atBase = 0, wasOut = false, lastLive = null, closing = false;   // sent[k]: "enviant" | "enviat" 
 
 const home = () => ({lat:HOME[0], lon:HOME[1]});
@@ -68,11 +68,16 @@ function box(){ let b = $("liveAlert"); if(!b){ b = document.createElement("div"
 function render(){
   const b = box(), now = Date.now(), L = ALL.filter(k => sent[k] || (active[k] && !(snooze[k] > now)));
   b.hidden = !L.length;
-  b.innerHTML = L.map(k => sent[k] ? `<div class="la-item sent"><b>${esc(active[k]?.title || "Avís enviat")}</b>
+  const html = L.map(k => sent[k] ? `<div class="la-item sent"><b>${esc(active[k]?.title || "Avís enviat")}</b>
       <p>${sent[k] === "enviant" ? (navigator.onLine === false ? "Sense connexió: l'avís s'enviarà quan en tinguis." : "Enviant l'avís al club…") : helpersTxt ? `Et socorren: ${esc(helpersTxt)}.` : "Avís enviat al club. Quan algú hi vagi, t'arribarà un missatge i el veuràs al mapa."}</p>
-      <div class="la-btns"><button type="button" class="btn" data-cancel="${k}">Estic bé · anul·la'l</button></div></div>`
+      <div class="la-slide" data-cancelbox="${k}"></div></div>`
     : `<div class="la-item"><b>${esc(active[k].title)}</b><p>${esc(active[k].text)}</p>
       <div class="la-btns"><button type="button" class="btn" data-snooze="${k}">${k === "ajuda" ? "Cancel·la" : "No cal"}</button><button type="button" class="btn la-pri" data-send="${k}">${k === "ajuda" ? "Demana ajuda" : "Avisa el club"}</button></div></div>`).join("");
+  // Només es repinta si canvia (cada 20 s es torna a avaluar): així el lliscador no es reinicia mentre el fas córrer
+  if(html === lastHtml) return;
+  lastHtml = html; b.innerHTML = html;
+  // Anul·lar un avís enviat costa més que enviar-lo: cal lliscar fins al final
+  b.querySelectorAll("[data-cancelbox]").forEach(el => slideConfirm(el, "Llisca: estic bé, anul·la'l", () => cancel(el.dataset.cancelbox)));
 }
 async function send(k){
   if(!lastLive || sent[k]) return;
@@ -87,12 +92,11 @@ function askHelp(){   // botó «Ajuda» de la pantalla de navegació
   delete snooze.ajuda; render();
 }
 function cancel(k){ if(lastLive) window.OV_CLUB?.clearAlert(k, lastLive); delete sent[k]; helpersTxt = ""; if(k === "ajuda") delete active.ajuda; snooze[k] = Date.now() + SNOOZE; render(); }
-function toast(t){ const b = box(); b.hidden = false; b.innerHTML = `<div class="la-item ok"><b>${esc(t)}</b><button type="button" class="btn" data-snooze="ok">D'acord</button></div>`; }
+function toast(t){ const b = box(); b.hidden = false; lastHtml = null; b.innerHTML = `<div class="la-item ok"><b>${esc(t)}</b><button type="button" class="btn" data-snooze="ok">D'acord</button></div>`; }
 document.addEventListener("click", e => {
   if(e.target.closest && e.target.closest("#rideHelp")){ askHelp(); return; }
-  const t = e.target.closest && e.target.closest("#liveAlert [data-snooze], #liveAlert [data-send], #liveAlert [data-cancel]"); if(!t) return;
+  const t = e.target.closest && e.target.closest("#liveAlert [data-snooze], #liveAlert [data-send]"); if(!t) return;
   if(t.dataset.send){ send(t.dataset.send); return; }
-  if(t.dataset.cancel){ cancel(t.dataset.cancel); return; }
   const k = t.dataset.snooze; if(k === "ajuda") delete active.ajuda; else if(k !== "ok") snooze[k] = Date.now() + SNOOZE; else box().hidden = true; render();
 });
 
