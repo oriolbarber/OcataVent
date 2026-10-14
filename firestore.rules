@@ -32,7 +32,8 @@ service cloud.firestore {
     function modera(d) { return isAdmin() || (hasPerm('moderar') && d.clubId == myClub()); }
     // Contingut «tothom» d'un altre club: qui modera només el pot amagar per al seu club (llista «amagat» amb ids de club)
     function amagaOk() {
-      let a = resource.data.get('amagat', []).toSet(), b = request.resource.data.get('amagat', []).toSet();
+      let a = resource.data.get('amagat', []).toSet();
+      let b = request.resource.data.get('amagat', []).toSet();
       return hasPerm('moderar') && veu(resource.data) && resource.data.clubId != myClub()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['amagat'])
         && request.resource.data.amagat is list && request.resource.data.amagat.size() <= 50
