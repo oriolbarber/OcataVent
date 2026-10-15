@@ -1330,7 +1330,7 @@ body.wm-open{overflow:hidden}
 .cl-undo .btn{flex:none;min-height:44px;background:none;border-color:var(--surface);color:var(--surface)}
 
 /* Avisos: qui s'apunta i recordatori en obrir l'app */
-.cl-avsign{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--surface-2)}
+.cl-avsign{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--surface-2)}
 .cl-signt{flex:1;min-width:0;font-size:.92rem;font-weight:600;color:var(--muted);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .cl-signt b{color:var(--ink);font-family:var(--f-mono);font-size:1rem}
 .cl-avsign .btn.cl-go{min-height:44px;padding:0 12px}
@@ -1358,3 +1358,13 @@ body.wm-open{overflow:hidden}
 .cl-only{font-weight:500;font-style:italic}
 .cl-an{gap:8px}
 .cl-an .cl-afoot .btn.cl-go{min-height:44px;padding:0 12px}
+/* Qui s'hi apunta / s'hi interessa: nombre + (i) que desplega la llista */
+.cl-wl{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cl-wl b{color:var(--ink);font-family:var(--f-mono)}
+.cl-wl .ib-i{width:32px;height:32px}
+.cl-wnames{flex-basis:100%;list-style:none;margin:4px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.cl-wnames li{padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:.9rem;font-weight:600;color:var(--ink)}
+.cl-wnames li.me{border-color:var(--ideal);color:var(--ideal);background:var(--ideal-t)}
+.cl-ib .cl-wnames li,.cl-an .cl-wnames li{background:var(--surface-2)}
+.cl-ia{display:block;-webkit-line-clamp:unset}
+:root[data-size="big"] .cl-wnames li{font-size:1.05rem}
