@@ -1287,7 +1287,7 @@ body.wm-open{overflow:hidden}
 :root[data-size="big"] .cl-fit{font-size:1rem}:root[data-size="big"] .cl-fitd{font-size:.98rem}
 
 /* Club · «Qui surt» compacte: indicador petit a la cantonada, botó a sota */
-.cl-intents > .cl-int{display:grid;grid-template-columns:62px minmax(0,1fr) auto;grid-template-areas:"when body mg" "when body act";column-gap:10px;row-gap:6px;align-items:start}
+.cl-intw > .cl-int{display:grid;grid-template-columns:62px minmax(0,1fr) auto;grid-template-areas:"when body mg" "when body act";column-gap:10px;row-gap:6px;align-items:start}
 .cl-intents .cl-when{grid-area:when;align-self:stretch;justify-content:center}
 .cl-ib{grid-area:body;min-width:0;display:flex;flex-direction:column;gap:2px}
 .cl-it{display:flex;align-items:baseline;gap:6px;min-width:0}
@@ -1299,7 +1299,7 @@ body.wm-open{overflow:hidden}
 .cl-mg{grid-area:mg;justify-self:end;display:block;width:44px;height:44px}
 .cl-mg svg{width:100%;height:100%;display:block}
 .cl-mg.k-ideal{--c:var(--ideal)}.cl-mg.k-marg{--c:var(--marg)}.cl-mg.k-no{--c:var(--no)}.cl-mg.k-none{--c:var(--muted)}
-.cl-intents > .cl-int > .btn{grid-area:act;justify-self:end;align-self:end;min-height:44px}
+.cl-intw > .cl-int > .btn{grid-area:act;justify-self:end;align-self:end;min-height:44px}
 :root[data-size="big"] .cl-it b{font-size:1.15rem}
 :root[data-size="big"] .cl-im,:root[data-size="big"] .cl-ia,:root[data-size="big"] .cl-it span{font-size:1rem}
 :root[data-size="big"] .cl-mg{width:54px;height:54px}
@@ -1354,3 +1354,7 @@ body.wm-open{overflow:hidden}
 :root[data-size="big"] .cl-meta{font-size:.95rem}
 :root[data-size="big"] .cl-avh .cl-event{font-size:1.05rem}
 .cl-rerr{margin:-4px 0 0;font-size:.85rem;font-weight:700;color:var(--no)}
+.cl-ink{color:var(--ink)}
+.cl-only{font-weight:500;font-style:italic}
+.cl-an{gap:8px}
+.cl-an .cl-afoot .btn.cl-go{min-height:44px;padding:0 12px}
