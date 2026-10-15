@@ -410,16 +410,13 @@ const field = (id, label, input) => `<label class="cl-field" for="${id}"><span c
 async function busy(btn, fn){ if(btn.disabled) return; btn.disabled = true; sheetSay(""); try{ await TO(fn()); }catch(e){ sheetSay(errText(e)); } finally{ btn.disabled = false; } }
 
 /* Publicar o editar una sortida */
-// Ruta per al mur: sense el tram inicial i final (fins a 200 m; menys si la sortida és curta) i simplificada a ~150 punts
+// Ruta per al mur: sencera (de la base a la base) i simplificada a ~150 punts
 function routeOf(t){
   const P = (t.pts || []).map(p => p && {lat:+p.lat, lon:+p.lon}).filter(p => p && isFinite(p.lat) && isFinite(p.lon));
   if(P.length < 4) return null;
   const far = Math.max(...P.map(p => hav(P[0], p)));
   if(far < 100) return null;   // no s'ha allunyat ni 100 m: no hi ha ruta per ensenyar
-  const cut = Math.min(200, far * 0.25);
-  let i = 0; while(i < P.length && hav(P[0], P[i]) < cut) i++;
-  let j = P.length - 1; while(j > i && hav(P[P.length-1], P[j]) < cut) j--;
-  const Q = P.slice(i, j + 1); if(Q.length < 2) return null;
+  const Q = P;   // sencera: se surt i s'arriba a la base nàutica, no de casa (decisió de l'Oriol)
   const step = Math.max(1, Math.ceil(Q.length/150)), R = Q.filter((_, k) => k % step === 0);
   if(R[R.length-1] !== Q[Q.length-1]) R.push(Q[Q.length-1]);
   return R.map(p => p.lat.toFixed(5) + "," + p.lon.toFixed(5)).join(";");
@@ -439,7 +436,7 @@ async function pubSheet(t, p){
   const def = p ? p.titol : (t && t.name) || "Sortida de " + (t ? dayStr(t.start) : "");
   sheet(p ? "La meva publicació" : "Comparteix amb el club", `
     ${field("shText", "Comentari <small>(opcional)</small>", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="280" placeholder="Què ha de saber qui surti un dia com aquest?">${esc(p ? p.comentari || "" : "")}</textarea>`)}
-    <label class="cl-sw"><span><b>${p ? "Mostra la ruta" : "Inclou la ruta"}</b><small class="note">Simplificada i sense els primers ni els últims 200 m. Ho pots canviar després.</small></span><input type="checkbox" class="switch" id="shRoute"${p && p.ruta ? " checked" : ""}></label>
+    <label class="cl-sw"><span><b>${p ? "Mostra la ruta" : "Inclou la ruta"}</b><small class="note">Simplificada a uns 150 punts. Ho pots canviar després.</small></span><input type="checkbox" class="switch" id="shRoute"${p && p.ruta ? " checked" : ""}></label>
     ${visSelect("mur", p ? (p.visibilitat || "club") : prefOf("mur"))}
     <p class="note">Les xifres de la sortida no es poden retocar.</p>
     <button type="button" class="btn cl-pri cl-wide" id="shSave">${p ? "Desa els canvis" : "Publica al mur"}</button>
