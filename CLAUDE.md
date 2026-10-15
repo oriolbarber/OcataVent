@@ -58,7 +58,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Anuncis: categoria i «fins al» a dalt; al peu, autor i data (o, si és teu, quants interessats i qui) amb llapis i paperera.
 - Avisos vistos: es pleguen en una línia 1 h després de marcar-los (`AV_FOLD`; hora local a `ov2_avis_vist`; vistos des d'un altre mòbil, plegats). Es despleguen tocant-los i es tornen a plegar amb la fletxa.
 - Mur: lliscar una sortida → arxiva, ← esborra (`ov2_mur_arx_{uid}` / `ov2_mur_del_{uid}`, només en aquest mòbil), amb «Desfés» 6 s. Si és pròpia, ← la retira del mur per a tothom quan s'acaba el temps de desfer. Filtres ▸ Mostra: Mur / Arxivades.
-- **Base i embarcacions (en disseny):** decisions a `docs/base-embarcacions.md`.
+- **Base i embarcacions (en disseny):** decisions a `docs/base-embarcacions.md`. Prototip de l'editor: `planol.html` + `planol.js` (pàgina a part, fora del service worker; metres amb origen a la base, y cap al sud; es desa a `localStorage` `ov_planol_v1` i s'exporta en JSON; fons ICGC/Esri/imatge pròpia ajustable).
 - Base nàutica del Club Ocata Vent: 41.479804, 2.324024 (`LOCS.masnou.home` a `app.js`).
 - Al document del soci: `comissions` (ids de `clubs/{clubId}.comissions`), rols i permisos (vegeu Web de gestió). L'antic camp `responsable` es converteix en el permís `seguretat` quan es desen els rols d'aquella persona; mentrestant les regles el continuen acceptant.
 

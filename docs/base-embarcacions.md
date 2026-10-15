@@ -39,5 +39,7 @@ Pestanya Club ▸ **Base** (primera: Base · Mur · Avisos · Anuncis). Dins de 
 ## Fases
 - A: plànol, editor, places i fitxes. B: estats i «navegant» automàtic. C: avisos de fets i preguntes.
 
-## Pendent de confirmar
-- Mides estàndard de cada tipus d'embarcació.
+## Mides estàndard (eslora × mànega)
+- Patí català 5,60 × 1,60 m · Hobie Cat 5,11 × 2,34 m · Llaüd català 6 × 2 m · Barca 4 × 1,6 m.
+- Windsurf: provisional 2,5 × 0,7 m (cal confirmar).
+- Caiacs: no es dibuixen; van en un «Espai de caiacs» (zona) amb prestatgeries.
