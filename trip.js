@@ -129,7 +129,7 @@ function liveGapNote(){
   const el = $("liveGap"); if(!el) return;
   if(!g.length && !hiddenAt){ el.hidden = true; return; }
   const last = g[g.length - 1], hm = t => new Date(t).toTimeString().slice(0, 5);
-  const fixTxt = window.OV_NATIVE ? "Comprova que l'app té la ubicació «Permet sempre» i la bateria «Sense restriccions»."
+  const fixTxt = window.OV_NATIVE ? "Comprova que l'app té permís d'ubicació i la bateria «Sense restriccions»."
     : `No apaguis la pantalla amb el botó: deixa l'app oberta${LIVE.eco ? " amb la pantalla negra d'estalvi" : " (o activa el mode estalvi)"}.`;
   el.innerHTML = g.length ? `⚠ Ruta incompleta: ${g.length} ${g.length === 1 ? "tram" : "trams"} sense GPS (${fmtDurShort(tot)}), l'últim de ${hm(last.from)} a ${hm(last.to)}. ${fixTxt}` : "";
   el.hidden = !g.length;

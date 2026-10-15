@@ -1328,3 +1328,9 @@ body.wm-open{overflow:hidden}
 .cl-undo[hidden]{display:none}
 .cl-undo span{flex:1;min-width:0}
 .cl-undo .btn{flex:none;min-height:44px;background:none;border-color:var(--surface);color:var(--surface)}
+
+/* Avisos: qui s'apunta i recordatori en obrir l'app */
+.cl-avsign{margin-top:4px}
+.cl-remind{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line)}
+.cl-remind b{font-family:var(--f-head);font-size:1.35rem;line-height:1.15}
+.cl-remind .cl-int{border-top:0;padding:8px 0 0}

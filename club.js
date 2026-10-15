@@ -92,7 +92,7 @@ function publishEvents(){
   window.OV_EVENTS = D.avisos.filter(a => a.data && alive(a)).map(a => ({data:a.data, titol:a.titol, text:a.text, comissio:COMSm()[a.comissio] || a.comissio}));
   window.dispatchEvent(new CustomEvent("ov-events"));
 }
-async function loadEvents(){ if(!C) return; try{ D.avisos = await getAll("avisos", W("clubId", "==", C.member.clubId)); D.at.avisos = now(); publishEvents(); }catch(e){} }
+async function loadEvents(){ if(!C) return; try{ D.avisos = await getAll("avisos", W("clubId", "==", C.member.clubId)); D.at.avisos = now(); publishEvents(); remindEvents(); }catch(e){} }
 
 /* ---------- càrrega ---------- */
 // Tot el que aquest soci pot veure d'una col·lecció, segons la confidencialitat de cada document: una consulta per nivell
@@ -321,6 +321,7 @@ function renderAvisos(){
         <h3 class="cl-atitle">${esc(a.titol)}</h3>
         ${a.data ? `<div class="cl-event">${CAL}<b>${esc(dayLong(a.data))}</b></div>` : ""}
         <p class="cl-text">${esc(a.text)}</p>
+        ${a.inscripcio ? signRow(a) : ""}
         <div class="cl-afoot"><div class="cl-who"><span>${esc(a.autorNom || "")} · ${esc(COMSm()[a.comissio] || "")}${a.editat ? " · editat" : ""}</span><span>${a.data ? "Desapareix l'endemà" : "Fins que es retiri"} · <span class="cl-nv" aria-label="vist per ${n}">${EYE_S}${n}</span></span></div>
           <button type="button" class="btn cl-seen" data-seen="${esc(a.id)}" aria-pressed="${seen}" aria-label="${seen ? "Vist. Toca per desmarcar" : "Marca com a vist"}">${seen ? SEEN : EYE}<small>${seen ? "Vist" : "Marca"}</small></button></div>
         ${own || del ? `<div class="cl-row2">${own ? `<button type="button" class="btn sm" data-editavis="${esc(a.id)}">Edita</button>` : "<span></span>"}${del ? `<button type="button" class="btn sm" data-askdel="avisos" data-id="${esc(a.id)}">Retira l'avís</button>` : ""}</div><div data-delbox="${esc(a.id)}"></div>` : ""}</article>`; }).join("")
@@ -492,6 +493,44 @@ function intentSheet(){
     });
   });
 }
+// Avisos amb «Qui s'apunta»: mapa apuntats = {uid: nom}
+const signTxt = n => n === 0 ? "Encara no s'hi ha apuntat ningú" : n === 1 ? "1 persona s'hi apunta" : n + " persones s'hi apunten";
+function signRow(a){
+  const ap = a.apuntats || {}, n = Object.keys(ap).length, on = !!ap[uid()];
+  return `<div class="cl-int cl-avsign"><div class="cl-who"><b>${signTxt(n)}</b>${n ? `<span>${esc(Object.values(ap).join(", "))}</span>` : ""}</div>
+    <button type="button" class="btn cl-go" data-avjoin="${esc(a.id)}" aria-pressed="${on}">${on ? "Hi vas ✓" : "M'hi apunto"}</button></div>`;
+}
+
+/* ---------- recordatori en obrir l'app: el dia abans i el mateix dia de les activitats ---------- */
+// No hi ha notificacions push: surt quan s'obre l'app (o es torna a ella). Un cop per avís i dia, en aquest mòbil.
+const POP_K = "ov2_avis_pop";
+function remindEvents(){
+  if(!C || (typeof LIVE !== "undefined" && LIVE) || $("clSheet")) return;
+  const today = ymd(new Date()), tom = ymd(new Date(now() + DAY)), yest = ymd(new Date(now() - DAY));
+  const seen = {}; Object.entries(store.get(POP_K) || {}).forEach(([k, v]) => { if(k.slice(-10) >= yest) seen[k] = v; });
+  const L = D.avisos.filter(a => alive(a) && (a.data === today || a.data === tom) && !seen[a.id + "_" + today])
+    .sort((a, b) => a.data.localeCompare(b.data));
+  if(!L.length){ store.set(POP_K, seen); return; }
+  L.forEach(a => seen[a.id + "_" + today] = 1); store.set(POP_K, seen);
+  const item = a => { const ap = a.apuntats || {}, on = !!ap[uid()];
+    return `<div class="cl-remind c-${esc(a.comissio)}"><span class="lbl">${a.data === today ? "Avui" : "Demà"} · ${esc(COMSm()[a.comissio] || a.comissio)}</span>
+      <b>${esc(a.titol)}</b><span class="note">${esc(dayLong(a.data))}</span>
+      ${a.inscripcio ? `<div class="cl-int"><div class="cl-who"><span>${signTxt(Object.keys(ap).length)}</span></div><button type="button" class="btn cl-go" data-popjoin="${esc(a.id)}" aria-pressed="${on}">${on ? "Hi vas ✓" : "M'hi apunto"}</button></div>` : ""}</div>`; };
+  sheet(L.length === 1 ? "Recordatori" : "Recordatoris", `${L.map(item).join("")}
+    <div class="cl-row2"><button type="button" class="btn" id="popSee">Veure als avisos</button><button type="button" class="btn cl-pri" data-close>D'acord</button></div>`, d => {
+    d.querySelector("#popSee").onclick = () => { closeSheet(); tab = "avisos"; store.set("ov2_club_tab", tab); go("club"); };
+    d.addEventListener("click", async e => { const b = e.target.closest("[data-popjoin]"); if(!b) return;
+      await mapToggle("avisos", D.avisos, b.dataset.popjoin, "apuntats", C.member.nom);
+      const a = D.avisos.find(x => x.id === b.dataset.popjoin), on = !!((a && a.apuntats) || {})[uid()];
+      b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Hi vas ✓" : "M'hi apunto";
+      b.previousElementSibling.querySelector("span").textContent = signTxt(Object.keys((a && a.apuntats) || {}).length); });
+  });
+}
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState !== "visible" || !C) return;
+  if(now() - (D.at.avisos || 0) > 15*MIN) loadEvents(); else remindEvents();
+});
+
 function avisSheet(a){
   const coms = canPost(), today = ymd(new Date());
   sheet(a ? "Edita l'avís" : "Nou avís", `
@@ -499,20 +538,21 @@ function avisSheet(a){
     ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="80" value="${esc(a ? a.titol : "")}" style="font-family:var(--f-body)">`)}
     ${field("shText", "Text", `<textarea class="field cl-ta" id="shText" rows="5" maxlength="600">${esc(a ? a.text : "")}</textarea>`)}
     ${field("shData", "Data de l'activitat <small>(opcional)</small>", `<input class="field" id="shData" type="date" value="${esc(a && a.data || "")}" min="${today}">`)}
-    <p class="note">Amb data: surt també a la previsió de 7 dies i desapareix l'endemà. Sense data: es queda fins que algú amb permís el retiri.</p>
+    <p class="note">Amb data: surt també a la previsió de 7 dies, l'app ho recorda el dia abans i el mateix dia, i desapareix l'endemà. Sense data: es queda fins que algú amb permís el retiri.</p>
     <label class="cl-sw"><span><b>Fixa'l a dalt</b></span><input type="checkbox" class="switch" id="shPin"${a && a.fixat ? " checked" : ""}></label>
+    <label class="cl-sw"><span><b>Pregunta qui s'apunta</b><small class="note">Surt el botó «M'hi apunto» i la llista de qui hi va.</small></span><input type="checkbox" class="switch" id="shSign"${a && a.inscripcio ? " checked" : ""}></label>
     <button type="button" class="btn cl-pri cl-wide" id="shSave">${a ? "Desa els canvis" : "Publica l'avís"}</button>`, () => {
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
       const titol = $("shTitle").value.trim().slice(0, 80), text = $("shText").value.trim().slice(0, 600), data = $("shData").value || null;
       if(!titol || !text){ sheetSay("Cal un títol i un text."); return; }
       if(data && data < today){ sheetSay("La data no pot ser d'abans d'avui."); return; }
       const cadMs = data ? new Date(data + "T23:59:59").getTime() + DAY : null;   // caduca l'endemà de l'activitat
-      const f = {titol, text, fixat:$("shPin").checked, data, caduca: cadMs ? TS(cadMs) : null};
+      const f = {titol, text, fixat:$("shPin").checked, inscripcio:$("shSign").checked, data, caduca: cadMs ? TS(cadMs) : null};
       if(a){
         await C.F.updateDoc(ref("avisos", a.id), Object.assign({}, f, {editat:true}));
         Object.assign(a, f, {caduca:cadMs, editat:true});
       } else {
-        const doc = Object.assign({userId:uid(), clubId:C.member.clubId, comissio:$("shCom").value, creat:C.F.serverTimestamp(), autorNom:C.member.nom, vist:{}}, f);
+        const doc = Object.assign({userId:uid(), clubId:C.member.clubId, comissio:$("shCom").value, creat:C.F.serverTimestamp(), autorNom:C.member.nom, vist:{}, apuntats:{}}, f);
         const r = await C.F.addDoc(col("avisos"), doc);
         D.avisos.push(Object.assign({id:r.id}, doc, {caduca:cadMs, creat:now()}));
       }
@@ -662,6 +702,7 @@ document.addEventListener("click", async e => {
   if(ds.editavis){ const a = D.avisos.find(x => x.id === ds.editavis); if(a) avisSheet(a); return; }
   if(ds.react){ react(ds.pub, ds.react); return; }
   if(ds.join){ mapToggle("intencions", D.intents, ds.join, "apuntats", C.member.nom); return; }
+  if(ds.avjoin){ mapToggle("avisos", D.avisos, ds.avjoin, "apuntats", C.member.nom); return; }
   if(ds.seen){ const a = D.avisos.find(x => x.id === ds.seen); setSeenAt(ds.seen, !(a && (a.vist || {})[uid()])); mapToggle("avisos", D.avisos, ds.seen, "vist", true); return; }
   if(ds.interest){ interest(ds.interest); return; }
   if(ds.editpub){ const p = D.pubs.find(x => x.id === ds.editpub); if(p) pubSheet(null, p); return; }
@@ -857,7 +898,7 @@ const OV_CLUB = window.OV_CLUB = {
     const drop = (n, id, f) => C.F.updateDoc(ref(n, id), {[f + "." + me]: C.F.deleteField()}).catch(() => {});
     for(const p of await getVisible("publicacions")) p.userId === me ? await del("publicacions", p.id) : (p.reaccions || {})[me] && await drop("publicacions", p.id, "reaccions");
     for(const x of await getVisible("intencions")) x.userId === me ? await del("intencions", x.id) : (x.apuntats || {})[me] && await drop("intencions", x.id, "apuntats");
-    for(const x of await getAll("avisos", W("clubId", "==", club))) x.userId === me ? await del("avisos", x.id) : (x.vist || {})[me] && await drop("avisos", x.id, "vist");
+    for(const x of await getAll("avisos", W("clubId", "==", club))) { if(x.userId === me){ await del("avisos", x.id); continue; } if((x.vist || {})[me]) await drop("avisos", x.id, "vist"); if((x.apuntats || {})[me]) await drop("avisos", x.id, "apuntats"); }
     for(const x of await getVisible("anuncis")){
       if(x.userId === me){ for(const i of await getAll("anuncis/" + x.id + "/interessats")) await C.F.deleteDoc(ref("anuncis", x.id, "interessats", i.id)).catch(() => {}); await del("anuncis", x.id); }
       else await C.F.deleteDoc(ref("anuncis", x.id, "interessats", me)).catch(() => {});

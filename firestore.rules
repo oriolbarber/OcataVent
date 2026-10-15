@@ -251,15 +251,20 @@ service cloud.firestore {
       allow read: if clubOk();
       // Data opcional de l'activitat (AAAA-MM-DD): amb data, caduca l'endemà; sense data, no caduca (caduca = null)
       allow create: if newClubOk() && canAvis(request.resource.data.comissio)
-        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'comissio', 'titol', 'text', 'fixat', 'data', 'caduca', 'creat', 'autorNom', 'vist'])
+        && request.resource.data.keys().hasOnly(['userId', 'clubId', 'comissio', 'titol', 'text', 'fixat', 'data', 'caduca', 'creat', 'autorNom', 'vist', 'inscripcio', 'apuntats'])
+        && request.resource.data.get('inscripcio', false) is bool && request.resource.data.get('apuntats', {}) == {}
         && request.resource.data.comissio in comsClub()
         && avisOk(request.resource.data)
         && nomOk(request.resource.data.autorNom, 80) && request.resource.data.vist == {}
         && request.resource.data.creat == request.time;
-      // L'autor el pot editar (títol, text, fixat i data)
+      // L'autor el pot editar (títol, text, fixat, data i si pregunta qui s'apunta)
       allow update: if signedIn() && resource.data.userId == me()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['titol', 'text', 'fixat', 'data', 'caduca', 'editat'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['titol', 'text', 'fixat', 'data', 'caduca', 'editat', 'inscripcio'])
+        && request.resource.data.get('inscripcio', false) is bool
         && avisOk(request.resource.data);
+      // «M'hi apunto»: cadascú la seva clau (nom); només si l'avís ho pregunta (desapuntar-se, sempre)
+      allow update: if clubOk() && onlyMyKey('apuntats')
+        && (!(me() in request.resource.data.get('apuntats', {})) || (resource.data.get('inscripcio', false) == true && nomOk(request.resource.data.apuntats[me()], 80)));
       allow update: if clubOk() && onlyMyKey('vist')
         && (!(me() in request.resource.data.vist) || request.resource.data.vist[me()] == true);
       allow delete: if signedIn() && (resource.data.userId == me() || inComissio(resource.data.comissio) || modera(resource.data) || expired());
