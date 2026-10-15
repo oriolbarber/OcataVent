@@ -29,7 +29,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Publica les regles
         env:
@@ -37,5 +37,12 @@ jobs:
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          npx -y firebase-tools@latest deploy --only firestore:rules --project ocatavent --non-interactive
+          set +e
+          npx -y firebase-tools@latest deploy --only firestore:rules --project ocatavent --non-interactive 2>&1 | tee "$RUNNER_TEMP/out.txt"
+          rc=${PIPESTATUS[0]}
           rm -f "$RUNNER_TEMP/sa.json"
+          if [ "$rc" -ne 0 ]; then
+            # l'error, com a anotació (es veu al resum de l'execució sense obrir el registre)
+            grep -iE "error|denied|permission|403|404|enable" "$RUNNER_TEMP/out.txt" | tail -8 | while IFS= read -r l; do echo "::error::$l"; done
+            exit "$rc"
+          fi
