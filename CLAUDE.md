@@ -104,6 +104,15 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Es desen a la base de dades de l'artefacte: col·lecció `icons`, document `boats` (llegeix-lo amb l'eina ArtifactData, acció `get`). Claus: `pati`, `windsurf`, `hobie` (BOAT_IC), `onada` (WAVE_IC), `bandera` (FLAG_IC: traç 1 = pal, la resta farcit), `gps`, `pantalla`, `bateria`, `avisos` (SAFE_IC: caselles de «Nova sortida» i avisos en ruta), `armilla`, `emissora`, `navalla`, `xiulet`, `aigua`, `abric`, `guants`, `mobil`, `bossa`, `sol` (KIT_IC de `trip.js`: recordatori «Ho portes tot?» en començar una sortida, gruix 1,7; al document només hi són si l'Oriol ha desat després d'afegir-les), `logo` (128×128 amb anella i color), `stroke` (gruix, viewBox 24×24).
 - `data/icones.json` és una còpia de l'última versió aplicada. Quan l'Oriol digui «aplica les icones», llegeix el document, aplica-les a l'app i actualitza aquesta còpia.
 
+## Documentació (`docs/`)
+- **L'original és el repo**, no el Drive ni cap artefacte. Índex i pendents: `docs/README.md`. Guia: `docs/guia.html` (també imprimible en A4). Play Store: `docs/play/`. Legal: `docs/legal/`.
+- **Estalvi de tokens en editar documentació:**
+  - Canvis amb Edit, només del fragment afectat (`grep -n` per trobar-lo). No llegir ni reescriure el document sencer.
+  - Agrupar en el mateix commit el canvi de codi i el de la guia que l'explica.
+  - El PDF no es genera a mà: en fer push de `docs/guia.html`, l'acció `docs.yml` el publica a la Release «docs» (enllaç fix https://github.com/oriolbarber/OcataVent/releases/download/docs/guia-ocata-vent.pdf). La guia en línia (GitHub Pages) s'actualitza sola.
+  - No republicar artefactes ni pujar res al Drive en cada canvi. Al Drive (`htmls ▸ Idoneïtat_OcataVent`) només s'hi copia una instantània quan l'Oriol ho demani («puja la documentació al Drive»), d'un sol cop, seguint la skill gestio-projectes-drive.
+- Quan un canvi de l'app afecti el que fa el soci, actualitzar la secció de la guia en el mateix commit.
+
 ## Fonts de dades (V1)
 - **Previsió:** Open-Meteo forecast i marine. Ús no comercial.
 - **Estacions:** meteoelmasnou.cat (Meteotemplate). Cal demanar permís per a la V2.

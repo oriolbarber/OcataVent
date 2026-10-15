@@ -1,0 +1,45 @@
+# Documentació: genera el PDF de la guia (docs/guia.html) i el publica a la Release «docs».
+# Enllaç fix: https://github.com/oriolbarber/OcataVent/releases/download/docs/guia-ocata-vent.pdf
+# La guia en línia és https://oriolbarber.github.io/OcataVent/docs/guia.html (GitHub Pages, sense fer res).
+name: Documentació
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/guia.html"
+      - "scripts/guia-pdf.mjs"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: docs
+  cancel-in-progress: true
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Playwright i Chromium
+        run: |
+          npm i --no-save --no-audit --no-fund playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Genera el PDF
+        run: |
+          export GUIA_VERSIO="$(TZ=Europe/Madrid date '+%d/%m/%Y')"
+          node scripts/guia-pdf.mjs guia-ocata-vent.pdf
+      - name: Publica a la Release «docs»
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="Guia d'Ocata Vent en PDF (A4) · $(TZ=Europe/Madrid date '+%d/%m/%Y %H:%M'). En línia: https://oriolbarber.github.io/OcataVent/docs/guia.html"
+          if gh release view docs >/dev/null 2>&1; then
+            gh release edit docs --title "Documentació d'Ocata Vent" --notes "$notes"
+          else
+            gh release create docs --title "Documentació d'Ocata Vent" --notes "$notes" --target "$GITHUB_SHA"
+          fi
+          gh release upload docs guia-ocata-vent.pdf --clobber

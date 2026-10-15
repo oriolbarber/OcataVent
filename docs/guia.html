@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Guia d'Ocata Vent</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Rajdhani:wght@500;600;700&display=swap">
+<style>
+/* Maquetació: manual de butxaca — portada amb el logo, índex, capítols numerats (és material de consulta), caixes d'avís i taules; A4 en imprimir. Colors i lletres de l'app. */
+:root{
+  --bg:#f4f7fb; --paper:#ffffff; --ink:#0a1322; --muted:#4a5a72; --line:#cbd5e2; --soft:#eaf0f7;
+  --brand:#dc3427; --accent:#0068b8; --ideal:#007a45; --marg:#d05a00; --no:#c3162a;
+  --ideal-t:#d4f2e2; --marg-t:#ffe4cf; --no-t:#fbdadd; --info-t:#dcebf8;
+  --f-head:"Rajdhani","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#060c19; --paper:#0d1729; --ink:#e9f1ff; --muted:#9fb2d0; --line:#24375a; --soft:#122039;
+  --brand:#ff5a4c; --accent:#3cc4f5; --ideal:#34d58f; --marg:#ff9a3c; --no:#ff6476;
+  --ideal-t:#0f3a2c; --marg-t:#422409; --no-t:#41161f; --info-t:#0e2a45; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#060c19; --paper:#0d1729; --ink:#e9f1ff; --muted:#9fb2d0; --line:#24375a; --soft:#122039;
+  --brand:#ff5a4c; --accent:#3cc4f5; --ideal:#34d58f; --marg:#ff9a3c; --no:#ff6476;
+  --ideal-t:#0f3a2c; --marg-t:#422409; --no-t:#41161f; --info-t:#0e2a45; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 64px}
+.doc{max-width:46rem;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.sheet{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:28px clamp(18px,4vw,40px)}
+h1,h2,h3,h4{font-family:var(--f-head);line-height:1.1;margin:0;text-wrap:balance}
+h2{font-size:2rem;font-weight:700;display:flex;gap:.5em;align-items:baseline;margin-bottom:.4em}
+h2 .n{color:var(--brand);font-variant-numeric:tabular-nums}
+h3{font-size:1.3rem;font-weight:700;margin:1.4em 0 .35em;letter-spacing:.02em}
+h4{font-size:1.05rem;font-weight:700;margin:1em 0 .2em;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+p{margin:.5em 0}
+p,li{max-width:65ch}
+ul,ol{margin:.4em 0;padding-left:1.3em}
+li{margin:.2em 0}
+.lead{font-size:1.08rem;color:var(--muted)}
+b,strong{font-weight:600}
+.ui{font-weight:600;white-space:nowrap}
+.ui::before{content:"«"}.ui::after{content:"»"}
+.path{font-weight:600}
+.k{font-family:var(--f-mono);font-size:.9em;font-variant-numeric:tabular-nums}
+
+/* portada */
+.cover{display:grid;gap:22px;padding-block:44px}
+.cover .mark{display:flex;align-items:center;gap:16px}
+.cover svg{width:88px;height:88px;flex:none}
+.cover .eyebrow{font-family:var(--f-head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);font-size:.95rem}
+.cover h1{font-size:clamp(2.6rem,9vw,4.2rem);font-weight:700;letter-spacing:.01em}
+.cover .meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:.92rem;border-top:1px solid var(--line);padding-top:14px}
+.compass{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--no) 0 30%,var(--marg) 30% 55%,var(--ideal) 55% 100%)}
+
+/* índex */
+.toc ol{list-style:none;padding:0;columns:2 16rem;column-gap:28px;margin:.6em 0 0}
+.toc li{break-inside:avoid;display:flex;gap:.6em;padding:.25em 0;border-bottom:1px dotted var(--line);max-width:none}
+.toc a{color:var(--ink);text-decoration:none}
+.toc a:hover,.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+.toc .n{font-family:var(--f-head);font-weight:700;color:var(--brand);min-width:1.6em;font-variant-numeric:tabular-nums}
+
+/* caixes */
+.box{border-radius:10px;padding:12px 14px;margin:.9em 0;border:1px solid var(--line);background:var(--soft)}
+.box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
+.box .t{font-family:var(--f-head);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:.88rem;display:block;margin-bottom:2px}
+.box.warn{background:var(--no-t);border-color:transparent}.box.warn .t{color:var(--no)}
+.box.tip{background:var(--ideal-t);border-color:transparent}.box.tip .t{color:var(--ideal)}
+.box.info{background:var(--info-t);border-color:transparent}.box.info .t{color:var(--accent)}
+
+/* passos */
+.steps{counter-reset:s;list-style:none;padding:0;display:grid;gap:10px;margin:.8em 0}
+.steps li{counter-increment:s;display:grid;grid-template-columns:2.1em 1fr;gap:10px;align-items:start;max-width:none}
+.steps li::before{content:counter(s);font-family:var(--f-head);font-weight:700;font-size:1.1rem;width:1.9em;height:1.9em;border-radius:50%;
+  display:grid;place-items:center;background:var(--brand);color:#fff}
+.steps li>div{min-width:0}
+
+/* taules */
+.tw{overflow-x:auto;margin:.8em 0}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-head);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.85rem;color:var(--muted);background:var(--soft)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* escala del veredicte */
+.scale{display:grid;grid-template-columns:3.5fr 2.5fr 4fr;border-radius:8px;overflow:hidden;margin:.8em 0;font-size:.9rem}
+.scale div{padding:8px 10px}
+.scale .s1{background:var(--no-t);color:var(--no)}.scale .s2{background:var(--marg-t);color:var(--marg)}.scale .s3{background:var(--ideal-t);color:var(--ideal)}
+.scale b{display:block;font-family:var(--f-head);font-size:1.05rem}
+
+/* barra de pestanyes */
+.tabbar{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;border:1px solid var(--line);border-radius:12px;padding:6px;margin:.8em 0;background:var(--soft)}
+.tabbar div{text-align:center;font-family:var(--f-head);font-weight:700;font-size:.95rem;padding:6px 2px;border-radius:8px}
+.tabbar small{display:block;font-family:var(--f-body);font-weight:400;font-size:.72rem;color:var(--muted);line-height:1.25}
+.tabbar .on{background:var(--paper);box-shadow:0 0 0 1px var(--line)}
+.defs{display:grid;grid-template-columns:minmax(7rem,max-content) 1fr;gap:6px 14px;margin:.7em 0}
+.defs dt{font-weight:600}.defs dd{margin:0;min-width:0}
+@media (max-width:520px){.defs{grid-template-columns:1fr}.defs dd{margin-bottom:6px}.tabbar small{display:none}}
+footer.doc-foot{color:var(--muted);font-size:.85rem;text-align:center}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* paper */
+@page{size:A4;margin:16mm 15mm 18mm}
+@media print{
+  :root{--bg:#fff;--paper:#fff;--ink:#0a1322;--muted:#45556d;--line:#c9d3e0;--soft:#eef3f8;color-scheme:light}
+  body{padding:0;font-size:10.5pt;line-height:1.5}
+  .doc{max-width:none;gap:0}
+  .sheet{border:0;border-radius:0;padding:0}
+  .cover,.toc{break-after:page}
+  .sheet+.sheet:not(.toc){margin-top:12mm}
+  h2{break-after:avoid}
+  p,li{max-width:none}
+  .cover{min-height:250mm;align-content:center}
+  h2{font-size:22pt}h3{break-after:avoid}h4{break-after:avoid}
+  .box,.steps li,table tr,.scale,.tabbar,.defs{break-inside:avoid}
+  .tw{overflow:visible}
+  a{color:inherit;text-decoration:none}
+  footer.doc-foot{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="doc">
+
+<section class="sheet cover" aria-label="Portada">
+  <div class="mark">
+    <svg viewBox="0 0 128 128" role="img" aria-label="Logo del Club Ocata Vent"><circle cx="64" cy="64" r="61" fill="#ffffff"/><circle cx="64" cy="64" r="55" fill="none" stroke="#dc3427" stroke-width="11"/><path fill="#dc3427" fill-rule="evenodd" d="M50.5 28L42 19L31.5 34C27 42 25.5 49 23.5 62.5C24 75 26.5 86 30.5 93L43 108L51 99.5L59 90.5C41.5 94 37 76.4 37 64C37 51.6 40.5 30 60 35Z"/><path fill="#dc3427" fill-rule="evenodd" d="M56 45C62.9 45 68.5 53.5 68.5 64C68.5 74.5 62.9 83 56 83C49.1 83 43.5 74.5 43.5 64C43.5 53.5 49.1 45 56 45ZM56 57.5C58.2 57.5 60 60.4 60 64C60 67.6 58.2 70.5 56 70.5C53.8 70.5 52 67.6 52 64C52 60.4 53.8 57.5 56 57.5Z"/><path fill="#dc3427" fill-rule="evenodd" d="M72.5 46.5L90 64L71.5 78.5C75.5 74 75.5 69.5 77 64C76.5 57.5 75.5 51.5 72.5 46.5Z"/><path fill="#dc3427" fill-rule="evenodd" d="M92 64L109 45C104.5 56 104.5 71 109 82Z"/></svg>
+    <span class="eyebrow">Club Ocata Vent · El Masnou</span>
+  </div>
+  <h1>Guia d'Ocata Vent</h1>
+  <p class="lead">Com saber si fa bo per navegar, gravar les sortides, compartir-les amb el club i fer servir els avisos de seguretat.</p>
+  <div class="compass" aria-hidden="true"></div>
+  <div class="meta"><span>Versió de l'app 2.0</span><span>Octubre de 2026</span><span>Per a Android, iPhone i navegador</span></div>
+</section>
+
+<section class="sheet toc" aria-labelledby="t-idx">
+  <h2 id="t-idx">Índex</h2>
+  <ol>
+    <li><span class="n">1</span><a href="#c1">Què és Ocata Vent</a></li>
+    <li><span class="n">2</span><a href="#c2">Instal·lar l'app</a></li>
+    <li><span class="n">3</span><a href="#c3">Primers passos</a></li>
+    <li><span class="n">4</span><a href="#c4">Previsió</a></li>
+    <li><span class="n">5</span><a href="#c5">Nova sortida i navegació</a></li>
+    <li><span class="n">6</span><a href="#c6">Avisos de seguretat i ajuda</a></li>
+    <li><span class="n">7</span><a href="#c7">Mapes i webcams</a></li>
+    <li><span class="n">8</span><a href="#c8">Historial</a></li>
+    <li><span class="n">9</span><a href="#c9">Compte de soci</a></li>
+    <li><span class="n">10</span><a href="#c10">Club</a></li>
+    <li><span class="n">11</span><a href="#c11">Confidencialitat i amistats</a></li>
+    <li><span class="n">12</span><a href="#c12">Configuració</a></li>
+    <li><span class="n">13</span><a href="#c13">Administració del club</a></li>
+    <li><span class="n">14</span><a href="#c14">Problemes freqüents</a></li>
+    <li><span class="n">15</span><a href="#c15">Dades, privacitat i avís legal</a></li>
+  </ol>
+  <div class="box warn"><span class="t">Abans de res</span><p>Ocata Vent és una ajuda per decidir i per avisar el club. <b>No és un sistema de seguretat</b> i no substitueix l'emissora VHF (canal 16) ni el telèfon d'emergències 112. Abans de sortir, mira el cel, el mar i la bandera, i porta sempre l'armilla i el material de seguretat.</p></div>
+</section>
+
+<section class="sheet" id="c1" aria-labelledby="h1x">
+  <h2 id="h1x"><span class="n">1</span>Què és Ocata Vent</h2>
+  <p class="lead">Una app del Club Ocata Vent que diu, per a cada embarcació, si fa bo per navegar a la platja d'Ocata (El Masnou) o a Badalona, i que ajuda el club a saber qui és a l'aigua.</p>
+  <p>Funciona en dos nivells:</p>
+  <ul>
+    <li><b>Sense compte:</b> previsió, vent mesurat en directe, mapes, webcams, gravació de sortides i historial. Tot es desa al mòbil.</li>
+    <li><b>Amb compte de soci aprovat:</b> a més, les sortides es copien al núvol, i tens la pestanya Club (mur, avisos, anuncis, base), les amistats i els avisos de seguretat compartits.</li>
+  </ul>
+  <h3>Les cinc pestanyes</h3>
+  <div class="tabbar" role="img" aria-label="Barra de pestanyes inferior: Previsió, Sortida, Mapes, Historial, Club">
+    <div class="on">Previsió<small>Si fa bo</small></div><div>Sortida<small>Gravar</small></div><div>Mapes<small>Vent, onades, webcams</small></div><div>Historial<small>Les teves sortides</small></div><div>Club<small>Socis</small></div>
+  </div>
+  <p>A la barra de dalt, al costat de les icones d'embarcació, hi ha el botó de <b>Configuració</b> i, al seu costat, el d'actualitzar les dades. A la Configuració hi ha: compte, confidencialitat, ubicació, tema, mida del text, model de previsió, criteris i, si tens permisos, administració.</p>
+  <h3>Com està pensada</h3>
+  <ul>
+    <li><b>Gran i clar:</b> mentre navegues l'has de poder llegir d'un cop d'ull. Si et costa, posa la mida del text a <span class="ui">Gran</span>.</li>
+    <li><b>Les explicacions llargues</b> són dins dels botons rodons <span class="k">(i)</span>.</li>
+    <li><b>Esborrar o descartar</b> sempre es confirma lliscant el dit sobre un botó, perquè no passi per accident.</li>
+    <li><b>No surts mai de l'app:</b> mapes i webcams s'obren a dins.</li>
+  </ul>
+</section>
+
+<section class="sheet" id="c2" aria-labelledby="h2x">
+  <h2 id="h2x"><span class="n">2</span>Instal·lar l'app</h2>
+  <table>
+    <thead><tr><th>Mòbil</th><th>Com</th><th>Grava amb la pantalla apagada</th></tr></thead>
+    <tbody>
+      <tr><td>Android</td><td>App d'Android (Google Play o fitxer APK del club)</td><td>Sí</td></tr>
+      <tr><td>iPhone</td><td>App web afegida a la pantalla d'inici</td><td>No: deixa la pantalla oberta</td></tr>
+      <tr><td>Ordinador</td><td>Navegador</td><td>No cal: per consultar la previsió i l'historial</td></tr>
+    </tbody>
+  </table>
+  <h3>Android</h3>
+  <ol class="steps">
+    <li><div><b>Instal·la-la</b> des de Google Play buscant «Ocata Vent» o, mentre som en proves, amb l'APK que et passi el club. Amb l'APK, el mòbil et demanarà permetre «Instal·lar aplicacions desconegudes» per al navegador o el gestor de fitxers.</div></li>
+    <li><div><b>Obre-la</b> i dona-li la ubicació quan te la demani. Per gravar amb la pantalla apagada, l'app mostra una notificació fixa mentre grava.</div></li>
+    <li><div><b>Bateria:</b> a la pestanya Sortida, prem <span class="ui">Obre els ajustos</span> i, a <b>Bateria</b>, tria <span class="ui">Sense restriccions</span>. També ho pots fer a <span class="path">Ajustaments ▸ Aplicacions ▸ Ocata Vent ▸ Bateria</span>. Així Android no la tanca a mitja sortida.</div></li>
+  </ol>
+  <div class="box info"><span class="t">Entrar al compte a l'app d'Android</span><p>Dins l'app no hi ha el botó de Google (Google no ho permet en aquest tipus d'app). Entra amb <b>correu i contrasenya</b> o amb l'<b>enllaç per correu</b>: si l'enllaç s'obre al navegador, et torna a portar a l'app.</p></div>
+  <h3>iPhone</h3>
+  <ol class="steps">
+    <li><div>Obre <b>oriolbarber.github.io/OcataVent</b> amb Safari.</div></li>
+    <li><div>Prem el botó de compartir i <span class="ui">Afegeix a la pantalla d'inici</span>.</div></li>
+    <li><div>Obre-la des de la icona nova. Funciona com una app, també sense connexió per consultar l'última previsió.</div></li>
+  </ol>
+  <div class="box warn"><span class="t">Important a l'iPhone i al navegador</span><p>Si apagues la pantalla, el navegador atura el GPS i la sortida es queda sense ruta. Deixa l'app oberta: la pantalla es posa negra sola per estalviar bateria. També pots gravar amb un rellotge o una altra app i importar el GPX a l'Historial.</p></div>
+</section>
+
+<section class="sheet" id="c3" aria-labelledby="h3x">
+  <h2 id="h3x"><span class="n">3</span>Primers passos</h2>
+  <p>Cinc minuts el primer dia i ja la tens a punt.</p>
+  <ol class="steps">
+    <li><div><b>Tria l'embarcació</b> amb les icones de la barra de dalt: patí català, windsurf o Hobie Cat. Tot el veredicte es calcula per a aquesta embarcació.</div></li>
+    <li><div><b>Tria la platja</b> a <span class="path">Configuració ▸ Ubicació</span>: El Masnou (Ocata) o Badalona (Patins de Vela).</div></li>
+    <li><div><b>Ajusta la visualització:</b> tema (automàtic, fosc o clar) i mida del text (Petita o Gran).</div></li>
+    <li><div><b>Fes-te el compte de soci</b> a <span class="path">Configuració ▸ Compte ▸ Alta nova</span> si vols compartir i fer servir el Club. L'aprova l'administració (capítol 9).</div></li>
+    <li><div><b>Revisa la confidencialitat</b> a <span class="path">Configuració ▸ Confidencialitat</span> i tria qui veu cada cosa (capítol 11).</div></li>
+    <li><div><b>Fes una sortida de prova</b> a la platja per comprovar que el GPS i la bateria funcionen (capítol 5).</div></li>
+  </ol>
+</section>
+
+<section class="sheet" id="c4" aria-labelledby="h4x">
+  <h2 id="h4x"><span class="n">4</span>Previsió</h2>
+  <p class="lead">La portada respon la pregunta «puc sortir ara amb la meva embarcació?» i et deixa mirar la resta del dia i els dies següents.</p>
+  <h3>L'indicador d'idoneïtat</h3>
+  <p>Una nota de 0 a 10 per a l'embarcació triada. Fa la mitjana de l'última hora mesurada a l'estació i les dues hores següents de previsió. L'anell exterior és la nota; els anells de dins són el vent i les onades. A sota hi ha la bandera de bany i el motiu (poc vent, vent fort, onada, terral…).</p>
+  <div class="scale" role="img" aria-label="Escala del veredicte: menys de 3,5 no recomanat, de 3,5 a 6 limitat, 6 o més ideal o bo">
+    <div class="s1"><b>No recomanat</b>menys de 3,5</div><div class="s2"><b>Limitat</b>3,5 a 6</div><div class="s3"><b>Ideal o Bo</b>6 o més</div>
+  </div>
+  <h4>Com es calcula</h4>
+  <ul>
+    <li>Es valoren el vent mitjà i l'onada a la platja. Amb mar de fons (període de 7 s o més) l'onada es compta més alta.</li>
+    <li>Resten punts les ratxes de més d'1,6 vegades el vent mitjà, el terral de 6 kn o més (ponent, mestral o tramuntana), el plugim i la pluja probable (60 % o més).</li>
+    <li><b>Sempre «No recomanat»:</b> ratxes per sobre del màxim de l'embarcació, terral de 10 kn o més, pluja, tempesta i poca llum (de 30 min abans de la posta fins a 30 min abans de la sortida del sol).</li>
+    <li>«Aigua freda» (menys de 17 °C) només avisa per dur neoprè.</li>
+  </ul>
+  <h3>La rosa dels vents</h3>
+  <p>Mostra d'on ha bufat i d'on bufarà avui. Les barres plenes són el vent mesurat a l'estació; les buides, la previsió fins a la posta. Com més llarga la barra, més estona de vent d'aquella direcció. El con és el vent d'ara i el número del centre, la força en nusos. La icona blava de fora marca d'on ve l'onada i l'alçada.</p>
+  <p>El botó rodó de dalt a la dreta orienta la rosa amb la brúixola del mòbil: el nord apunta al nord real i el triangle blau marca cap on mires. Va bé a la platja per entendre d'on entra el vent.</p>
+  <h3>El dia i les hores</h3>
+  <dl class="defs">
+    <dt>Selector de dia</dt><dd><span class="ui">Avui</span>, <span class="ui">Demà</span> o el calendari, fins a 16 dies. El gràfic per hores, la taula i el mapa segueixen el dia triat.</dd>
+    <dt>Vent per hores</dt><dd>Gràfic de vent mitjà i ratxa amb el color del veredicte. Les hores passades surten com a «mesurat». El botó de maximitzar l'obre a pantalla completa en horitzontal, amb una línia del temps a baix per recórrer tota la previsió.</dd>
+    <dt>Hores d'avui</dt><dd>Taula de 7 a 21 h amb vent, ratxa, direcció, onada i veredicte de cada hora.</dd>
+    <dt>7 dies</dt><dd>Matí (9–12 h), migdia (12–15 h) i tarda (15–19 h) de cada dia, amb icona del temps, vent i onada. Si el club ha publicat un avís amb data, hi surt una icona.</dd>
+    <dt>Dades del moment</dt><dd>Vent mesurat a les estacions locals, onada mesurada a la boia de Barcelona, temperatura de l'aire i de l'aigua, posta de sol, bandera de la platja i avisos de Meteocat.</dd>
+  </dl>
+  <h3>Criteris per embarcació</h3>
+  <p>Valors de fàbrica, en nusos (vent) i metres (onada). Els pots canviar a <span class="path">Configuració ▸ Criteris</span>; es desen al teu mòbil i <span class="ui">Restaura valors</span> torna a aquests.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Embarcació</th><th class="num">Mínim</th><th class="num">Ideal</th><th class="num">Màxim</th><th class="num">Ratxa màx.</th><th class="num">Onada bona</th><th class="num">Onada màx.</th></tr></thead>
+    <tbody>
+      <tr><td>Patí català</td><td class="num">5</td><td class="num">8–16</td><td class="num">20</td><td class="num">24</td><td class="num">0,6</td><td class="num">1,2</td></tr>
+      <tr><td>Windsurf</td><td class="num">10</td><td class="num">14–24</td><td class="num">30</td><td class="num">34</td><td class="num">1,2</td><td class="num">2,2</td></tr>
+      <tr><td>Hobie Cat</td><td class="num">6</td><td class="num">10–18</td><td class="num">22</td><td class="num">26</td><td class="num">0,8</td><td class="num">1,5</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Models de previsió</h3>
+  <p>A <span class="path">Configuració ▸ Model de previsió</span> pots triar quin model fa servir l'app. Per defecte, <span class="ui">El que més encerta avui</span>: compara les hores passades d'avui amb l'estació i tria el model que s'hi ha acostat més. Fins que hi ha 3 hores mesurades, fa servir el que més ha encertat els últims 30 dies.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Model</th><th>Qui el fa</th><th>Per a què va bé</th></tr></thead>
+    <tbody>
+      <tr><td>AROME</td><td>Météo-France, ≈1,3 km</td><td>Molt detallat a la costa; 2 a 4 dies</td></tr>
+      <tr><td>ICON-EU</td><td>Servei alemany (DWD), ≈7 km</td><td>Bo amb el vent; 5 dies</td></tr>
+      <tr><td>ECMWF</td><td>Centre europeu, 9 km</td><td>El més fiable a mitjà termini</td></tr>
+      <tr><td>UKMO</td><td>Met Office britànic, 10 km</td><td>Global</td></tr>
+      <tr><td>Open-Meteo</td><td>Barreja</td><td>Combina els models que funcionen millor a cada zona i termini</td></tr>
+      <tr><td>Optimista / Pessimista</td><td>Càlcul de l'app</td><td>Per a cada hora, el model més o menys favorable. Si coincideixen, la previsió és fiable</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Historial d'encerts:</b> cada dia es desa la previsió de les 7 h de cada model i a les 22 h es compara amb el vent mesurat de 8 a 20 h. El dia es classifica pel vent dominant (terral, marinada, llevant, garbí o calma), per saber quin model encerta més en cada situació.</p>
+</section>
+
+<section class="sheet" id="c5" aria-labelledby="h5x">
+  <h2 id="h5x"><span class="n">5</span>Nova sortida i navegació</h2>
+  <p class="lead">Grava la ruta amb el GPS i el vent de l'estació. En acabar tens la distància, les velocitats, els rumbs respecte al vent i el mapa.</p>
+  <h3>Abans de sortir</h3>
+  <p>A la pestanya <b>Sortida</b> tens:</p>
+  <ul>
+    <li><b>Condicions d'ara</b> per a la teva embarcació, la millor franja, les hores fins a la posta i la llum que queda, els avisos de Meteocat d'avui i la bandera.</li>
+    <li><b>Mapa «On ets»</b> amb la teva posició (punt blau), la base nàutica (casa verda) i la distància i el rumb fins a la base. Pots activar les capes <span class="ui">Vent</span>, <span class="ui">Onades</span> i <span class="ui">Pluja</span>. Les etiquetes surten del costat d'on vénen el vent i l'onada, amb el color dels teus criteris.</li>
+    <li><b>Comprovacions:</b> GPS, pantalla i bateria. Si alguna diu «Revisa», segueix el que hi posa.</li>
+    <li><b>Recordatori «Ho portes tot?»:</b> armilla ben ajustada, xiulet, emissora carregada, navalla, aigua i crema, guants i calçat, mòbil en funda estanca, neoprè o abric, claus i farmaciola.</li>
+  </ul>
+  <ol class="steps">
+    <li><div>Escriu un nom per a la sortida si vols (és opcional).</div></li>
+    <li><div>Prem <span class="ui">Comença la sortida</span> i espera que el GPS trobi senyal. Al principi pot trigar una mica; a l'aire lliure va més de pressa.</div></li>
+    <li><div>Obre la <b>pantalla de ruta</b> i navega.</div></li>
+  </ol>
+  <h3>La pantalla de ruta</h3>
+  <p>A pantalla completa i amb lletra molt gran. Té tres vistes:</p>
+  <dl class="defs">
+    <dt>Dades</dt><dd>Velocitat (en nusos), màxima i mitjana, distància, rumb, vent de l'estació, distància i rumb fins a la base, angle respecte al vent (cenyida, través, popa) i temps en moviment.</dd>
+    <dt>Mapa</dt><dd>La ruta en directe.</dd>
+    <dt>Brúixola</dt><dd>Rosa amb el teu rumb, la direcció del vent i la direcció de la base.</dd>
+  </dl>
+  <dl class="defs">
+    <dt>Pantalla negra</dt><dd>Si no la toques en 40 s es posa negra per estalviar bateria. Dos tocs i tornes a veure les xifres. Els avisos de seguretat sempre es veuen.</dd>
+    <dt>Estalvi</dt><dd>Fons negre, només dades bàsiques i una lectura de GPS cada 20 s. Per a sortides llargues o amb poca bateria.</dd>
+    <dt>Previsió</dt><dd>Mira la previsió completa sense aturar la gravació.</dd>
+    <dt>Ajuda</dt><dd>Botó de dalt, només amb compte aprovat: envia al club un avís de petició d'ajuda (capítol 6).</dd>
+  </dl>
+  <div class="box warn"><span class="t">No premis el botó d'apagar</span><p>A l'iPhone i al navegador, si la pantalla s'apaga, el GPS s'atura. A l'app d'Android continua gravant, però deixa-la oberta igualment si vols veure els avisos a l'instant.</p></div>
+  <h3>Acabar la sortida</h3>
+  <ul>
+    <li><b>A mà:</b> <span class="ui">Atura</span> i després <span class="ui">Desa la sortida</span>, o <span class="ui">Continua navegant</span> si t'has equivocat. Per descartar-la, cal lliscar.</li>
+    <li><b>Sola:</b> si tornes a menys de 50 m de la base i t'hi quedes 10 minuts seguits (després d'haver-te allunyat més de 150 m), la sortida es desa sola i el club et veu «a la base».</li>
+  </ul>
+  <p>Si hi ha trams sense GPS, ho veuràs al resum i al mapa amb línia discontínua.</p>
+</section>
+
+<section class="sheet" id="c6" aria-labelledby="h6x">
+  <h2 id="h6x"><span class="n">6</span>Avisos de seguretat i ajuda</h2>
+  <p class="lead">Mentre graves, l'app vigila les condicions cada 20 segons. Si detecta un problema, t'avisa amb vibració i so i et <b>proposa</b> avisar el club. Tu decideixes: només s'envia si prems el botó.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Avís</th><th>Quan salta</th></tr></thead>
+    <tbody>
+      <tr><td>Sense vent i lluny</td><td>Menys d'1 kn durant 10 minuts, a més de 0,5 milles de la base, l'estació marca menys de 4 kn i la previsió de les 2 hores següents és per sota del mínim de l'embarcació.</td></tr>
+      <tr><td>Vent massa fort</td><td>L'estació marca un vent o una ratxa per sobre del màxim de la teva embarcació.</td></tr>
+      <tr><td>Onades perilloses</td><td>La previsió de les 3 hores següents supera l'onada màxima de l'embarcació.</td></tr>
+      <tr><td>Demana ajuda</td><td>El botó <span class="ui">Ajuda</span> de la pantalla de ruta, amb confirmació.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Què passa quan avises el club</h3>
+  <ol class="steps">
+    <li><div>L'avís arriba a qui hagis triat a Confidencialitat (per defecte, el club i la gent que és a la base en aquell moment). El veuen <b>en obrir l'app</b>: no hi ha notificacions automàtiques.</div></li>
+    <li><div>Qui el veu pot prémer <span class="ui">Vaig a ajudar</span> (màxim 3 persones). Tu reps «Missatge rebut per…» i un mapa amb la teva posició i la de qui ve.</div></li>
+    <li><div>Mentre l'avís és actiu, el teu mòbil comparteix la posició amb qui t'ajuda.</div></li>
+    <li><div>Si ja estàs bé, prem <span class="ui">Estic bé · anul·la'l</span> (lliscant). També s'esborra en acabar la sortida o quan la Junta, qui té el permís de seguretat o algú de la base el marca com a resolt.</div></li>
+  </ol>
+  <div class="box warn"><span class="t">Límits</span><p>Necessita cobertura de mòbil i compte aprovat. No avisa ningú si no tornes a l'hora prevista. En una emergència real, truca al 112 o crida pel canal 16 del VHF.</p></div>
+</section>
+
+<section class="sheet" id="c7" aria-labelledby="h7x">
+  <h2 id="h7x"><span class="n">7</span>Mapes i webcams</h2>
+  <dl class="defs">
+    <dt>Vent</dt><dd>Mapa de meteoblue: animació del vent, ratxes, núvols i pluja, satèl·lit o temperatura. El botó ▶ anima la previsió.</dd>
+    <dt>Onades</dt><dd>Mapa de Windy amb onades, vent, ratxes, pluja i núvols. Mou la línia de temps per veure les properes hores i dies; toca el mapa per veure els valors d'un punt.</dd>
+    <dt>Pluja</dt><dd>Radar de les últimes 2 hores (RainViewer).</dd>
+    <dt>Webcam</dt><dd>Imatge en directe del Nàutic Masnou i del Club Natació Badalona. Toca-la per veure-la a pantalla completa, gira el mòbil i pessiga o toca dues vegades per fer zoom. L'enquadrament es desa al mòbil.</dd>
+  </dl>
+  <p>El gràfic per hores i el mapa de la Previsió també es poden maximitzar, amb l'efecte de vent i onades de l'hora triada.</p>
+</section>
+
+<section class="sheet" id="c8" aria-labelledby="h8x">
+  <h2 id="h8x"><span class="n">8</span>Historial</h2>
+  <p class="lead">Totes les teves sortides, amb estadístiques, ruta al mapa i el vent real de l'estació durant la sortida.</p>
+  <ul>
+    <li><b>Detall de la sortida:</b> distància, temps en moviment, velocitat mitjana i màxima, rumbs respecte al vent i mapa.</li>
+    <li><b>Publica al mur:</b> comparteix el resum amb el club, amb un comentari. La ruta va desactivada per defecte i la pots afegir o treure després (capítol 10).</li>
+    <li><b>Exporta GPX o CSV:</b> per obrir la sortida amb altres apps o un full de càlcul.</li>
+    <li><b>Importa una sortida (GPX):</b> una ruta gravada amb un rellotge o una altra app. L'app hi afegeix el vent de l'estació.</li>
+    <li><b>Còpia de seguretat:</b> desa totes les sortides en un fitxer i recupera-les en un altre mòbil. Amb compte de soci ja es copien al núvol, però la còpia en fitxer no fa mal.</li>
+    <li><b>Esborrar:</b> sempre lliscant. Si la sortida era al núvol, també s'esborra d'allà.</li>
+  </ul>
+</section>
+
+<section class="sheet" id="c9" aria-labelledby="h9x">
+  <h2 id="h9x"><span class="n">9</span>Compte de soci</h2>
+  <p>A <span class="path">Configuració ▸ Compte</span>.</p>
+  <h3>Fer-te el compte</h3>
+  <ol class="steps">
+    <li><div>Tria <span class="ui">Alta nova</span>, escriu el nom i cognoms i marca que tens 18 anys o més i acceptes el tractament de dades (el detall és a la <span class="k">(i)</span>).</div></li>
+    <li><div>Entra amb una d'aquestes maneres: <b>Google</b> (només al navegador), <b>correu i contrasenya</b> (mínim 6 caràcters) o <b>enllaç per correu</b>. L'enllaç pot trigar uns minuts: mira també el correu brossa i obre'l al mateix mòbil.</div></li>
+    <li><div>La sol·licitud queda <b>pendent</b> fins que l'administració del club l'aprova. Mentrestant, la pestanya Club t'explica què falta.</div></li>
+  </ol>
+  <p>Si ja tens compte, tria <span class="ui">Ja soc soci</span>. Si no recordes la contrasenya, <span class="ui">He oblidat la contrasenya</span> t'envia un correu per posar-ne una de nova.</p>
+  <h3>Què canvia amb el compte</h3>
+  <ul>
+    <li>Les sortides es continuen desant al mòbil i, a més, se'n fa una còpia al núvol. Sense connexió es pujaran quan n'hi hagi.</li>
+    <li>Les sortides que ja tenies al mòbil passen al teu compte.</li>
+    <li>Les sortides del núvol són privades: només les veus tu. L'administració tampoc les veu.</li>
+  </ul>
+  <h3>Esborrar el compte</h3>
+  <p>A <span class="path">Configuració ▸ Compte ▸ Esborra el compte</span>, confirmant lliscant. S'esborren el compte, la teva fitxa, les sortides del núvol i tot el que hagis publicat o marcat al club. No es pot desfer. Les sortides del mòbil s'hi queden. Per seguretat, si fa estona que vas entrar, et demanarà tornar a entrar abans.</p>
+</section>
+
+<section class="sheet" id="c10" aria-labelledby="h10x">
+  <h2 id="h10x"><span class="n">10</span>Club</h2>
+  <p class="lead">Només per a socis amb l'alta aprovada. Té quatre seccions.</p>
+  <h3>Mur</h3>
+  <ul>
+    <li>Sortides publicades pels socis, amb resum, comentari i, si l'autor ho vol, la ruta (sense els primers i els últims 200 m, perquè no es vegi on viu ningú).</li>
+    <li>Reaccions: dit amunt, aplaudiment, cara d'ensurt i dit avall.</li>
+    <li><b>Filtres:</b> data, persones, ordre (més recents o més reaccions), vent fort (més de 16 kn), onada forta (més de 0,8 m) i embarcació.</li>
+    <li><b>Qui surt:</b> a dalt del mur. Prem <span class="ui">+ Anuncia que surts</span>, tria el dia (fins a 15 dies vista), l'hora i l'embarcació. Els altres premen <span class="ui">Hi vaig</span>. S'esborra l'endemà.</li>
+  </ul>
+  <h3>Avisos</h3>
+  <p>Comunicats de les comissions del club (Junta, Manteniment, Econòmica…). Hi publica qui forma part d'una comissió i té el permís per fer avisos. Si l'avís té una data d'activitat, desapareix l'endemà i surt una icona a la previsió de 7 dies; si no en té, dura fins que es retira. Marca'ls com a <span class="ui">Vist</span> perquè el punt vermell desaparegui.</p>
+  <ul>
+    <li><b>Qui s'apunta:</b> la comissió pot activar <span class="ui">Pregunta qui s'apunta</span>. Llavors l'avís porta el botó <span class="ui">M'hi apunto</span> i la llista de qui hi va.</li>
+    <li><b>Recordatori:</b> el dia abans i el mateix dia de l'activitat, en obrir l'app surt un recordatori, tant si t'hi has apuntat com si no. Des del recordatori també t'hi pots apuntar. Surt un cop al dia en cada mòbil i no surt mentre graves una sortida.</li>
+  </ul>
+  <div class="box info"><span class="t">Sense notificacions</span><p>L'app no envia notificacions al mòbil. Els avisos i els recordatoris els veus quan obres l'app.</p></div>
+  <h3>Anuncis</h3>
+  <p>Anuncis entre socis: tripulació, material o altres. Duren 15 dies per defecte (màxim 60). Qui hi està interessat prem <span class="ui">M'interessa</span>; només l'autor veu qui és, i hi contacta pel seu compte.</p>
+  <h3>Base</h3>
+  <ul>
+    <li>Mapa i llista de qui és <b>a l'aigua</b> i qui és <b>a la base</b>, amb els avisos de seguretat destacats.</li>
+    <li>Botons <span class="ui">Soc a la base</span> i <span class="ui">Marxo de la base</span>. Si vols, l'app et marca sola (capítol 11).</li>
+    <li>La presència s'esborra en marxar, en acabar la sortida o al cap de 24 hores.</li>
+  </ul>
+</section>
+
+<section class="sheet" id="c11" aria-labelledby="h11x">
+  <h2 id="h11x"><span class="n">11</span>Confidencialitat i amistats</h2>
+  <p class="lead">Per defecte tot és privat, i tu tries què comparteixes i amb qui, a <span class="path">Configuració ▸ Confidencialitat</span>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Què</th><th>Per defecte</th><th>Pots triar</th></tr></thead>
+    <tbody>
+      <tr><td>Publicacions al mur</td><td>El club</td><td>Tothom · El club · Amistats (i en cada publicació)</td></tr>
+      <tr><td>On ets (base o aigua, amb la posició navegant)</td><td>El club</td><td>Tothom · El club · Amistats · Ningú</td></tr>
+      <tr><td>Avisos de seguretat en ruta</td><td>El club + gent a la base</td><td>Tothom · El club · Amistats · Ningú</td></tr>
+      <tr><td>Qui surt</td><td>El club</td><td>Tothom · El club · Amistats</td></tr>
+      <tr><td>Anuncis</td><td>El club</td><td>Tothom · El club · Amistats</td></tr>
+    </tbody>
+  </table></div>
+  <dl class="defs">
+    <dt>Tothom</dt><dd>Qualsevol persona amb l'alta aprovada a l'app (avui, el club; més endavant, també altres clubs).</dd>
+    <dt>El club</dt><dd>La gent del teu club amb l'alta aprovada.</dd>
+    <dt>Amistats</dt><dd>Les persones que heu acceptat mútuament.</dd>
+    <dt>Ningú</dt><dd>No es comparteix. Si tens els avisos a «Ningú» i prems «Avisa el club», l'avís s'envia igualment al club.</dd>
+  </dl>
+  <h3>Marca'm a la base automàticament</h3>
+  <p>Opcional i desactivat per defecte. Amb l'app oberta, després de 10 minuts a menys de 50 m de la base et marca a la base; després de 2 minuts a més de 200 m, et treu. Gasta poca bateria.</p>
+  <h3>Amistats</h3>
+  <p>Amb el botó rodó de baix a la dreta de la pestanya Club, cerca una persona pel nom i prem <span class="ui">Afegeix</span>. Quan accepti, sereu amistats i podreu compartir coses només entre vosaltres.</p>
+</section>
+
+<section class="sheet" id="c12" aria-labelledby="h12x">
+  <h2 id="h12x"><span class="n">12</span>Configuració</h2>
+  <dl class="defs">
+    <dt>Compte</dt><dd>Entrar, sortir, posar contrasenya i esborrar el compte.</dd>
+    <dt>Administració</dt><dd>Només si tens algun permís (capítol 13).</dd>
+    <dt>Confidencialitat</dt><dd>Qui veu cada cosa (capítol 11).</dd>
+    <dt>Ubicació</dt><dd>El Masnou o Badalona. Canvia la previsió, l'onatge, l'estació, la bandera i els avisos de Meteocat. L'estació de Badalona és a Dalt de la Vila, a uns 600 m del mar i en alçada: pot marcar menys vent que a la platja.</dd>
+    <dt>Visualització</dt><dd>Tema automàtic, fosc o clar, i mida del text Petita o Gran.</dd>
+    <dt>Model de previsió</dt><dd>Capítol 4.</dd>
+    <dt>Criteris</dt><dd>Llindars de vent, ratxa i onada de l'embarcació triada. Es desen al mòbil.</dd>
+  </dl>
+</section>
+
+<section class="sheet" id="c13" aria-labelledby="h13x">
+  <h2 id="h13x"><span class="n">13</span>Administració del club</h2>
+  <p class="lead">Per a la junta i les persones amb permisos. La resta de socis pot saltar aquest capítol.</p>
+  <h3>Permisos</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Permís</th><th>Què permet</th></tr></thead>
+    <tbody>
+      <tr><td>Altes</td><td>Aprovar, rebutjar o treure l'accés a socis</td></tr>
+      <tr><td>Rols</td><td>Assignar comissions i crear, reanomenar o eliminar comissions</td></tr>
+      <tr><td>Permisos</td><td>Donar permisos a altres socis</td></tr>
+      <tr><td>Avisos</td><td>Publicar avisos de les comissions de què formes part</td></tr>
+      <tr><td>Seguretat</td><td>Marcar com a resolts els avisos de seguretat en ruta</td></tr>
+      <tr><td>Moderar</td><td>Retirar publicacions, «Qui surt» i anuncis d'altres socis del club</td></tr>
+    </tbody>
+  </table></div>
+  <p>Ningú no es pot canviar l'estat ni els permisos a si mateix. La Junta no es pot eliminar perquè la fan servir els avisos de seguretat.</p>
+  <h3>Web de gestió</h3>
+  <p>Des de <span class="path">Configuració ▸ Administració</span>, l'administració i les persones amb rol premium obren la web de gestió del club: llista de socis amb cerca i filtres, fitxa de cada soci, comissions, <b>rols</b> (paquets de permisos amb nom, com Secretaria, Comunicació, Coordinació o Monitoratge) i exportació en CSV. L'administració general, a més, gestiona tots els clubs i usuaris.</p>
+</section>
+
+<section class="sheet" id="c14" aria-labelledby="h14x">
+  <h2 id="h14x"><span class="n">14</span>Problemes freqüents</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Què passa</th><th>Què fer</th></tr></thead>
+    <tbody>
+      <tr><td>«No es troba senyal GPS»</td><td>Surt a l'aire lliure i espera un minut. Comprova que l'app té la ubicació permesa.</td></tr>
+      <tr><td>La ruta té trams discontinus</td><td>La pantalla es va apagar (navegador o iPhone) o Android va tancar l'app. A Android, comprova que l'app té permís d'ubicació i posa la bateria a «Sense restriccions» (botó «Obre els ajustos» a la pestanya Sortida).</td></tr>
+      <tr><td>No m'arriba l'enllaç per correu</td><td>Mira el correu brossa i espera uns minuts. Obre'l al mateix mòbil. Si ha caducat, demana'n un de nou.</td></tr>
+      <tr><td>A l'app d'Android no hi ha «Entra amb Google»</td><td>És normal. Entra amb correu i contrasenya o amb l'enllaç. Si tenies compte amb Google, prem «He oblidat la contrasenya» per posar-ne una.</td></tr>
+      <tr><td>No veig la pestanya Club plena</td><td>La teva alta encara és pendent. Parla amb la junta.</td></tr>
+      <tr><td>L'estació marca menys vent que a l'aigua</td><td>Passa sobretot a Badalona, on l'estació és lluny del mar. Mira també la previsió i la webcam.</td></tr>
+      <tr><td>«Memòria plena: no es pot desar la ruta»</td><td>Allibera espai al mòbil, fes una còpia de seguretat i esborra sortides velles.</td></tr>
+      <tr><td>No veig els canvis nous de l'app</td><td>Tanca-la del tot i torna-la a obrir. S'actualitza sola.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sheet" id="c15" aria-labelledby="h15x">
+  <h2 id="h15x"><span class="n">15</span>Dades, privacitat i avís legal</h2>
+  <h3>D'on vénen les dades</h3>
+  <ul>
+    <li><b>Previsió:</b> Open-Meteo (models AROME, ICON-EU, ECMWF i UKMO; onatge MFWAM).</li>
+    <li><b>Vent mesurat:</b> estacions d'Ocata, El Masnou i Badalona, de meteoelmasnou.cat.</li>
+    <li><b>Onada mesurada:</b> boia Barcelona II de Ports de l'Estat.</li>
+    <li><b>Avisos:</b> Meteocat. <b>Bandera de les platges:</b> Generalitat de Catalunya.</li>
+    <li><b>Mapes:</b> meteoblue, Windy, RainViewer (radar), OpenStreetMap i OpenSeaMap (carta nàutica).</li>
+    <li><b>Webcams:</b> Nàutic Masnou i Club Natació Badalona, a través de meteoelmasnou.cat.</li>
+  </ul>
+  <p>Vent en nusos, onades en metres. Les previsions poden fallar i les estacions poden deixar de funcionar.</p>
+  <h3>Les teves dades</h3>
+  <ul>
+    <li><b>Sense compte,</b> tot queda al teu mòbil.</li>
+    <li><b>Amb compte,</b> es desen el nom, el correu, la data d'acceptació i les sortides que hi pugis, a Google Firebase, en servidors de la Unió Europea. Responsable: Club Ocata Vent (El Masnou).</li>
+    <li>No es ven ni es cedeix res, i el correu no s'envia a cap altre servei.</li>
+    <li>Pots esborrar el compte i totes les dades del núvol des de l'app. Per consultar-les o corregir-les, adreça't a la junta.</li>
+    <li>Només per a majors de 18 anys.</li>
+  </ul>
+  <div class="box warn"><span class="t">Avís legal</span><p>Ocata Vent és una eina d'ajuda gratuïta per als socis. La decisió de sortir a navegar i la seguretat a l'aigua són responsabilitat de cada navegant. L'app no substitueix l'emissora VHF (canal 16), el 112, les indicacions del club ni la normativa de la platja i del port.</p></div>
+</section>
+
+<footer class="doc-foot">Guia d'Ocata Vent · versió 2.0 · octubre de 2026 · Club Ocata Vent, El Masnou</footer>
+</div>
+</body>
+</html>
