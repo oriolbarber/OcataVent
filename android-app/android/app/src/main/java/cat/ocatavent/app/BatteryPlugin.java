@@ -1,6 +1,5 @@
 package cat.ocatavent.app;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -13,7 +12,9 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 /* Ocata Vent: comprova si l'app està exclosa de l'optimització de bateria (perquè Android no aturi la gravació)
-   i obre el diàleg del sistema per excloure-la. Web: window.Capacitor.Plugins.OvBattery.check() / open(). */
+   i obre els ajustos de l'app perquè el soci triï Bateria ▸ Sense restriccions.
+   No fa servir REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (permís restringit al Google Play): ni check() ni open() el necessiten.
+   Web: window.Capacitor.Plugins.OvBattery.check() / open(). */
 @CapacitorPlugin(name = "OvBattery")
 public class BatteryPlugin extends Plugin {
     @PluginMethod
@@ -24,16 +25,16 @@ public class BatteryPlugin extends Plugin {
         call.resolve(r);
     }
 
-    @SuppressLint("BatteryLife")
+    // Fitxa de l'app (Informació de l'app ▸ Bateria). Si el fabricant no la deixa obrir, la llista d'optimització de bateria.
     @PluginMethod
     public void open(PluginCall call) {
         Context c = getContext();
         try {
-            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + c.getPackageName()));
+            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + c.getPackageName()));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             c.startActivity(i);
         } catch (Exception e) {
-            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + c.getPackageName()));
+            Intent i = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             c.startActivity(i);
         }

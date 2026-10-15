@@ -738,13 +738,13 @@ async function batCheck(){
   let ign = null; if(P){ try{ ign = (await P.check()).ignoring; }catch(e){} }
   let man = false; try{ man = localStorage.getItem(BAT_K) === where; }catch(e){}
   if(ign === true) say("ok", "A punt", "Android no aturarà la gravació: l'app no té restriccions de bateria.", null);
-  else if(ign === false) say("pm-info", "Revisa", "Android pot aturar la gravació per estalviar bateria. Toca «Treu la restricció» i tria <b>Permet</b>.", "Treu la restricció");
+  else if(ign === false) say("pm-info", "Revisa", "Android pot aturar la gravació per estalviar bateria. Toca «Obre els ajustos» i, a <b>Bateria</b>, tria <b>Sense restriccions</b>.", "Obre els ajustos");
   else if(man) say("ok", "A punt", `Has confirmat que ${where} no té restriccions de bateria.`, null);
   else say("pm-info", "Revisa", `Perquè Android no aturi la gravació: Ajustaments ▸ Aplicacions ▸ ${where} ▸ Bateria ▸ <b>Sense restriccions</b>. Quan ho tinguis, toca «Ja ho he fet».`, "Ja ho he fet");
 }
 document.addEventListener("click", e => { if(e.target.id !== "pmBatBtn") return;
   const P = window.OV_NATIVE && window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.OvBattery;
-  if(P && e.target.textContent === "Treu la restricció"){ P.open().catch(() => {}); return; }   // en tornar a l'app es torna a comprovar
+  if(P && e.target.textContent === "Obre els ajustos"){ P.open().catch(() => {}); return; }   // fitxa de l'app; en tornar a l'app es torna a comprovar
   try{ localStorage.setItem(BAT_K, window.OV_NATIVE ? "Ocata Vent" : "Chrome"); }catch(_){}
   permCheck();
 });
