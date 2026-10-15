@@ -16,6 +16,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 ## Normes de l'app (no negociables)
 - **Res obre un navegador extern:** ni enllaços amb `target=_blank` ni iframes que puguin navegar. Els iframes de tercers porten `sandbox="allow-scripts allow-same-origin"`.
 - **Tot gran i clar:** mentre navegues, el mòbil s'ha de poder llegir d'un cop d'ull.
+- **Aprofita l'espai (a cada millora):** text en línia i no apilat; dades curtes a la mateixa fila; accions secundàries com a icones a la fila del peu; res en columnes estretes que obliguin a partir paraules. Comprova-ho a 400 px d'amplada.
 - **Esborrar o descartar:** sempre amb confirmació lliscant (`slideConfirm`).
 - **Explicacions llargues:** dins un botó (i), no a la vista.
 - **Mida de lletra:** «Petita / Gran» (mai «Normal»).
@@ -50,6 +51,8 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - `publicacions/{uid}_{tripId}`: còpia del resum (no enllaç a la sortida privada), ruta opcional simplificada i sense els 200 m inicials i finals, `reaccions` = mapa {uid: up|clap|wow|down}.
 - `intencions` (avui, demà o fins a 15 dies vista; s'apunten amb el mapa `apuntats`; cada una mostra la idoneïtat d'aquella hora i les 2 següents per a l'embarcació, amb `scoreHour` — `intentFit` a `club.js` —, també al formulari), `avisos` (hi publiquen membres de la comissió amb el permís `avisos`; administració i premium, a qualsevol comissió; l'autor els edita; `data` opcional de l'activitat: amb data caduquen l'endemà i surten amb una icona a la previsió de 7 dies via `window.OV_EVENTS`; sense data no caduquen; mapa `vist`; opcional `inscripcio` = «Pregunta qui s'apunta» → botó «M'hi apunto» i mapa `apuntats` {uid: nom}, cadascú la seva clau; **recordatori** `remindEvents`: en obrir o tornar a l'app, full amb els avisos amb data de demà i d'avui, per a tothom que els veu, un cop per avís i dia en aquest mòbil (`ov2_avis_pop`); no surt mentre es grava una sortida; no hi ha notificacions push), `anuncis` (data de caducitat, per defecte +15 dies, màxim 60; + subcol·lecció `interessats`, només la veu l'autor), `presencia/{uid}` (base o aigua).
 - «Qui surt» compacte: indicador d'idoneïtat petit (`miniGauge`) a la cantonada dreta, botó a sota; vent/onada en una línia del color del veredicte.
+- Avisos compactes: data de l'activitat a la capçalera; autor, data, «s'esborra», vistos, Edita (llapis), Retira (paperera) i Marca en una fila. Plegats: barra del color de la comissió, títol i data curta.
+- Reaccions: `react` només redibuixa la fila (`paintReacts`), bloqueja dobles tocs, rellegeix el document per tenir el recompte real i mostra l'error al costat.
 - Avisos vistos: es pleguen en una línia 1 h després de marcar-los (`AV_FOLD`; hora local a `ov2_avis_vist`; vistos des d'un altre mòbil, plegats). Es despleguen tocant-los i es tornen a plegar amb la fletxa.
 - Mur: lliscar una sortida → arxiva, ← esborra (`ov2_mur_arx_{uid}` / `ov2_mur_del_{uid}`, només en aquest mòbil), amb «Desfés» 6 s. Si és pròpia, ← la retira del mur per a tothom quan s'acaba el temps de desfer. Filtres ▸ Mostra: Mur / Arxivades.
 - Base nàutica del Club Ocata Vent: 41.479804, 2.324024 (`LOCS.masnou.home` a `app.js`).

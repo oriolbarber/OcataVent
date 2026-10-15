@@ -38,6 +38,9 @@ const murL = k => store.get(murK(k)) || [];
 function murSet(k, id, on){ const L = murL(k).filter(x => x !== id); if(on) L.unshift(id); store.set(murK(k), L.slice(0, 400)); }
 const ARX = svgI('<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>', 24);
 const BIN = svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', 24);
+const PENC = svgI('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>', 20);
+const BIN_S = svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', 20);
+const dayShort = d => new Date(d + "T12:00").toLocaleDateString("ca", {weekday:"short", day:"numeric"});
 const CHEV = svgI('<path d="M6 9l6 6 6-6"/>', 20);
 const EYE = svgI('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 22);
 const SEEN = svgI('<path d="M2 13l4 4L16 7"/><path d="M10 15l2 2L22 7"/>', 22);
@@ -273,8 +276,7 @@ function card(p){
     <div class="cl-head cl-foot"><span class="cl-av" aria-hidden="true">${esc(initials(p.nom))}</span>
       <div class="cl-who"><b>${esc(p.nom)}</b><span>${esc(boatShort(p.act))} · ${esc(dayStr(p.inici))}</span></div>
       <span class="cl-boat">${typeof boatIcon === "function" ? boatIcon(p.act) : ""}</span></div>
-    <div class="cl-reacts" role="group" aria-label="Reaccions">${REACTS.map(r => `<button type="button" class="cl-r" data-react="${r.k}" data-pub="${esc(p.id)}" aria-pressed="${my === r.k}" aria-label="${r.l}">${svgI(r.p, 22, r.rot)}${cnt(r.k) ? `<span>${cnt(r.k)}</span>` : ""}</button>`).join("")}
-      ${mine ? `<button type="button" class="btn sm cl-edit" data-editpub="${esc(p.id)}">Edita</button>` : ""}</div>
+    <div class="cl-reacts" role="group" aria-label="Reaccions" data-rpub="${esc(p.id)}">${reactsHtml(p)}</div>
     ${!mine && canMod() ? modBtn("publicacions", p) + `<div data-delbox="${esc(p.id)}"></div>` : ""}
   </article>`;
 }
@@ -314,17 +316,17 @@ function renderAvisos(){
   const coms = canPost(), mine = C.member.comissions || [];
   return foldFilters("avis", ui.avisCom === "totes" ? "" : COMSm()[ui.avisCom], ui.avisOpen, [["totes", "Totes"]].concat(Object.entries(COMSm())).map(([k, t]) => chip("data-acom", k, ui.avisCom === k, t)).join(""))
     + `${L.map(a => { const seen = !!(a.vist || {})[uid()], n = Object.keys(a.vist || {}).length, own = a.userId === uid(), del = own || C.isAdm || mine.includes(a.comissio) || canMod();
-      if(folded(a)) return `<button type="button" class="card cl-avis cl-avmini c-${esc(a.comissio)}" data-avopen="${esc(a.id)}" aria-expanded="false" aria-label="${esc(a.titol)}. Vist. Toca per obrir-lo">
-        <span class="cl-badge">${esc(COMSm()[a.comissio] || a.comissio)}</span>${a.fixat ? `<span class="cl-pin" aria-label="Fixat">${PIN}</span>` : ""}<b>${esc(a.titol)}</b>${a.data ? `<span class="cl-date">${CAL}${esc(dayStr(new Date(a.data + "T12:00")))}</span>` : ""}${CHEV}</button>`;
+      if(folded(a)) return `<button type="button" class="card cl-avis cl-avmini c-${esc(a.comissio)}" data-avopen="${esc(a.id)}" aria-expanded="false" aria-label="${esc(COMSm()[a.comissio] || a.comissio)}: ${esc(a.titol)}. Vist. Toca per obrir-lo">
+        ${a.fixat ? `<span class="cl-pin" aria-hidden="true">${PIN}</span>` : ""}<b>${esc(a.titol)}</b>${a.data ? `<span class="cl-date">${esc(dayShort(a.data))}</span>` : ""}${a.inscripcio && (a.apuntats || {})[uid()] ? `<span class="cl-mok" aria-hidden="true">✓</span>` : ""}${CHEV}</button>`;
       return `<article class="card cl-avis c-${esc(a.comissio)}${seen ? "" : " unread"}">
-        <div class="cl-avh"><span class="cl-badge">${esc(COMSm()[a.comissio] || a.comissio)}</span>${a.fixat ? `<span class="cl-pin">${PIN}Fixat</span>` : ""}<span class="cl-date">${esc(dayStr(ms(a.creat) || now()))}</span>${seen ? `<button type="button" class="cl-avfold" data-avfold="${esc(a.id)}" aria-expanded="true" aria-label="Plega l'avís">${CHEV}</button>` : ""}</div>
+        <div class="cl-avh"><span class="cl-badge">${esc(COMSm()[a.comissio] || a.comissio)}</span>${a.fixat ? `<span class="cl-pin" aria-label="Fixat">${PIN}</span>` : ""}${a.data ? `<span class="cl-event">${CAL}<b>${esc(dayLong(a.data))}</b></span>` : ""}${seen ? `<button type="button" class="cl-avfold" data-avfold="${esc(a.id)}" aria-expanded="true" aria-label="Plega l'avís">${CHEV}</button>` : ""}</div>
         <h3 class="cl-atitle">${esc(a.titol)}</h3>
-        ${a.data ? `<div class="cl-event">${CAL}<b>${esc(dayLong(a.data))}</b></div>` : ""}
-        <p class="cl-text">${esc(a.text)}</p>
+        ${a.text ? `<p class="cl-text">${esc(a.text)}</p>` : ""}
         ${a.inscripcio ? signRow(a) : ""}
-        <div class="cl-afoot"><div class="cl-who"><span>${esc(a.autorNom || "")} · ${esc(COMSm()[a.comissio] || "")}${a.editat ? " · editat" : ""}</span><span>${a.data ? "Desapareix l'endemà" : "Fins que es retiri"} · <span class="cl-nv" aria-label="vist per ${n}">${EYE_S}${n}</span></span></div>
+        <div class="cl-afoot"><div class="cl-meta">${esc(a.autorNom || "")} · ${esc(dayStr(ms(a.creat) || now()))}${a.editat ? " · editat" : ""} · ${a.data ? "s'esborra l'endemà" : "fins que es retiri"} · <span class="cl-nv" aria-label="vist per ${n}">${EYE_S}${n}</span></div>
+          ${own ? `<button type="button" class="cl-ib2" data-editavis="${esc(a.id)}" aria-label="Edita l'avís">${PENC}</button>` : ""}${del ? `<button type="button" class="cl-ib2" data-askdel="avisos" data-id="${esc(a.id)}" aria-label="Retira l'avís">${BIN_S}</button>` : ""}
           <button type="button" class="btn cl-seen" data-seen="${esc(a.id)}" aria-pressed="${seen}" aria-label="${seen ? "Vist. Toca per desmarcar" : "Marca com a vist"}">${seen ? SEEN : EYE}<small>${seen ? "Vist" : "Marca"}</small></button></div>
-        ${own || del ? `<div class="cl-row2">${own ? `<button type="button" class="btn sm" data-editavis="${esc(a.id)}">Edita</button>` : "<span></span>"}${del ? `<button type="button" class="btn sm" data-askdel="avisos" data-id="${esc(a.id)}">Retira l'avís</button>` : ""}</div><div data-delbox="${esc(a.id)}"></div>` : ""}</article>`; }).join("")
+        ${del ? `<div data-delbox="${esc(a.id)}"></div>` : ""}</article>`; }).join("")
       || `<article class="card empty">${D.at.avisos ? "No hi ha cap avís." : "Carregant…"}</article>`}
     ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Hi publiquen les comissions amb permís per fer avisos${mine.length ? ". Tu hi publiques com a: " + esc(mine.map(k => COMSm()[k]).join(", ")) : ""}.</p>` : ""}`;
 }
@@ -497,7 +499,7 @@ function intentSheet(){
 const signTxt = n => n === 0 ? "Encara no s'hi ha apuntat ningú" : n === 1 ? "1 persona s'hi apunta" : n + " persones s'hi apunten";
 function signRow(a){
   const ap = a.apuntats || {}, n = Object.keys(ap).length, on = !!ap[uid()];
-  return `<div class="cl-int cl-avsign"><div class="cl-who"><b>${signTxt(n)}</b>${n ? `<span>${esc(Object.values(ap).join(", "))}</span>` : ""}</div>
+  return `<div class="cl-avsign"><div class="cl-signt"><b>${n ? n : "Ningú"}</b> ${n === 1 ? "s'hi apunta" : n ? "s'hi apunten" : "s'hi ha apuntat encara"}${n ? `<span>: ${esc(Object.values(ap).join(", "))}</span>` : ""}</div>
     <button type="button" class="btn cl-go" data-avjoin="${esc(a.id)}" aria-pressed="${on}">${on ? "Hi vas ✓" : "M'hi apunto"}</button></div>`;
 }
 
@@ -590,12 +592,32 @@ function anunciSheet(a){
 }
 
 /* ---------- accions ---------- */
+// Reaccions: només es redibuixa la fila de la sortida (no els mapes ni el desplaçament); un toc alhora per sortida
+const reactBusy = {};
+function reactsHtml(p){
+  const rc = p.reaccions || {}, my = rc[uid()], cnt = k => Object.values(rc).filter(x => x === k).length;
+  return REACTS.map(r => `<button type="button" class="cl-r" data-react="${r.k}" data-pub="${esc(p.id)}" aria-pressed="${my === r.k}" aria-label="${r.l}${cnt(r.k) ? ": " + cnt(r.k) : ""}">${svgI(r.p, 22, r.rot)}${cnt(r.k) ? `<span>${cnt(r.k)}</span>` : ""}</button>`).join("")
+    + (p.userId === uid() ? `<button type="button" class="btn sm cl-edit" data-editpub="${esc(p.id)}">Edita</button>` : "");
+}
+function paintReacts(p, err){
+  const g = document.querySelector(`#clubView .cl-reacts[data-rpub="${CSS.escape(p.id)}"]`); if(!g){ render(); return; }
+  g.innerHTML = reactsHtml(p);
+  const m = g.parentElement.querySelector(".cl-rerr"); if(m) m.remove();
+  if(err) g.insertAdjacentHTML("afterend", `<p class="cl-rerr" role="alert">${esc(err)}</p>`);
+}
 async function react(pid, k){
-  const p = D.pubs.find(x => x.id === pid); if(!p) return;
-  const before = Object.assign({}, p.reaccions), cur = before[uid()], nv = cur === k ? null : k;
-  p.reaccions = Object.assign({}, before); if(nv) p.reaccions[uid()] = nv; else delete p.reaccions[uid()]; render();
-  try{ await TO(C.F.updateDoc(ref("publicacions", pid), {["reaccions." + uid()]: nv || C.F.deleteField()})); }
-  catch(e){ p.reaccions = before; render(); say(errText(e)); }
+  const p = D.pubs.find(x => x.id === pid); if(!p || reactBusy[pid]) return;
+  reactBusy[pid] = true;
+  const before = Object.assign({}, p.reaccions), nv = before[uid()] === k ? null : k;
+  p.reaccions = Object.assign({}, before); if(nv) p.reaccions[uid()] = nv; else delete p.reaccions[uid()];
+  paintReacts(p);
+  try{
+    await TO(C.F.updateDoc(ref("publicacions", pid), {["reaccions." + uid()]: nv || C.F.deleteField()}));
+    const d = await C.F.getDoc(ref("publicacions", pid)).catch(() => null);   // recompte real (inclou les d'altres)
+    if(d && d.exists()) p.reaccions = d.data().reaccions || {};
+    paintReacts(p);
+  }catch(e){ p.reaccions = before; paintReacts(p, "La reacció no s'ha desat. " + errText(e)); }
+  finally{ delete reactBusy[pid]; }
 }
 async function hideDoc(n, id){
   try{ await TO(C.F.updateDoc(ref(n, id), {amagat:C.F.arrayUnion(C.member.clubId)}));
