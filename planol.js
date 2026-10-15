@@ -101,6 +101,10 @@ const t2lon = (x, z) => x / 2**z * 360 - 180;
 const t2lat = (y, z) => { const n = Math.PI - 2*Math.PI*y / 2**z; return Math.atan(Math.sinh(n)) / D2R; };
 const lon2t = (lon, z) => (lon + 180) / 360 * 2**z;
 const lat2t = (lat, z) => (1 - Math.log(Math.tan(lat*D2R) + 1/Math.cos(lat*D2R)) / Math.PI) / 2 * 2**z;
+// Gira (a graus) i escala (k) el fons al voltant del punt c, sense que c es mogui
+function bgAround(c, a, k){ const b = doc.bg; const [vx, vy] = rot((b.dx - c[0]) * k, (b.dy - c[1]) * k, a);
+  b.dx = c[0] + vx; b.dy = c[1] + vy; b.r = (((b.r + a) % 360) + 540) % 360 - 180; b.s *= k; }
+const viewC = () => [view.x + view.w/2, view.y + view.w*aspect()/2];
 function bgTransform(){ const b = doc.bg; return `translate(${b.dx} ${b.dy}) rotate(${b.r}) scale(${b.s})`; }
 function drawBg(){
   const g = $("gBg"), b = doc.bg, S = SRC[b.src] || SRC.cap; $("attr").textContent = S.attr;
@@ -174,6 +178,11 @@ function drawUi(){
   for(const m of [measure, calib && calib.a && {a:calib.a, b:calib.b || calib.hover}].filter(Boolean)) if(m.a && m.b){ const d = Math.hypot(m.b[0]-m.a[0], m.b[1]-m.a[1]);
     h += `<g pointer-events="none"><line x1="${m.a[0]}" y1="${m.a[1]}" x2="${m.b[0]}" y2="${m.b[1]}" stroke="#ffcf33" stroke-width="${lw*2.5}"/><line x1="${m.a[0]}" y1="${m.a[1]}" x2="${m.b[0]}" y2="${m.b[1]}" stroke="#0a1322" stroke-width="${lw}" stroke-dasharray="${lw*4} ${lw*4}"/>`
       + `<text x="${(m.a[0]+m.b[0])/2}" y="${(m.a[1]+m.b[1])/2 - 10/ppm()}" font-size="${14/ppm()}" text-anchor="middle" class="tx measure">${fmt(d)} m</text></g>`; }
+  if(tool === "bg" && !calib && doc.bg.src !== "cap"){ const c = viewC(), R = Math.min(view.w, view.w*aspect()) * .32, a = doc.bg.r * D2R, hx = c[0] + Math.cos(a - Math.PI/2)*R, hy = c[1] + Math.sin(a - Math.PI/2)*R;
+    h += `<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="none" stroke="#ffcf33" stroke-width="${lw*1.5}" stroke-dasharray="${lw*6} ${lw*4}" pointer-events="none"/>`
+      + `<line x1="${c[0]}" y1="${c[1]}" x2="${hx}" y2="${hy}" stroke="#ffcf33" stroke-width="${lw*1.5}" pointer-events="none"/><circle cx="${c[0]}" cy="${c[1]}" r="${H*.6}" fill="#ffcf33" pointer-events="none"/>`
+      + `<circle class="h-bgrot" cx="${hx}" cy="${hy}" r="${H*1.6}" fill="#ffcf33" stroke="#0a1322" stroke-width="${lw*1.5}"/>`
+      + `<text x="${hx}" y="${hy}" font-size="${H*1.7}" text-anchor="middle" dominant-baseline="central" pointer-events="none" fill="#0a1322">⟳</text>`; }
   $("gUi").innerHTML = h;
 }
 function all(){ setView(); drawBg(); drawObjs(); panel(); btns(); }
@@ -187,7 +196,7 @@ const TIPS = {
   poly:"Clica els vèrtexs · clica el primer punt o prem Retorn per tancar · Esc per cancel·lar",
   point:"Clica on vols el punt de servei.",
   measure:"Arrossega per mesurar una distància.",
-  bg:"Arrossega per moure la foto · roda: escala · Maj+roda: gira"
+  bg:"Arrossega per moure la foto · roda: escala · cercle groc ⟳, Maj+roda o [ ]: gira"
 };
 function setTool(t){ tool = t; draft = null; measure = null; calib = null; askDel = false; if(t !== "sel") sel.clear(); tip(TIPS[t], 6000); all(); }
 
@@ -210,6 +219,8 @@ function panel(){
       <p class="note">Ajusta-la fins que les embarcacions (mida real) hi encaixin. ${TIPS.bg}.</p>
       <div class="row3">${field("Escala %", `<input type="number" data-bg="s" value="${Math.round(b.s*1000)/10}" step="0.5">`)}${field("Gir °", `<input type="number" data-bg="r" value="${r2(b.r)}" step="0.5">`)}${field("Opacitat", `<input type="number" data-bg="op" value="${Math.round(b.op*100)}" step="5" min="0" max="100">`)}</div>
       <div class="row2">${field("Despl. x (m)", `<input type="number" data-bg="dx" value="${r2(b.dx)}" step="0.1">`)}${field("Despl. y (m)", `<input type="number" data-bg="dy" value="${r2(b.dy)}" step="0.1">`)}</div>
+      <div><span class="lbl">Gira la foto</span><div class="chips" style="margin-top:4px">${[[-5, "↺ 5°"], [-1, "↺ 1°"], [-.1, "↺ 0,1°"], [.1, "↻ 0,1°"], [1, "↻ 1°"], [5, "↻ 5°"]].map(([a, t]) => `<button class="chip" data-bgrot="${a}">${t}</button>`).join("")}</div>
+        <p class="note" style="margin-top:4px">També arrossegant el cercle groc ⟳, amb Maj+roda o girant amb dos dits.</p></div>
       <button class="tb" id="calib" aria-pressed="${!!calib}">Calibra amb una mesura</button>
       ${calib ? `<p class="note">${!calib.a ? "Clica un extrem d'una cosa de mida coneguda a la foto (un patí, un edifici)." : !calib.b ? "Clica l'altre extrem." : ""}</p>${calib.b ? `${field("Mida real (m)", `<input type="number" id="calibM" step="0.01" value="5.6">`)}<button class="tb" id="calibOk">Aplica l'escala</button>` : ""}` : ""}
       <button class="tb" id="bgReset">Torna a l'ajust inicial</button>`; }
@@ -249,6 +260,7 @@ $("side").addEventListener("click", e => {
   if(d.cplace){ cur.place = d.cplace; panel(); return; }
   if(d.cpoly){ cur.poly = d.cpoly; if(draft) draft.t = d.cpoly; panel(); drawUi(); return; }
   if(d.cpoint){ cur.point = d.cpoint; panel(); return; }
+  if(d.bgrot){ snapshot(); bgAround(viewC(), +d.bgrot, 1); save(); drawBg(); drawUi(); panelLater(); return; }
   if(d.bgsrc){ snapshot(); doc.bg.src = d.bgsrc; save(); all(); return; }
   if(b.id === "closePoly"){ finishPoly(); return; }
   if(b.id === "bgFile"){ $("bgFileIn").click(); return; }
@@ -262,6 +274,8 @@ $("side").addEventListener("click", e => {
   if(b.id === "delNo"){ askDel = false; panel(); return; }
   if(b.id === "rowGo"){ makeRow(); return; }
 });
+$("side").addEventListener("input", e => { const t = e.target; if(!t.dataset.bg) return; const k = t.dataset.bg, v = parseFloat(String(t.value).replace(",", ".")); if(!isFinite(v)) return;
+  doc.bg[k] = k === "s" ? Math.max(.01, v/100) : k === "op" ? Math.max(0, Math.min(1, v/100)) : v; save(); drawBg(); drawUi(); });
 $("side").addEventListener("change", e => {
   const t = e.target;
   if(t.id === "bgFileIn"){ const f = t.files[0]; if(!f) return; const rd = new FileReader();
@@ -326,6 +340,7 @@ const ptrs = new Map();
 function hitId(ev){ const g = ev.target.closest && ev.target.closest("[data-id]"); return g ? g.dataset.id : null; }
 svg.addEventListener("pointerdown", ev => {
   svg.setPointerCapture(ev.pointerId); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
+  if(ptrs.size === 2 && tool === "bg"){ const [a, b] = [...ptrs.values()]; if(drag && drag.bg){ /* ja hi havia un dit movent */ } snapshot(); drag = {bgpinch:true, d0:Math.hypot(a[0]-b[0], a[1]-b[1]), a0:Math.atan2(b[1]-a[1], b[0]-a[0]) / D2R}; return; }
   if(ptrs.size === 2){ const [a, b] = [...ptrs.values()]; drag = {pinch:true, d0:Math.hypot(a[0]-b[0], a[1]-b[1]), w0:view.w, c:toWorld({clientX:(a[0]+b[0])/2, clientY:(a[1]+b[1])/2})}; return; }
   const p = toWorld(ev);
   if(ev.button === 1 || ev.button === 2){ drag = {pan:true, sx:ev.clientX, sy:ev.clientY, v:{...view}}; svg.classList.add("panning"); return; }
@@ -337,6 +352,7 @@ svg.addEventListener("pointerdown", ev => {
     if(draft.pts.length >= 3 && Math.hypot(p[0]-draft.pts[0][0], p[1]-draft.pts[0][1]) < 10/ppm()){ finishPoly(); return; }
     draft.pts.push(p); drawUi(); panel(); return; }
   if(tool === "measure"){ measure = {a:p, b:p}; drag = {measure:true}; drawUi(); return; }
+  if(tool === "bg" && ev.target.classList.contains("h-bgrot")){ snapshot(); const c = viewC(); drag = {bgrot:true, c, a0:Math.atan2(p[1]-c[1], p[0]-c[0]) / D2R}; return; }
   if(tool === "bg"){ if(calib){ if(!calib.a) calib.a = p; else if(!calib.b) calib.b = p; else { calib.a = p; calib.b = null; } panel(); drawUi(); return; }
     snapshot(); drag = {bg:true, p0:p, dx:doc.bg.dx, dy:doc.bg.dy}; return; }
   // selecció
@@ -354,12 +370,17 @@ svg.addEventListener("pointerdown", ev => {
 svg.addEventListener("pointermove", ev => {
   if(ptrs.has(ev.pointerId)) ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
   const p = toWorld(ev);
+  if(drag && drag.bgpinch && ptrs.size === 2){ const [a, b] = [...ptrs.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]), an = Math.atan2(b[1]-a[1], b[0]-a[0]) / D2R;
+    const c = toWorld({clientX:(a[0]+b[0])/2, clientY:(a[1]+b[1])/2}); let da = an - drag.a0; if(da > 180) da -= 360; if(da < -180) da += 360;
+    bgAround(c, da, d / Math.max(10, drag.d0)); drag.d0 = d; drag.a0 = an; drawBg(); drawUi(); return; }
   if(drag && drag.pinch && ptrs.size === 2){ const [a, b] = [...ptrs.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]); zoomAt(drag.c, drag.w0 * drag.d0 / Math.max(10, d) / view.w); return; }
   if(tool === "poly" && draft){ draft.hover = p; drawUi(); }
   if(tool === "bg" && calib && calib.a && !calib.b){ calib.hover = p; drawUi(); }
   if(!drag) return;
   if(drag.pan){ const k = view.w / svg.getBoundingClientRect().width; view.x = drag.v.x - (ev.clientX - drag.sx)*k; view.y = drag.v.y - (ev.clientY - drag.sy)*k; setView(); bgLater(); return; }
   if(drag.measure){ measure.b = p; drawUi(); panel(); return; }
+  if(drag.bgrot){ const a = Math.atan2(p[1]-drag.c[1], p[0]-drag.c[0]) / D2R; let da = a - drag.a0; if(da > 180) da -= 360; if(da < -180) da += 360;
+    bgAround(drag.c, da, 1); drag.a0 = a; drawBg(); drawUi(); return; }
   if(drag.bg){ doc.bg.dx = drag.dx + p[0] - drag.p0[0]; doc.bg.dy = drag.dy + p[1] - drag.p0[1]; $("gBg").firstChild && $("gBg").firstChild.setAttribute("transform", bgTransform()); return; }
   if(drag.box){ drag.box[1] = p; drawUi(); return; }
   if(drag.rot){ const o = drag.rot; let a = Math.atan2(p[1] - o.y, p[0] - o.x) / D2R; if(!ev.altKey) a = Math.round(a / 5) * 5; o.r = (a + 360) % 360; if(o.k === "place") follow(o); drawObjs(); return; }
@@ -370,6 +391,7 @@ function endPtr(ev){
   ptrs.delete(ev.pointerId); svg.classList.remove("panning");
   if(!drag) return; const d = drag; drag = null;
   if(d.pinch){ bgLater(); return; }
+  if(d.bgpinch){ save(); drawBg(); panel(); return; }
   if(d.box){ const [a, b] = d.box, x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
     doc.objs.forEach(o => { const [bx0, by0, bx1, by1] = bbox(o); if(bx0 >= x0 && bx1 <= x1 && by0 >= y0 && by1 <= y1) sel.add(o.id); }); drawObjs(); panel(); return; }
   if(d.move){ if(!d.moved){ undoS.pop(); btns(); return; }
@@ -378,7 +400,7 @@ function endPtr(ev){
       if(pl && (!doc.objs.some(b => b.k === "boat" && b.place === pl.id && b !== o))) assign(o, pl.id);
       else if(!pl || pl.id !== o.place) o.place = null; }
     save(); drawObjs(); panel(); return; }
-  if(d.bg){ save(); drawBg(); panel(); return; }
+  if(d.bg || d.bgrot){ save(); drawBg(); drawUi(); panel(); return; }
   if(d.rot || d.vx){ save(); panel(); return; }
 }
 svg.addEventListener("pointerup", endPtr); svg.addEventListener("pointercancel", endPtr);
@@ -393,9 +415,9 @@ svg.addEventListener("dblclick", ev => {   // doble clic a la vora d'una zona: a
 svg.addEventListener("wheel", ev => {
   ev.preventDefault(); const p = toWorld(ev);
   if(tool === "bg" && !ev.ctrlKey){ const b = doc.bg;
-    if(ev.shiftKey){ b.r += (ev.deltaY || ev.deltaX) > 0 ? .5 : -.5; }
+    if(ev.shiftKey){ bgAround(p, (ev.deltaY || ev.deltaX) > 0 ? .5 : -.5, 1); }
     else { const k = ev.deltaY > 0 ? 1/1.01 : 1.01; b.dx = p[0] + (b.dx - p[0])*k; b.dy = p[1] + (b.dy - p[1])*k; b.s *= k; }
-    save(); drawBg(); panelLater(); return; }
+    save(); drawBg(); drawUi(); panelLater(); return; }
   zoomAt(p, ev.deltaY > 0 ? 1.15 : 1/1.15);
 }, {passive:false});
 function zoomAt(p, k){ const w = Math.max(4, Math.min(800, view.w * k)), f = w / view.w; view.x = p[0] - (p[0] - view.x)*f; view.y = p[1] - (p[1] - view.y)*f; view.w = w; setView(); drawObjs(); bgLater(); }
@@ -419,6 +441,7 @@ document.addEventListener("keydown", ev => {
   if(k === "Escape"){ if(draft){ draft = null; drawUi(); panel(); } else if(tool !== "sel") setTool("sel"); else { sel.clear(); askDel = false; drawObjs(); panel(); } return; }
   if(k === "Enter" && draft){ finishPoly(); return; }
   if((k === "Delete" || k === "Backspace") && sel.size){ askDel = true; panel(); bindSlide(); tip("Confirma-ho lliscant al panell.", 2500); return; }
+  if(tool === "bg" && (k === "[" || k === "]")){ snapshot(); bgAround(viewC(), (k === "]" ? 1 : -1) * (ev.shiftKey ? .1 : .5), 1); save(); drawBg(); drawUi(); panelLater(); return; }
   const step = ev.shiftKey ? 1 : .1;
   if(k === "ArrowLeft"){ ev.preventDefault(); nudge(-step, 0); return; } if(k === "ArrowRight"){ ev.preventDefault(); nudge(step, 0); return; }
   if(k === "ArrowUp"){ ev.preventDefault(); nudge(0, -step); return; } if(k === "ArrowDown"){ ev.preventDefault(); nudge(0, step); return; }
