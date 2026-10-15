@@ -1285,3 +1285,46 @@ body.wm-open{overflow:hidden}
 .cl-fit.k-none{--c:var(--muted);padding-left:10px}
 .cl-fitd{font-size:.82rem;font-weight:600;color:var(--muted)}
 :root[data-size="big"] .cl-fit{font-size:1rem}:root[data-size="big"] .cl-fitd{font-size:.98rem}
+
+/* Club · «Qui surt» compacte: indicador petit a la cantonada, botó a sota */
+.cl-int{display:grid;grid-template-columns:62px minmax(0,1fr) auto;grid-template-areas:"when body mg" "when body act";column-gap:10px;row-gap:6px;align-items:start}
+.cl-int .cl-when{grid-area:when;align-self:stretch;justify-content:center}
+.cl-ib{grid-area:body;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cl-it{display:flex;align-items:baseline;gap:6px;min-width:0}
+.cl-it b{font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl-it span{flex:none;font-size:.82rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cl-im{font-family:var(--f-mono);font-size:.9rem;font-weight:700;color:var(--c,var(--ink))}
+.cl-im.k-ideal{--c:var(--ideal)}.cl-im.k-marg{--c:var(--marg)}.cl-im.k-no{--c:var(--no)}.cl-im.k-none{--c:var(--muted);font-family:var(--f-body)}
+.cl-ia{font-size:.82rem;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cl-mg{grid-area:mg;justify-self:end;display:block;width:44px;height:44px}
+.cl-mg svg{width:100%;height:100%;display:block}
+.cl-mg.k-ideal{--c:var(--ideal)}.cl-mg.k-marg{--c:var(--marg)}.cl-mg.k-no{--c:var(--no)}.cl-mg.k-none{--c:var(--muted)}
+.cl-int > .btn{grid-area:act;justify-self:end;align-self:end;min-height:44px}
+:root[data-size="big"] .cl-it b{font-size:1.15rem}
+:root[data-size="big"] .cl-im,:root[data-size="big"] .cl-ia,:root[data-size="big"] .cl-it span{font-size:1rem}
+:root[data-size="big"] .cl-mg{width:54px;height:54px}
+
+/* Club · avisos vistos plegats en una línia */
+.card.cl-avmini{flex-direction:row;align-items:center;gap:8px;width:100%;padding:10px 12px;font:inherit;color:var(--ink);text-align:left;cursor:pointer;opacity:.85}
+.cl-avmini .cl-badge{flex:none;font-size:.75rem;padding:3px 8px}
+.cl-avmini .cl-pin{flex:none}
+.cl-avmini b{flex:1;min-width:0;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl-avmini .cl-date{flex:none;margin-left:0;display:inline-flex;align-items:center;gap:4px}
+.cl-avmini > svg:last-child{flex:none;color:var(--muted)}
+.cl-avfold{flex:none;display:grid;place-items:center;width:40px;height:40px;margin:-6px -6px -6px 0;border:0;border-radius:50%;background:none;color:var(--muted);cursor:pointer}
+.cl-avfold svg{transform:rotate(180deg)}
+:root[data-size="big"] .cl-avmini b{font-size:1.15rem}
+
+/* Club · mur: lliscar per arxivar o esborrar */
+.cl-swp{position:relative;border-radius:var(--r);overflow:hidden}
+.cl-swp > .cl-card{position:relative;z-index:1;touch-action:pan-y;will-change:transform}
+.cl-swbg{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-radius:var(--r);font-family:var(--f-head);font-weight:700;font-size:1rem;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--line)}
+.cl-swbg span{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.55;transition:opacity .15s,transform .15s}
+.cl-swp[data-dir="arx"] .cl-swbg{background:var(--accent)}
+.cl-swp[data-dir="del"] .cl-swbg{background:var(--no)}
+.cl-swp[data-dir="arx"] .cl-swbg .d,.cl-swp[data-dir="del"] .cl-swbg .a{visibility:hidden}
+.cl-swp.go .cl-swbg span{opacity:1;transform:scale(1.15)}
+.cl-undo{position:fixed;left:12px;right:92px;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:1200;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 16px;border-radius:14px;background:var(--ink);color:var(--surface);font-weight:700;box-shadow:var(--shadow)}
+.cl-undo[hidden]{display:none}
+.cl-undo span{flex:1;min-width:0}
+.cl-undo .btn{flex:none;min-height:44px;background:none;border-color:var(--surface);color:var(--surface)}

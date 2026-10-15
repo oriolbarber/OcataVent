@@ -24,9 +24,21 @@ const now = () => Date.now();
 let C = null, tab = store.get("ov2_club_tab") || "mur", mapObj = null, lastPos = 0;
 const D = {pubs:[], intents:[], avisos:[], anuncis:[], pres:[], myPres:null, alertes:[], at:{}};
 const WARN = svgI('<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>', 22);
-const F0 = {open:false, date:"mes", person:"tots", order:"recents", vent:false, onada:false, all:false};
+const F0 = {open:false, date:"mes", person:"tots", order:"recents", vent:false, onada:false, all:false, view:"mur"};
 let filt = Object.assign({}, F0, store.get("ov2_club_filt") || {}, {open:false});
-const ui = {avisCom:"totes", anCat:"tots", avisOpen:false, anOpen:false, interest:{}, interested:{}};
+const ui = {avisCom:"totes", anCat:"tots", avisOpen:false, anOpen:false, interest:{}, interested:{}, avOpen:{}};
+// Avisos vistos: es pleguen sols 1 h després de marcar-los (l'hora es desa en aquest mòbil; vistos des d'un altre mòbil, plegats)
+const AV_FOLD = 60*MIN;
+const seenAt = () => store.get("ov2_avis_vist") || {};
+function setSeenAt(id, on){ const m = seenAt(); if(on) m[id] = now(); else delete m[id]; store.set("ov2_avis_vist", m); }
+const folded = a => !!(a.vist || {})[uid()] && !ui.avOpen[a.id] && now() - (seenAt()[a.id] || 0) > AV_FOLD;
+// Mur: cada soci arxiva o esborra publicacions lliscant (només per a ell, en aquest mòbil; les pròpies es retiren del mur)
+const murK = k => "ov2_mur_" + k + "_" + (C ? uid() : "");
+const murL = k => store.get(murK(k)) || [];
+function murSet(k, id, on){ const L = murL(k).filter(x => x !== id); if(on) L.unshift(id); store.set(murK(k), L.slice(0, 400)); }
+const ARX = svgI('<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>', 24);
+const BIN = svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', 24);
+const CHEV = svgI('<path d="M6 9l6 6 6-6"/>', 20);
 const EYE = svgI('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 22);
 const SEEN = svgI('<path d="M2 13l4 4L16 7"/><path d="M10 15l2 2L22 7"/>', 22);
 const EYE_S = svgI('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 14);
@@ -172,12 +184,13 @@ function activeFilters(){
   const P = {meves:"Les meves"}; D.pubs.forEach(p => P[p.userId] = p.nom);
   return [filt.date !== "tot" ? (filt.date === "mes" ? "Últim mes" : "Última setmana") : null,
     filt.person !== "tots" ? (P[filt.person] || "Una persona") : null,
-    filt.order === "likes" ? "Més reaccions" : null, filt.vent ? "Vent fort" : null, filt.onada ? "Onada forta" : null].filter(Boolean);
+    filt.order === "likes" ? "Més reaccions" : null, filt.view === "arx" ? "Arxivades" : null, filt.vent ? "Vent fort" : null, filt.onada ? "Onada forta" : null].filter(Boolean);
 }
 const nReact = p => Object.keys(p.reaccions || {}).length;
 function feedList(){
   const t0 = {setmana: now() - 7*DAY, mes: now() - 31*DAY, tot: 0}[filt.date] || 0;
-  const L = D.pubs.filter(p => (filt.all || p.act === act) && p.inici >= t0
+  const arx = new Set(murL("arx")), del = new Set(murL("del"));
+  const L = D.pubs.filter(p => !del.has(p.id) && (filt.view === "arx") === arx.has(p.id) && (filt.all || p.act === act) && p.inici >= t0
     && (filt.person === "tots" || (filt.person === "meves" ? p.userId === uid() : p.userId === filt.person))
     && (!filt.vent || (p.vent && p.vent.avg > 16)) && (!filt.onada || (p.onada != null && p.onada >= 0.8)));
   return L.sort(filt.order === "likes" ? (a, b) => nReact(b) - nReact(a) || b.inici - a.inici : (a, b) => b.inici - a.inici);
@@ -188,7 +201,10 @@ function renderMur(){
   const people = {}; D.pubs.forEach(p => { if(p.userId !== uid()) people[p.userId] = p.nom; });
   const bar = `<div class="cl-fbar"><button type="button" class="btn cl-fbtn" id="clFilt" aria-expanded="${filt.open}" aria-controls="clPanel">${svgI('<path d="M4 6h16M7 12h10M10 18h4"/>', 20)}Filtres${act0.length ? `<span class="cl-n">${act0.length}</span>` : ""}</button>
     <span class="cl-sum">${esc([filt.all ? "Totes les embarcacions" : "Només " + boatShort(act)].concat(act0).join(" · "))}</span></div>`;
+  const nArx = D.pubs.filter(p => murL("arx").includes(p.id) && !murL("del").includes(p.id)).length;
   const panel = !filt.open ? "" : `<div class="card cl-panel" id="clPanel">
+    <div class="cl-grp"><span class="lbl">Mostra</span><div class="cl-chips">${chip("data-fview", "mur", filt.view !== "arx", "Mur")}${chip("data-fview", "arx", filt.view === "arx", "Arxivades" + (nArx ? " (" + nArx + ")" : ""))}</div>
+      <p class="note">Llisca una sortida: cap a la dreta l'arxives, cap a l'esquerra l'esborres. Només ho veus tu; si és teva, es retira del mur.</p></div>
     <div class="cl-grp"><span class="lbl">Data</span><div class="cl-chips">${[["setmana", "Última setmana"], ["mes", "Últim mes"], ["tot", "Tot"]].map(([k, t]) => chip("data-fdate", k, filt.date === k, t)).join("")}</div></div>
     <div class="cl-grp"><span class="lbl">Persones</span><div class="cl-chips">${[["tots", "Tothom"], ["meves", "Les meves"]].concat(Object.entries(people).slice(0, 8)).map(([k, t]) => chip("data-fperson", k, filt.person === k, t)).join("")}</div></div>
     <div class="cl-grp"><span class="lbl">Ordena per</span><div class="cl-chips">${[["recents", "Més recents"], ["likes", "Més reaccions"]].map(([k, t]) => chip("data-forder", k, filt.order === k, t)).join("")}</div></div>
@@ -196,8 +212,10 @@ function renderMur(){
     <label class="cl-sw"><span>Totes les embarcacions</span><input type="checkbox" class="switch" id="clAll"${filt.all ? " checked" : ""}></label>
     <div class="cl-row2"><button type="button" class="btn" id="clReset">Esborra filtres</button><button type="button" class="btn cl-pri" id="clFiltDone">Fet</button></div></div>`;
   const L = feedList();
-  return bar + panel + intentsCard() + (L.length ? L.map(card).join("")
-    : `<article class="card empty">${D.at.pubs ? (D.pubs.length ? "Cap sortida amb aquests filtres." : "Encara no hi ha cap sortida publicada. Comparteix-ne una des de l'Historial.") : "Carregant…"}</article>`);
+  const inArx = filt.view === "arx";
+  const sw = p => `<div class="cl-swp" data-sw="${esc(p.id)}"><div class="cl-swbg" aria-hidden="true"><span class="a">${ARX}${inArx ? "Al mur" : "Arxiva"}</span><span class="d">${BIN}${p.userId === uid() ? "Retira" : "Esborra"}</span></div>${card(p)}</div>`;
+  return bar + panel + (inArx ? "" : intentsCard()) + (L.length ? L.map(sw).join("")
+    : `<article class="card empty">${!D.at.pubs ? "Carregant…" : inArx ? "No tens cap sortida arxivada amb aquests filtres." : D.pubs.length ? "Cap sortida amb aquests filtres." : "Encara no hi ha cap sortida publicada. Comparteix-ne una des de l'Historial."}</article>`);
 }
 // Idoneïtat d'una sortida anunciada: el mateix càlcul que la previsió (scoreHour) per a l'hora triada i les 2 següents
 function intentFit(dia, hora, a){
@@ -212,9 +230,16 @@ function intentFit(dia, hora, a){
   const W = P.map(p => p.wind).filter(v => v != null), G = P.map(p => p.gust).filter(v => v != null), O = R.map(r => r.hb).filter(v => v != null);
   return {score, v: verdict({score, why}), wind: W.length ? Math.round(W.reduce((a, b) => a + b, 0) / W.length) : null, gust: G.length ? Math.round(Math.max(...G)) : null, wave: O.length ? Math.max(...O) : null};
 }
+const fitDet = f => !f ? "" : [f.wind != null ? `${f.wind} kn${f.gust != null && f.gust > f.wind + 3 ? " (ratxes " + f.gust + ")" : ""}` : "", f.wave != null ? String(Math.round(f.wave * 10) / 10).replace(".", ",") + " m" : "", f.v.sub].filter(Boolean).join(" · ");
+// Indicador d'idoneïtat petit (anell + nota), per a la cantonada de cada «Qui surt»
+function miniGauge(f){
+  const r = 17, L = 2*Math.PI*r, s = f ? f.score : null, n = f ? Math.round(s/10) : "–";
+  const arc = s > 0 ? `<circle cx="22" cy="22" r="${r}" fill="none" stroke="var(--c)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(Math.max(.03, s/100)*L).toFixed(1)} ${L.toFixed(1)}" transform="rotate(-90 22 22)"/>` : "";
+  return `<span class="cl-mg k-${f ? f.v.k : "none"}" role="img" aria-label="${f ? `Idoneïtat ${n} de 10: ${esc(f.v.t)}` : "Sense previsió encara"}" title="${f ? esc(f.v.t) : "Sense previsió"}"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="${r}" fill="none" stroke="var(--grid)" stroke-width="5"/>${arc}<text x="22" y="28" text-anchor="middle" font-family="Rajdhani,sans-serif" font-weight="700" font-size="18" fill="var(--c)">${n}</text></svg></span>`;
+}
 function fitHtml(f){
   if(!f) return `<span class="cl-fit k-none">Sense previsió encara</span>`;
-  const det = [f.wind != null ? `${f.wind} kn${f.gust != null && f.gust > f.wind + 3 ? " (ratxes " + f.gust + ")" : ""}` : "", f.wave != null ? String(Math.round(f.wave * 10) / 10).replace(".", ",") + " m" : "", f.v.sub].filter(Boolean).join(" · ");
+  const det = fitDet(f);
   return `<span class="cl-fit k-${f.v.k}"><b>${Math.round(f.score / 10)}</b>${esc(f.v.t)}</span>${det ? `<span class="cl-fitd">${esc(det)}</span>` : ""}`;
 }
 function intentsCard(){
@@ -223,8 +248,12 @@ function intentsCard(){
   const dl = d => d === today ? "Avui" : d === tom ? "Demà" : new Date(d + "T12:00").toLocaleDateString("ca", {weekday:"short", day:"numeric"});
   return `<section class="card cl-intents" aria-label="Qui surt a navegar"><div class="card-h"><span class="lbl">Qui surt</span><span class="note">S'esborra l'endemà</span></div>
     ${L.map(it => { const ap = it.apuntats || {}, n = Object.keys(ap).length, on = !!ap[uid()], mine = it.userId === uid();
+      const f = intentFit(it.dia, it.hora, it.act), det = f ? fitDet(f) : "Sense previsió encara";
       return `<div class="cl-int"><div class="cl-when"><b>${esc(dl(it.dia))}</b><span>${esc(it.hora)}</span></div>
-        <div class="cl-who"><b>${esc(it.nom)}</b><span>${esc(boatShort(it.act))} · ${n === 1 ? "1 s'hi apunta" : n + " s'hi apunten"}${n ? ": " + esc(Object.values(ap).join(", ")) : ""}</span><div class="cl-fitrow">${fitHtml(intentFit(it.dia, it.hora, it.act))}</div></div>
+        <div class="cl-ib"><div class="cl-it"><b>${esc(it.nom)}</b><span>${esc(boatShort(it.act))}</span></div>
+          <div class="cl-im k-${f ? f.v.k : "none"}">${esc(det)}</div>
+          <div class="cl-ia">${n ? (n === 1 ? "1 s'hi apunta: " : n + " s'hi apunten: ") + esc(Object.values(ap).join(", ")) : "Encara no s'hi apunta ningú"}</div></div>
+        ${miniGauge(f)}
         ${mine ? `<button type="button" class="btn sm" data-askdel="intencions" data-id="${esc(it.id)}">Retira</button>` : `<button type="button" class="btn cl-go" data-join="${esc(it.id)}" aria-pressed="${on}">${on ? "Hi vas ✓" : "Hi vaig"}</button>`}</div>
         ${!mine && canMod() ? modBtn("intencions", it) : ""}<div data-delbox="${esc(it.id)}"></div>`; }).join("")}
     <button type="button" class="btn cl-dash" id="clNewIntent">+ Anuncia que surts</button></section>`;
@@ -285,8 +314,10 @@ function renderAvisos(){
   const coms = canPost(), mine = C.member.comissions || [];
   return foldFilters("avis", ui.avisCom === "totes" ? "" : COMSm()[ui.avisCom], ui.avisOpen, [["totes", "Totes"]].concat(Object.entries(COMSm())).map(([k, t]) => chip("data-acom", k, ui.avisCom === k, t)).join(""))
     + `${L.map(a => { const seen = !!(a.vist || {})[uid()], n = Object.keys(a.vist || {}).length, own = a.userId === uid(), del = own || C.isAdm || mine.includes(a.comissio) || canMod();
+      if(folded(a)) return `<button type="button" class="card cl-avis cl-avmini c-${esc(a.comissio)}" data-avopen="${esc(a.id)}" aria-expanded="false" aria-label="${esc(a.titol)}. Vist. Toca per obrir-lo">
+        <span class="cl-badge">${esc(COMSm()[a.comissio] || a.comissio)}</span>${a.fixat ? `<span class="cl-pin" aria-label="Fixat">${PIN}</span>` : ""}<b>${esc(a.titol)}</b>${a.data ? `<span class="cl-date">${CAL}${esc(dayStr(new Date(a.data + "T12:00")))}</span>` : ""}${CHEV}</button>`;
       return `<article class="card cl-avis c-${esc(a.comissio)}${seen ? "" : " unread"}">
-        <div class="cl-avh"><span class="cl-badge">${esc(COMSm()[a.comissio] || a.comissio)}</span>${a.fixat ? `<span class="cl-pin">${PIN}Fixat</span>` : ""}<span class="cl-date">${esc(dayStr(ms(a.creat) || now()))}</span></div>
+        <div class="cl-avh"><span class="cl-badge">${esc(COMSm()[a.comissio] || a.comissio)}</span>${a.fixat ? `<span class="cl-pin">${PIN}Fixat</span>` : ""}<span class="cl-date">${esc(dayStr(ms(a.creat) || now()))}</span>${seen ? `<button type="button" class="cl-avfold" data-avfold="${esc(a.id)}" aria-expanded="true" aria-label="Plega l'avís">${CHEV}</button>` : ""}</div>
         <h3 class="cl-atitle">${esc(a.titol)}</h3>
         ${a.data ? `<div class="cl-event">${CAL}<b>${esc(dayLong(a.data))}</b></div>` : ""}
         <p class="cl-text">${esc(a.text)}</p>
@@ -621,6 +652,9 @@ document.addEventListener("click", async e => {
   if(ds.fperson){ filt.person = ds.fperson; saveF(); return; }
   if(ds.forder){ filt.order = ds.forder; saveF(); return; }
   if(ds.fflag){ filt[ds.fflag] = !filt[ds.fflag]; saveF(); return; }
+  if(ds.fview){ filt.view = ds.fview; saveF(); return; }
+  if(ds.avopen){ ui.avOpen[ds.avopen] = true; render(); return; }
+  if(ds.avfold){ delete ui.avOpen[ds.avfold]; const m = seenAt(); m[ds.avfold] = 0; store.set("ov2_avis_vist", m); render(); return; }
   if(ds.acom){ ui.avisCom = ds.acom; ui.avisOpen = false; render(); return; }
   if(ds.acat){ ui.anCat = ds.acat; ui.anOpen = false; render(); return; }
   if(ds.fold){ const k = ds.fold + "Open"; ui[k] = !ui[k]; render(); return; }
@@ -628,7 +662,7 @@ document.addEventListener("click", async e => {
   if(ds.editavis){ const a = D.avisos.find(x => x.id === ds.editavis); if(a) avisSheet(a); return; }
   if(ds.react){ react(ds.pub, ds.react); return; }
   if(ds.join){ mapToggle("intencions", D.intents, ds.join, "apuntats", C.member.nom); return; }
-  if(ds.seen){ mapToggle("avisos", D.avisos, ds.seen, "vist", true); return; }
+  if(ds.seen){ const a = D.avisos.find(x => x.id === ds.seen); setSeenAt(ds.seen, !(a && (a.vist || {})[uid()])); mapToggle("avisos", D.avisos, ds.seen, "vist", true); return; }
   if(ds.interest){ interest(ds.interest); return; }
   if(ds.editpub){ const p = D.pubs.find(x => x.id === ds.editpub); if(p) pubSheet(null, p); return; }
   if(ds.askhide){ const box = document.querySelector(`[data-delbox="${CSS.escape(ds.id)}"]`); if(box) slideConfirm(box, "Llisca per amagar-ho al club", () => hideDoc(ds.askhide, ds.id)); return; }
@@ -645,6 +679,62 @@ document.addEventListener("click", async e => {
 });
 document.addEventListener("change", e => { if(e.target.id === "clAll"){ filt.all = e.target.checked; store.set("ov2_club_filt", Object.assign({}, filt, {open:false})); render(); } });
 $("actSeg").addEventListener("click", () => { if(visible() && tab === "mur") setTimeout(render, 0); });
+
+/* ---------- mur: lliscar per arxivar (→) o esborrar (←), amb «Desfés» ---------- */
+let sw = null, undoT = null;
+document.addEventListener("pointerdown", e => {
+  const art = e.target.closest && e.target.closest("#clubView .cl-swp > .cl-card");
+  if(!art || e.button || e.target.closest("button, a, input, select, .cl-rmap, .leaflet-container")) return;
+  sw = {art, wrap:art.parentElement, x:e.clientX, y:e.clientY, dx:0, on:false, id:e.pointerId};
+}, {passive:true});
+document.addEventListener("pointermove", e => {
+  if(!sw || e.pointerId !== sw.id) return;
+  const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+  if(!sw.on){
+    if(Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)){ sw = null; return; }   // és un desplaçament vertical
+    if(Math.abs(dx) < 14) return;
+    sw.on = true; try{ sw.art.setPointerCapture(e.pointerId); }catch(err){} sw.art.style.transition = "none";
+  }
+  sw.dx = dx; sw.art.style.transform = `translateX(${dx}px)`;
+  sw.wrap.dataset.dir = dx > 0 ? "arx" : "del"; sw.wrap.classList.toggle("go", Math.abs(dx) > sw.art.offsetWidth*0.35);
+});
+function swEnd(e){
+  if(!sw || e.pointerId !== sw.id) return;
+  const s = sw; sw = null; if(!s.on) return;
+  const W = s.art.offsetWidth, go = e.type === "pointerup" && Math.abs(s.dx) > W*0.35;
+  s.art.style.transition = "transform .2s ease";
+  if(!go){ s.art.style.transform = ""; s.wrap.classList.remove("go"); return; }
+  s.art.style.transform = `translateX(${s.dx > 0 ? W*1.15 : -W*1.15}px)`;
+  setTimeout(() => swipeDone(s.wrap.dataset.sw, s.dx > 0 ? "arx" : "del"), 200);
+}
+document.addEventListener("pointerup", swEnd);
+document.addEventListener("pointercancel", swEnd);
+function swipeDone(id, dir){
+  const p = D.pubs.find(x => x.id === id); if(!p) return;
+  const inArx = filt.view === "arx";
+  if(dir === "arx"){ murSet("arx", id, !inArx); undo(inArx ? "Ha tornat al mur" : "Sortida arxivada", () => murSet("arx", id, inArx)); }
+  else if(p.userId === uid()){   // la teva: es retira del mur de tothom quan s'acaba el temps de desfer
+    murSet("del", id, true);
+    undo("Retirada del mur", () => murSet("del", id, false), () => removeDoc("publicacions", id).finally(() => { murSet("del", id, false); murSet("arx", id, false); }));
+  }
+  else { murSet("del", id, true); undo("Esborrada del teu mur", () => murSet("del", id, false)); }
+  render();
+}
+function undo(txt, onUndo, onCommit){
+  flushUndo();
+  let el = $("clUndo");
+  if(!el){ el = document.createElement("div"); el.id = "clUndo"; el.className = "cl-undo"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+  el.innerHTML = `<span>${esc(txt)}</span><button type="button" class="btn">Desfés</button>`; el.hidden = false;
+  undoT = {commit:onCommit, timer:setTimeout(flushUndo, 6000)};
+  el.querySelector("button").onclick = () => { if(!undoT) return; clearTimeout(undoT.timer); undoT = null; el.hidden = true; onUndo(); render(); };
+}
+function flushUndo(){
+  if(!undoT) return;
+  const u = undoT; undoT = null; clearTimeout(u.timer);
+  const el = $("clUndo"); if(el) el.hidden = true;
+  if(u.commit) u.commit();
+}
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") flushUndo(); });
 
 /* ---------- avisos de seguretat (els detecta avisos.js al mòbil de qui navega) ---------- */
 const ALERT_T = {"sense-vent":"Sense vent i lluny", "vent-fort":"Vent massa fort", "onades":"Onades perilloses", "ajuda":"Demana ajuda"};
