@@ -50,7 +50,30 @@ async function load(force){
   }catch(e){ say(errText(e)); }
   badge(); render();
 }
-function badge(){ const n = has("altes") ? members.filter(m => m.estat === "pendent").length : 0; $("themeBtn").classList.toggle("has-dot", n > 0); }
+// Puntet vermell (engranatge de la configuració i capçalera «Administració») si hi ha altes pendents i tens el permís «altes»
+function badge(){
+  const n = has("altes") ? members.filter(m => m.estat === "pendent").length : 0, b = $("themeBtn");
+  b.classList.toggle("has-dot", n > 0); b.setAttribute("aria-label", n ? `Configuració · ${n} ${n === 1 ? "alta pendent" : "altes pendents"}` : "Configuració");
+  const h = document.querySelector("#admSec > summary h3"); if(!h) return;
+  let d = h.parentNode.querySelector(".cl-dot");
+  if(n){ if(!d){ d = document.createElement("span"); d.className = "cl-dot"; h.after(d); } d.textContent = n; d.setAttribute("aria-label", `${n} ${n === 1 ? "alta pendent" : "altes pendents"}`); } else if(d) d.remove();
+}
+// Escolta en directe les altes pendents del club: el puntet apareix sense haver d'obrir la configuració
+let unsub = null, watchKey = "";
+function watch(){
+  const key = C && has("altes") ? C.user.uid + "|" + C.member.clubId : "";
+  if(key === watchKey) return;
+  if(unsub){ try{ unsub(); }catch(e){} unsub = null; }
+  watchKey = key; if(!key) return;
+  unsub = C.F.onSnapshot(C.F.query(C.F.collection(C.db, "members"), C.F.where("clubId", "==", C.member.clubId), C.F.where("estat", "==", "pendent")), qs => {
+    const pend = qs.docs.map(d => d.data()), ids = new Set(pend.map(m => m.userId));
+    members = members.filter(m => m.estat !== "pendent" || ids.has(m.userId));
+    pend.forEach(m => { const i = members.findIndex(x => x.userId === m.userId); if(i < 0) members.push(m); else members[i] = m; });
+    members.sort((a, b) => String(a.nom).localeCompare(String(b.nom), "ca"));
+    badge();
+    if(!$("admBody")?.contains(document.activeElement)) render();   // no trenquis la cerca mentre s'escriu
+  }, () => { watchKey = ""; unsub = null; });
+}
 
 /* ---------- secció de la configuració ---------- */
 function rolesTxt(m){
@@ -128,6 +151,6 @@ document.addEventListener("change", e => { const k = e.target.dataset && e.targe
   if(v && v !== COMS[k]) saveComs(Object.assign({}, COMS, {[k]: v})); else e.target.value = COMS[k]; });
 document.addEventListener("input", e => { if(e.target.id !== "admCerca") return; cerca = e.target.value; const pos = e.target.selectionStart; render(); const i = $("admCerca"); if(i){ i.focus(); try{ i.setSelectionRange(pos, pos); }catch(err){} } });
 $("themeBtn").addEventListener("click", () => { if(!$("viewPanel").hidden && C){ render(); load(); } });
-window.addEventListener("ov-cloud", async () => { await ctx(); render(); load(true); loadComs(); });
-ctx().then(() => { render(); load(true); loadComs(); });
+window.addEventListener("ov-cloud", async () => { await ctx(); render(); badge(); watch(); load(true); loadComs(); });
+ctx().then(() => { render(); watch(); load(true); loadComs(); });
 })();
