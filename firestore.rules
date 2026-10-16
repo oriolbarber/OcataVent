@@ -380,17 +380,24 @@ service cloud.firestore {
     }
     match /embarcacions/{id} {
       function boatOk(d) {
-        return d.keys().hasOnly(['clubId', 't', 'label', 'vela', 'prop', 'propUid', 'coprop', 'ocult', 'estat', 'notes', 'place', 'historial', 'actualitzat', 'actualitzatPer'])
+        return d.keys().hasOnly(['clubId', 't', 'label', 'vela', 'prop', 'propUid', 'coprop', 'ocult', 'estat', 'notes', 'place', 'historial', 'pendent', 'actualitzat', 'actualitzatPer'])
           && d.estat in ['lloc', 'navegant', 'reparacio'] && d.get('historial', []) is list && d.get('historial', []).size() <= 20
-          && d.get('notes', '') is string && d.get('notes', '').size() <= 500 && d.actualitzatPer == me();
+          && d.get('notes', '') is string && d.get('notes', '').size() <= 500 && d.get('pendent', false) is bool && d.actualitzatPer == me();
       }
+      // Dades que un soci pot proposar i que ha de validar Manteniment (pendent = true)
+      function dadesKeys() { return ['t', 'label', 'vela', 'coprop', 'place']; }
       allow read: if isAdmin() || (isApproved() && resource.data.clubId == myClub());
-      allow create: if canBoats(request.resource.data.clubId) && boatOk(request.resource.data);
+      // Alta: qui gestiona les embarcacions (validada o no), o un soci per a ell mateix, pendent de validar
+      allow create: if boatOk(request.resource.data) && (canBoats(request.resource.data.clubId)
+        || (isApproved() && request.resource.data.clubId == myClub() && request.resource.data.propUid == me() && request.resource.data.pendent == true));
       allow update: if boatOk(request.resource.data) && request.resource.data.clubId == resource.data.clubId
         && (canBoats(resource.data.clubId)
-          // el propietari: estat, notes, nom ocult i l'historial (no la plaça ni el propietari)
-          || (resource.data.propUid == me() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estat', 'notes', 'ocult', 'prop', 'historial', 'actualitzat', 'actualitzatPer'])));
-      allow delete: if canBoats(resource.data.clubId);
+          // el propietari: estat, notes, foto i nom ocult lliurement; les dades (tipus, nom, vela, copropietaris, plaça) queden pendents de validar
+          || (resource.data.propUid == me()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estat', 'notes', 'ocult', 'prop', 'historial', 'pendent', 'actualitzat', 'actualitzatPer', 't', 'label', 'vela', 'coprop', 'place'])
+            && (request.resource.data.get('pendent', false) == true || (resource.data.get('pendent', false) == false && !request.resource.data.diff(resource.data).affectedKeys().hasAny(dadesKeys())))));
+      // Baixa: qui gestiona; el propietari, només si encara és pendent (retira la proposta)
+      allow delete: if canBoats(resource.data.clubId) || (resource.data.propUid == me() && resource.data.get('pendent', false) == true);
       function boat() { return get(/databases/$(database)/documents/embarcacions/$(id)).data; }
       // nom del propietari quan és ocult: el veuen el propietari i qui gestiona les embarcacions (Manteniment) o la Junta
       match /privat/{d} {

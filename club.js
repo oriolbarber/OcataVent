@@ -73,7 +73,7 @@ const vis = () => window.OV_PRIV ? OV_PRIV.pref("presencia") : "club";   // Conf
 const NIVT = v => (window.OV_PRIV?.NIV || {})[v] || v;
 // Publicar avisos: administració i premium, a qualsevol comissió; la resta, a les seves i amb el permís «avisos»
 const canPost = () => !C ? [] : (C.isAdm || C.isPremium) ? Object.keys(COMSm()) : C.perms.includes("avisos") ? (C.member.comissions || []).filter(k => COMSm()[k]) : [];
-const ERRS = {"permission-denied":"El núvol ho ha refusat (permís). Comprova que les regles estan publicades.", "unavailable":"Sense connexió amb el núvol.", "timeout":"El núvol no respon."};
+const ERRS = {"ocupada":"Aquesta plaça ja té una embarcació. Tria'n una altra.","permission-denied":"El núvol ho ha refusat (permís). Comprova que les regles estan publicades.", "unavailable":"Sense connexió amb el núvol.", "timeout":"El núvol no respon."};
 const errText = e => ERRS[e && e.code] || "No s'ha pogut fer" + (e && e.code ? " (" + e.code + ")." : ".");
 function say(t){ const m = $("clubMsg"); if(m){ m.textContent = t || ""; m.hidden = !t; } }
 function sheetSay(t){ const m = $("shMsg"); if(m){ m.textContent = t || ""; m.hidden = !t; } }
@@ -382,9 +382,13 @@ function renderBoats(){
   return `<article class="card ovp-card"><div class="ovp" id="ovp"><svg id="ovpSvg" xmlns="http://www.w3.org/2000/svg" aria-label="Plànol de la base: toca una plaça per veure'n l'embarcació"></svg>
       <div class="ovp-z"><button type="button" class="btn" data-pz="in" aria-label="Apropa">+</button><button type="button" class="btn" data-pz="out" aria-label="Allunya">−</button><button type="button" class="btn" data-pz="fit" aria-label="Tot el plànol">⤢</button></div></div>
     <div class="ovp-leg"><span><i style="background:#fff;border-color:#1c2530"></i>${n("lloc")} a la varada</span><span><i style="background:${E.navegant.f};border-color:${E.navegant.s}"></i>${n("navegant")} navegant</span><span><i style="background:${E.reparacio.f};border-color:${E.reparacio.s}"></i>${n("reparacio")} en reparació</span><span><i style="border-style:dashed"></i>${lliures} lliures</span></div></article>
-    ${M.length ? `<section class="card"><div class="card-h"><span class="lbl">${M.length === 1 ? "La meva embarcació" : "Les meves embarcacions"}</span></div>${M.map(b => { const pl = placeById(b.place);
-      return `<div class="cl-brow"><button type="button" class="cl-bname" data-boat="${esc(b.id)}"><b>${esc(b.label || PL().BOATS[b.t]?.n || "Embarcació")}</b><span>${pl ? "Plaça " + esc(pl.label || "") : "Sense plaça"}</span></button>
-        <div class="cl-bst">${Object.entries(E).map(([k, T]) => `<button type="button" class="cl-chip" data-bstate="${k}" data-id="${esc(b.id)}" aria-pressed="${(b.estat || "lloc") === k}" style="--c:${T.s}">${T.n}</button>`).join("")}</div></div>`; }).join("")}</section>` : ""}
+    ${(P => canBoatsE() && P.length ? `<section class="card cl-pend"><div class="card-h"><span class="lbl">Pendents de validar · ${P.length}</span></div>${P.map(b => { const pl = placeById(b.place);
+      return `<div class="cl-brow"><button type="button" class="cl-bname" data-boat="${esc(b.id)}"><b>${esc(b.label || PL().BOATS[b.t]?.n || "Embarcació")}</b><span>${esc(b.prop || "")} · ${pl ? "plaça " + esc(pl.label || "") : "sense plaça"}</span></button><button type="button" class="btn sm cl-pri" data-bvalid="${esc(b.id)}">Valida</button></div>`; }).join("")}</section>` : "")(D.boats.filter(b => b.pendent))}
+    <section class="card"><div class="card-h"><span class="lbl">${M.length > 1 ? "Les meves embarcacions" : "La meva embarcació"}</span></div>${M.map(b => { const pl = placeById(b.place);
+      return `<div class="cl-brow"><button type="button" class="cl-bname" data-boat="${esc(b.id)}"><b>${esc(b.label || PL().BOATS[b.t]?.n || "Embarcació")}${b.pendent ? ` <i class="cl-ptag">pendent de validar</i>` : ""}</b><span>${pl ? "Plaça " + esc(pl.label || "") : "Sense plaça"}</span></button>
+        <div class="cl-bst">${Object.entries(E).map(([k, T]) => `<button type="button" class="cl-chip" data-bstate="${k}" data-id="${esc(b.id)}" aria-pressed="${(b.estat || "lloc") === k}" style="--c:${T.s}">${T.n}</button>`).join("")}</div></div>`; }).join("")}
+      <button type="button" class="btn cl-dash" id="clBoatNew">+ ${M.length ? "Afegeix-ne una altra" : "Afegeix la meva embarcació"}</button>
+      <p class="note">Les dades que hi posis (tipus, nom, vela, plaça) les valida Manteniment. També pots tocar una plaça lliure del plànol.</p></section>
     ${edit ? `<p class="note">${canPlanE() ? "Pots editar el plànol" : "Pots gestionar les embarcacions"} des d'un ordinador: <a href="planol.html">Plànol de la base</a>.</p>` : ""}`;
 }
 // Vista del plànol: fit, + i −, arrossegar i pessigar; tocar una plaça obre la fitxa
@@ -413,6 +417,28 @@ document.addEventListener("pointerup", pEnd); document.addEventListener("pointer
 document.addEventListener("wheel", e => { const svg = e.target.closest && e.target.closest("#ovpSvg"); if(!svg || !ui.pv) return; e.preventDefault(); pZoom(svg, pWorld(svg, e.clientX, e.clientY), e.deltaY > 0 ? 1.15 : 1/1.15); }, {passive:false});
 
 /* ---------- fitxa de l'embarcació ---------- */
+// Dades que proposa el soci (i valida Manteniment): tipus, nom, vela, copropietaris i plaça
+function dataForm(b, pl){
+  const B = PL().BOATS, cur = b ? b.place : pl ? pl.id : "", t = b ? b.t : pl ? pl.t : "pati";
+  const free = ((D.planol && D.planol.objs) || []).filter(o => o.k === "place" && (o.id === cur || !D.boats.some(x => x.place === o.id)));
+  return `<div class="cl-row2">${field("bfT", "Tipus", `<select class="field" id="bfT">${Object.entries(B).map(([k, T]) => `<option value="${k}"${k === t ? " selected" : ""}>${esc(T.n)}</option>`).join("")}</select>`)}
+      ${field("bfP", "Plaça", `<select class="field" id="bfP"><option value="">Sense plaça</option>${free.map(o => `<option value="${esc(o.id)}"${o.id === cur ? " selected" : ""}>${esc(o.label || "")} · ${esc(B[o.t]?.n || "")}</option>`).join("")}</select>`)}</div>
+    <div class="cl-row2">${field("bfN", "Nom", `<input class="field" id="bfN" maxlength="40" value="${esc(b ? b.label || "" : "")}" placeholder="Garbinada">`)}${field("bfV", "Vela / matrícula", `<input class="field" id="bfV" maxlength="20" value="${esc(b ? b.vela || "" : "")}" placeholder="1234">`)}</div>
+    ${field("bfC", "Copropietaris", `<input class="field" id="bfC" maxlength="120" value="${esc(b ? b.coprop || "" : "")}" placeholder="Opcional, separats per comes">`)}`;
+}
+const formVals = () => ({t:$("bfT").value, place:$("bfP").value || null, label:$("bfN").value.trim().slice(0, 40), vela:$("bfV").value.trim().slice(0, 20), coprop:$("bfC").value.trim().slice(0, 120)});
+function newBoatSheet(pl){
+  sheet("La meva embarcació", `${dataForm(null, pl)}<p class="note">${canBoatsE() ? "Com que gestiones les embarcacions, queda validada directament." : "Queda pendent fins que la validi Manteniment. Mentrestant ja surt al plànol, amb la vora taronja."}</p>
+    <button type="button" class="btn cl-pri cl-wide" id="shSave">Desa-la</button>`, () => {
+    $("shSave").onclick = e => busy(e.currentTarget, async () => {
+      const v = formVals(), o = v.place && placeById(v.place);
+      if(v.place && D.boats.some(x => x.place === v.place)) throw {code:"ocupada"};
+      const data = Object.assign(v, {clubId:C.member.clubId, prop:C.member.nom || "", propUid:uid(), ocult:false, estat:"lloc", notes:"", pendent:!canBoatsE(),
+        historial:[{at:now(), qui:C.member.nom || "", que:(canBoatsE() ? "Alta" : "Proposada") + (o ? " a la plaça " + (o.label || "") : "")}], actualitzat:C.F.serverTimestamp(), actualitzatPer:uid()});
+      const r = C.F.doc(col("embarcacions")); await TO(C.F.setDoc(r, data));
+      D.boats.push(Object.assign({id:r.id}, data)); closeSheet(); render(); });
+  });
+}
 const ESTAT_T = k => (PL() ? PL().ESTATS[k] || PL().ESTATS.lloc : {n:k}).n;
 async function boatSave(b, patch, hist){
   const h = (b.historial || []).slice(-19); if(hist) h.push({at:now(), qui:C.member.nom || "", que:hist});
@@ -432,24 +458,37 @@ function boatSheet(placeId, boatId){
   const unplaced = mgr && pl && !b ? D.boats.filter(x => !x.place || !placeById(x.place)) : [];
   const body = !b ? `<p class="note">${pl ? `Plaça lliure per a ${esc(B[pl.t]?.n || "")}.` : ""}</p>
       ${unplaced.length ? field("shPut", "Hi poso", `<select class="field" id="shPut"><option value="">Tria una embarcació sense plaça…</option>${unplaced.map(x => `<option value="${esc(x.id)}">${esc((x.label || B[x.t]?.n) + (x.prop ? " · " + x.prop : ""))}</option>`).join("")}</select>`) : ""}
-      ${mgr ? `<p class="note">Per donar d'alta una embarcació nova, fes-ho des del <a href="planol.html">plànol</a>.</p>` : ""}`
-    : `<div class="cl-binfo">${pl ? `<span><b>Plaça</b> ${esc(pl.label || "")}</span>` : `<span>Sense plaça</span>`}<span>${esc(B[b.t]?.n || "")}</span>${b.vela ? `<span><b>Vela</b> ${esc(b.vela)}</span>` : ""}</div>
+      <button type="button" class="btn cl-pri cl-wide" id="shMine">Hi tinc la meva embarcació</button>`
+    : `${b.pendent ? `<div class="cl-pendbox"><span><b>Pendent de validar</b>${own ? " per Manteniment" : " · proposada per " + esc(b.prop || "un soci")}</span>${mgr ? `<button type="button" class="btn sm cl-pri" id="shValid">Valida</button>` : ""}</div>` : ""}
+      <div class="cl-binfo">${pl ? `<span><b>Plaça</b> ${esc(pl.label || "")}</span>` : `<span>Sense plaça</span>`}<span>${esc(B[b.t]?.n || "")}</span>${b.vela ? `<span><b>Vela</b> ${esc(b.vela)}</span>` : ""}</div>
       <div class="cl-bstate">${Object.entries(PL().ESTATS).map(([k, T]) => edit ? `<button type="button" class="cl-chip" data-sstate="${k}" aria-pressed="${(b.estat || "lloc") === k}" style="--c:${T.s}">${T.n}</button>` : (b.estat || "lloc") === k ? `<span class="cl-chip" aria-pressed="true" style="--c:${T.s}">${T.n}</span>` : "").join("")}</div>
       <div class="cl-bphoto" id="shPhoto">${edit ? `<button type="button" class="btn sm" id="shPhotoBtn">Afegeix una foto</button><input type="file" id="shPhotoIn" accept="image/*" hidden>` : ""}</div>
       <div class="cl-binfo"><span><b>Propietari/a</b> <span id="shProp">${b.ocult && !edit ? "nom ocult" : esc(b.prop || (b.ocult ? "…" : "—"))}</span></span>${b.coprop ? `<span><b>Amb</b> ${esc(b.coprop)}</span>` : ""}</div>
       ${edit ? `${field("shNotes", "Notes", `<textarea class="field cl-ta" id="shNotes" rows="2" maxlength="500" placeholder="Observacions">${esc(b.notes || "")}</textarea>`)}
         <label class="cl-sw"><span>Amaga el nom del propietari al club</span><input type="checkbox" class="switch" id="shOcult"${b.ocult ? " checked" : ""}></label>` : b.notes ? `<p class="cl-text">${esc(b.notes)}</p>` : ""}
       ${mgr ? `<details><summary class="lbl">Canvia de plaça</summary><div class="cl-row2" style="margin-top:8px">${field("shMove", "Plaça lliure", `<select class="field" id="shMove"><option value="">Tria…</option>${free.map(o => `<option value="${esc(o.id)}">${esc(o.label || "")} · ${esc(B[o.t]?.n || "")}</option>`).join("")}</select>`)}<button type="button" class="btn" id="shOut">Treu de la plaça</button></div></details>` : ""}
+      ${edit ? `<details${b.pendent && own ? " open" : ""}><summary class="lbl">Dades de l'embarcació</summary><div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">${dataForm(b)}
+        <button type="button" class="btn" id="shData">${mgr ? "Desa les dades" : "Proposa els canvis"}</button>${!mgr ? `<p class="note">Els canvis queden pendents fins que els validi Manteniment.</p>` : ""}</div></details>` : ""}
+      ${(b.pendent && own) || mgr ? `<div data-delbox="shDel"></div><button type="button" class="btn sm" id="shDelAsk">${mgr ? (b.pendent ? "Rebutja-la" : "Dona-la de baixa") : "Retira la proposta"}</button>` : ""}
       ${(b.historial || []).length ? `<details><summary class="lbl">Historial (${b.historial.length})</summary><p class="note">${b.historial.slice().reverse().map(x => `${new Date(x.at).toLocaleDateString("ca", {day:"numeric", month:"short"})} · ${esc(x.que)}${x.qui ? " · " + esc(x.qui) : ""}`).join("<br>")}</p></details>` : ""}
       ${edit ? `<button type="button" class="btn cl-pri cl-wide" id="shSave">Desa les notes</button>` : ""}`;
   sheet(title, body, async sh => {
     sh.addEventListener("click", ev => { if(ev.target.closest("[data-close]") || ev.target === sh){ ui.psel = null; drawPlan(); } });
-    if(!b){ const put = $("shPut"); if(put) put.onchange = () => busy(put, async () => { const x = D.boats.find(y => y.id === put.value); if(!x) return;
+    if(!b){ $("shMine").onclick = () => newBoatSheet(pl); const put = $("shPut"); if(put) put.onchange = () => busy(put, async () => { const x = D.boats.find(y => y.id === put.value); if(!x) return;
       await boatSave(x, {place:pl.id}, "Plaça " + (pl.label || "")); closeSheet(); render(); }); return; }
     // foto (es descarrega només en obrir la fitxa)
     C.F.getDoc(ref("embarcacions", b.id, "foto", "f")).then(d => { const el = $("shPhoto"); if(el && d.exists()) el.insertAdjacentHTML("afterbegin", `<img src="${d.data().data}" alt="Foto de l'embarcació">`); if(d.exists() && $("shPhotoBtn")) $("shPhotoBtn").textContent = "Canvia la foto"; }).catch(() => {});
     if(b.ocult && edit) C.F.getDoc(ref("embarcacions", b.id, "privat", "p")).then(d => { if(d.exists() && $("shProp")) $("shProp").textContent = (d.data().prop || "—") + " (ocult al club)"; }).catch(() => {});
     if(!edit) return;
+    const va = $("shValid"); if(va) va.onclick = () => busy(va, async () => { await boatSave(b, {pendent:false}, "Validada"); closeSheet(); render(); });
+    $("shData").onclick = e => busy(e.currentTarget, async () => { const v = formVals();
+      if(v.place && v.place !== b.place && D.boats.some(x => x.place === v.place)) throw {code:"ocupada"};
+      const o = v.place && placeById(v.place); await boatSave(b, Object.assign(v, mgr ? {} : {pendent:true}), mgr ? "Dades canviades" + (o && v.place !== b.place ? " · plaça " + (o.label || "") : "") : "Canvis proposats");
+      closeSheet(); render(); });
+    const da = $("shDelAsk"); if(da) da.onclick = () => { const box = sh.querySelector('[data-delbox="shDel"]'); da.hidden = true;
+      slideConfirm(box, mgr && !b.pendent ? "Llisca per donar-la de baixa" : mgr ? "Llisca per rebutjar-la" : "Llisca per retirar-la", async () => {
+        try{ await C.F.deleteDoc(ref("embarcacions", b.id, "privat", "p")).catch(() => {}); await C.F.deleteDoc(ref("embarcacions", b.id, "foto", "f")).catch(() => {});
+          await TO(C.F.deleteDoc(ref("embarcacions", b.id))); D.boats = D.boats.filter(x => x.id !== b.id); closeSheet(); render(); }catch(err){ sheetSay(errText(err)); } }); };
     sh.querySelectorAll("[data-sstate]").forEach(x => x.onclick = () => busy(x, async () => { const k = x.dataset.sstate; if((b.estat || "lloc") === k) return;
       await boatSave(b, {estat:k}, ESTAT_T(k)); sh.querySelectorAll("[data-sstate]").forEach(y => y.setAttribute("aria-pressed", String(y.dataset.sstate === k))); render(); }));
     const pb = $("shPhotoBtn"), pin = $("shPhotoIn");
@@ -857,6 +896,8 @@ document.addEventListener("click", async e => {
   if(ds.forder){ filt.order = ds.forder; saveF(); return; }
   if(ds.fflag){ filt[ds.fflag] = !filt[ds.fflag]; saveF(); return; }
   if(ds.who){ ui.whoOpen[ds.who] = !ui.whoOpen[ds.who]; const [n, ...r] = ds.who.split(":"); paintItem(n, r.join(":")); return; }
+  if(t.id === "clBoatNew"){ newBoatSheet(null); return; }
+  if(ds.bvalid){ const b = D.boats.find(x => x.id === ds.bvalid); if(b){ try{ await boatSave(b, {pendent:false}, "Validada"); render(); }catch(err){ say(errText(err)); } } return; }
   if(ds.bview){ ui.baseView = ds.bview; store.set("ov2_base_view", ds.bview); render(); return; }
   if(ds.pz){ const svg = $("ovpSvg"); if(!svg || !ui.pv) return; if(ds.pz === "fit"){ ui.pv = null; drawPlan(); return; } pZoom(svg, [ui.pv.x + ui.pv.w/2, ui.pv.y + ui.pv.w*svg.getBoundingClientRect().height/svg.getBoundingClientRect().width/2], ds.pz === "in" ? 1/1.4 : 1.4); return; }
   if(ds.boat){ const b = D.boats.find(x => x.id === ds.boat); if(b){ ui.psel = b.place || null; drawPlan(); boatSheet(b.place, b.id); } return; }

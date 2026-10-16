@@ -139,6 +139,7 @@ function drawObjs(){
       gl += `<g class="${cls}" data-id="${o.id}" transform="translate(${o.x} ${o.y}) rotate(${o.r})">`
         + `<rect x="${-o.l/2}" y="${-o.w/2}" width="${o.l}" height="${o.w}" rx=".15" fill="${!b ? "#ffffff" : home ? "#ffffff" : E.f}" fill-opacity="${!b ? .18 : home ? .01 : .55}" stroke="${st}" stroke-width="${sw}" ${!b ? `stroke-dasharray="${lw*5} ${lw*3}"` : ""}/>`
         + (home ? `<g fill="#ffffff" stroke="#1c2530" stroke-width="${lw}" stroke-linejoin="round" pointer-events="none">${shape(b.t, BOATS[b.t]?.l || o.l - MARGIN.l, BOATS[b.t]?.w || o.w - MARGIN.w)}</g>` : "")
+        + (b && b.pendent ? `<rect x="${-o.l/2 - lw*2}" y="${-o.w/2 - lw*2}" width="${o.l + lw*4}" height="${o.w + lw*4}" rx=".2" fill="none" stroke="#e07a00" stroke-width="${lw*2}" stroke-dasharray="${lw*4} ${lw*2}" pointer-events="none"/>` : "")
         + `<text x="${-o.l/2 + .25}" y="${0}" font-size="${fs*.8}" dominant-baseline="middle" class="tx code" transform="rotate(${-o.r} ${-o.l/2 + .25} 0)" pointer-events="none">${esc(o.label || "")}</text></g>`;
       const lab = b ? (b.label || b.vela || "") : ""; if(lab) gt += `<text x="${o.x}" y="${o.y}" font-size="${fs*.8}" text-anchor="middle" dominant-baseline="middle" class="tx boatlab" pointer-events="none">${esc(lab)}</text>`; }
     else if(o.k === "boat"){ /* no es dibuixa a mà: surt a la seva plaça */ }
@@ -233,6 +234,7 @@ function panel(){
       h = `<h2>Plaça ${esc(o.label || "")}</h2>
         ${can.plan ? `<div class="row2">${field("Codi", txt("label", o.label, "A1"))}${field("Per a", opts("pt", BOATS, o.t))}</div>` : `<p class="note">Per a ${esc(BOATS[o.t]?.n || "")}</p>`}
         <span class="lbl">Embarcació</span>
+        ${b && b.pendent ? `<div style="padding:8px 10px;border-radius:10px;border:2px dashed #e07a00;display:flex;gap:8px;align-items:center;justify-content:space-between"><span class="note"><b>Pendent de validar</b> · ho ha proposat ${esc(b.prop || "un soci")}</span>${can.boats ? `<button class="tb" id="boatOk">Valida</button>` : ""}</div>` : ""}
         ${!can.boats ? `<p class="note">${b ? esc((b.label || BOATS[b.t]?.n) + " · " + (ESTATS[b.estat] || ESTATS.lloc).n) : "Lliure"}. Les embarcacions les gestiona Manteniment.</p>` : b ? `<div class="row2">${field("Nom", `<input type="text" data-bk="label" value="${esc(b.label || "")}" placeholder="Garbinada">`)}${field("Vela / matrícula", `<input type="text" data-bk="vela" value="${esc(b.vela || "")}" placeholder="1234">`)}</div>
           ${cl ? field("Propietari/a (soci de l'app)", `<select data-bk="propUid"><option value="">— Ningú amb app / del club —</option>${cl.members.map(m => `<option value="${m.uid}"${m.uid === b.propUid ? " selected" : ""}>${esc(m.nom)}</option>`).join("")}</select>`) : ""}
           ${field(cl ? "Nom del propietari/a (si no té app, o del club)" : "Propietari/a", `<input type="text" data-bk="prop" value="${esc(b.prop || "")}" placeholder="Nom i cognoms">`)}
@@ -255,6 +257,7 @@ function panel(){
   else if(S.length > 1) h = `<h2>${S.length} elements</h2><p class="note">Arrossega'n un per moure'ls tots (s'enganxen a les cantonades; Alt per no enganxar) · fletxes: 10 cm (Maj: 1 m) · Q/E: gira 5° cadascun.</p>${clipRow()}${delBox(S.length)}`;
   else h = `<h2>Plànol</h2><p class="note">${TIPS.sel}</p>
       <div class="chips" style="gap:10px;font-size:.85rem">${[["#ffffff", "#1c2530", "A la varada (silueta)"], ["#4ea6ff", "#1f6fc4", "Navegant"], ["#ffb547", "#b86a00", "En reparació"], ["transparent", "#3b4450", "Lliure (discontínua)"]].map(([f, c, t]) => `<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:18px;height:12px;border-radius:3px;background:${f};border:2px ${f === "transparent" ? "dashed" : "solid"} ${c}"></i>${t}</span>`).join("")}</div>
+      ${(P => P.length ? `<div style="padding:8px 10px;border-radius:10px;border:2px dashed #e07a00"><b>${P.length} pendents de validar</b><p class="note">${P.map(x => { const pl = byId(x.place); return `${esc(x.label || BOATS[x.t]?.n)} · ${pl ? "plaça " + esc(pl.label || "") : "sense plaça"} · ${esc(x.prop || "")}`; }).join("<br>")}</p><p class="note">Toca la plaça (vora taronja) per validar-la.</p></div>` : "")(doc.objs.filter(x => x.k === "boat" && x.pendent))}
       ${(f => f.length ? `<details><summary>Sense plaça (${f.length})</summary><p class="note">${f.map(x => esc((x.label || BOATS[x.t]?.n) + (x.prop ? " · " + x.prop : ""))).join("<br>")}</p><p class="note">Tria una plaça lliure per posar-n'hi una.</p></details>` : "")(doc.objs.filter(x => x.k === "boat" && (!x.place || !byId(x.place))))}
       ${clip ? `<button class="tb" id="pst">Enganxa (${clip.objs.length})</button>` : ""}
       <p class="note">Tecles: Ctrl+C / Ctrl+X / Ctrl+V copia, retalla i enganxa · V selecciona · P plaça · Z zona · S punt · M mesura · F fons · Ctrl+D duplica · Supr esborra · Ctrl+Z desfés.</p>
@@ -292,6 +295,7 @@ $("side").addEventListener("click", e => {
   if(b.id === "boatNew"){ const p = selObjs()[0]; if(!p) return; snapshot(); doc.objs.push({id:uid(), k:"boat", t:p.t || "pati", label:"", vela:"", prop:"", estat:"lloc", place:p.id}); save(); drawObjs(); panel(); return; }
   if(b.id === "boatDelAsk"){ askBoatDel = !askBoatDel; panel(); bindSlide("boatSlide", () => { const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return;
     snapshot(); doc.objs = doc.objs.filter(x => x !== bt); askBoatDel = false; save(); drawObjs(); panel(); tip("Embarcació donada de baixa. Ctrl+Z per desfer.", 3000); }); return; }
+  if(b.id === "boatOk"){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return; snapshot(); bt.pendent = false; save(); drawObjs(); panel(); tip("Validada.", 2000); return; }
   if(b.id === "boatOut"){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return; snapshot(); bt.place = null; save(); drawObjs(); panel(); tip("Ara és a «Sense plaça» (panell general).", 3000); return; }
 });
 $("side").addEventListener("input", e => { const t = e.target; if(!t.dataset.bg) return; const k = t.dataset.bg, v = parseFloat(String(t.value).replace(",", ".")); if(!isFinite(v)) return;

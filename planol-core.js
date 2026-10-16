@@ -79,6 +79,7 @@ function render(plan, boats, opts){
       gl += `<g data-place="${esc(o.id)}" transform="translate(${o.x} ${o.y}) rotate(${o.r || 0})">`
         + `<rect x="${-o.l/2}" y="${-o.w/2}" width="${o.l}" height="${o.w}" rx=".15" fill="${!b || home ? "#ffffff" : E.f}" fill-opacity="${!b ? .25 : home ? .01 : .6}" stroke="${st}" stroke-width="${sw}" ${!b ? `stroke-dasharray="${lw*5} ${lw*3}"` : ""}/>`
         + (home ? `<g fill="#ffffff" stroke="#1c2530" stroke-width="${lw}" stroke-linejoin="round" pointer-events="none">${shape(b.t, BOATS[b.t]?.l || o.l - MARGIN.l, BOATS[b.t]?.w || o.w - MARGIN.w)}</g>` : "")
+        + (b && b.pendent ? `<rect x="${-o.l/2 - lw*2}" y="${-o.w/2 - lw*2}" width="${o.l + lw*4}" height="${o.w + lw*4}" rx=".2" fill="none" stroke="#e07a00" stroke-width="${lw*2}" stroke-dasharray="${lw*4} ${lw*2}" pointer-events="none"/>` : "")
         + `<text x="${-o.l/2 + .25}" y="0" font-size="${fs*.8}" dominant-baseline="middle" class="ovp-tx ovp-code" transform="rotate(${-(o.r || 0)} ${-o.l/2 + .25} 0)" pointer-events="none">${esc(o.label || "")}</text></g>`;
       const lab = b ? (b.label || b.vela || "") : ""; if(lab && ppm > 9) gt += `<text x="${o.x}" y="${o.y}" font-size="${fs*.75}" text-anchor="middle" dominant-baseline="middle" class="ovp-tx ovp-code" pointer-events="none">${esc(lab)}</text>`; }
     else if(o.k === "point"){ const T = POINTS[o.t] || POINTS.dutxa, R = Math.max(.45, 9 / ppm);

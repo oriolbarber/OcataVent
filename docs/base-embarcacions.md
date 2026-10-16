@@ -14,6 +14,7 @@ Pestanya Club ▸ **Base** (primera: Base · Mur · Avisos · Anuncis). Dins de 
 - Nom, tipus, plaça, núm. de vela/matrícula, propietari i copropietaris, foto i notes.
 - Foto: Firebase Storage demana el pla de pagament; es desa comprimida (~800 px, < 100 KB) en un document a part de Firestore i només es descarrega en obrir la fitxa.
 - Propietaris sense app i embarcacions del club: mateixos camps; les dona d'alta qui té el permís «embarcacions».
+- Els socis també omplen les dades de la seva embarcació des de l'app (16-10-2026): queden pendents de validar fins que Manteniment les valida o les edita.
 - Nom del propietari: per defecte el veu tot el club; el propietari el pot amagar (llavors només Manteniment i Junta).
 - Historial de canvis (moure, reassignar, estat) dins la fitxa, plegat (desplegable).
 - **Poca informació a la vista**: el que no és essencial, dins una (i) o un desplegable.
