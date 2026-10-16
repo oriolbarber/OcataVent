@@ -421,8 +421,8 @@ function windCard(){
     ${d != null ? `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="var(--${v.k})" stroke-width="4" stroke-linecap="round"/><path d="M${bx.toFixed(1)} ${by.toFixed(1)}L${l1x.toFixed(1)} ${l1y.toFixed(1)}L${l2x.toFixed(1)} ${l2y.toFixed(1)}Z" fill="var(--${v.k})"/>` : ""}</svg>`;
   const mins = live ? Math.max(0, Math.round((now() - ST.at)/MIN)) : null;
   return {html:`<div class="bs-wind">${rose}<div class="bs-wt"><span class="bs-kn"><b>${r0(n.wind)}</b> kn${n.gust != null ? ` <small>ratxa ${r0(n.gust)}</small>` : ""}</span>
-    <span class="bs-wd">${d != null ? esc(windName(d)) + " · " + Math.round(d) + "°" : ""}</span><small class="bs-src">${live ? "Estació · fa " + mins + " min" : "Previsió"}</small></div>
-    <span class="cl-fit k-${v.k} bs-fit"><b>${Math.round((v.score ?? 0) / 10) || "–"}</b>${esc(v.t)}</span></div>`};
+    <span class="bs-wd">${d != null ? esc(windName(d)) + " · " + Math.round(d) + "°" : ""}</span><span class="bs-wf"><small class="bs-src">${live ? "Estació · fa " + mins + " min" : "Previsió"}</small>
+    <span class="cl-fit k-${v.k} bs-fit"><b>${Math.round((v.score ?? 0) / 10) || "–"}</b>${esc(v.t)}</span></span></div></div>`};
 }
 // Capçalera de la Base: una sola targeta a tot l'ample (vent a dalt; font i qui hi ha en una línia al peu)
 function baseTop(){

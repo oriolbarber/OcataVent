@@ -1406,13 +1406,15 @@ body.wm-open{overflow:hidden}
 .cl-pendbox{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;border:2px dashed #e07a00;background:color-mix(in srgb,#ffb547 14%,var(--surface))}
 /* Base: capçalera (vent i qui hi ha), avisos de la base */
 .bs-top{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
-.bs-wind{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bs-wind{display:flex;align-items:center;gap:12px}
 .bs-rose{width:72px;height:72px;flex:none}
 .bs-wt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 .bs-kn{font-family:var(--f-mono);font-size:.95rem;font-weight:700;white-space:nowrap}
 .bs-kn b{font-size:1.9rem}
 .bs-kn small{font-size:.85rem;color:var(--muted)}
 .bs-wd{font-size:.9rem;font-weight:600;white-space:nowrap}
+.bs-wf{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}
+.bs-src{white-space:nowrap}
 .bs-fit{flex:none;margin-left:auto}
 .bs-foot{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:6px}
 .bs-src{font-size:.8rem;font-weight:600;color:var(--muted)}
