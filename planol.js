@@ -182,13 +182,26 @@ function drawUi(){
       + `<line x1="${c[0]}" y1="${c[1]}" x2="${hx}" y2="${hy}" stroke="#ffcf33" stroke-width="${lw*1.5}" pointer-events="none"/><circle cx="${c[0]}" cy="${c[1]}" r="${H*.6}" fill="#ffcf33" pointer-events="none"/>`
       + `<circle class="h-bgrot" cx="${hx}" cy="${hy}" r="${H*1.6}" fill="#ffcf33" stroke="#0a1322" stroke-width="${lw*1.5}"/>`
       + `<text x="${hx}" y="${hy}" font-size="${H*1.7}" text-anchor="middle" dominant-baseline="central" pointer-events="none" fill="#0a1322">⟳</text>`; }
+  if(tool === "app") h = vistaSvg(lw) + h;
   $("gUi").innerHTML = h; if($("bgbar")) bgBar();
 }
+/* ---------- enquadrament de l'app (doc.vista, metres) ---------- */
+const r1 = v => Math.round(v * 10) / 10;
+function rectOf([a, b]){ return {x:r1(Math.min(a[0], b[0])), y:r1(Math.min(a[1], b[1])), w:r1(Math.abs(b[0] - a[0])), h:r1(Math.abs(b[1] - a[1]))}; }
+function autoVista(){ const B = doc.objs.filter(o => o.k !== "boat").map(bbox); if(!B.length) return null; const m = 1.5;
+  const x0 = Math.min(...B.map(b => b[0])) - m, y0 = Math.min(...B.map(b => b[1])) - m; return {x:r1(x0), y:r1(y0), w:r1(Math.max(...B.map(b => b[2])) + m - x0), h:r1(Math.max(...B.map(b => b[3])) + m - y0)}; }
+// mòbil vertical: la targeta fa ~340 px d'ample i com a molt ~600 px d'alt
+const phonePpm = v => Math.min(340 / v.w, 600 / v.h);
+function vistaSvg(lw){ const live = drag && drag.vista ? rectOf(drag.vista) : null, v = live || doc.vista || autoVista(); if(!v) return "";
+  const auto = !live && !doc.vista, c = auto ? "#8a94a3" : "#ff8a00", B = 1e5;
+  return `<g pointer-events="none"><path d="M${-B} ${-B}H${B}V${B}H${-B}Z M${v.x} ${v.y}V${v.y + v.h}H${v.x + v.w}V${v.y}Z" fill="#0a1322" fill-opacity=".45" fill-rule="evenodd"/>`
+    + `<rect x="${v.x}" y="${v.y}" width="${v.w}" height="${v.h}" fill="none" stroke="${c}" stroke-width="${lw*3}" stroke-dasharray="${lw*8} ${lw*5}"/>`
+    + `<text x="${v.x + 6/ppm()}" y="${v.y - 6/ppm()}" font-size="${13/ppm()}" class="tx measure">${auto ? "Automàtic (tot el plànol)" : "Vista de l'app"} · ${fmt(v.w)} × ${fmt(v.h)} m</text></g>`; }
 function all(){ setView(); drawBg(); drawObjs(); panel(); btns(); }
 function bgBar(){ const on = tool === "bg" && doc.bg.src !== "cap" && !calib; $("bgbar").hidden = !on; mapEl.classList.toggle("bgmode", tool === "bg");
   $("bgdeg").textContent = String(Math.round(doc.bg.r * 10) / 10).replace(".", ",") + "°"; }
 function btns(){ bgBar(); $("undo").disabled = !undoS.length; $("redo").disabled = !redoS.length; document.querySelectorAll("[data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === tool)));
-  svg.classList.toggle("draw", ["boat", "place", "poly", "point", "measure", "paste"].includes(tool) || !!(calib && tool === "bg")); }
+  svg.classList.toggle("draw", ["boat", "place", "poly", "point", "measure", "paste", "app"].includes(tool) || !!(calib && tool === "bg")); }
 let tipT = 0; function tip(t, ms){ $("tip").textContent = t || ""; clearTimeout(tipT); if(t && ms !== 0) tipT = setTimeout(() => $("tip").textContent = "", ms || 3500); }
 const TIPS = {
   sel:"Clica per seleccionar · Maj+clic o Maj+arrossega per triar-ne diversos · arrossega el fons per moure el plànol",
@@ -198,6 +211,7 @@ const TIPS = {
   poly:"Clica els vèrtexs · clica el primer punt o prem Retorn per tancar · Esc per cancel·lar",
   point:"Clica on vols el punt de servei.",
   measure:"Arrossega per mesurar una distància.",
+  app:"Arrossega un rectangle: és el que veuran els socis a l'app (Club ▸ Base), fix, sense moure'l ni ampliar-lo.",
   bg:"Arrossega per moure la foto · roda: escala · cercle groc ⟳, Maj+roda o [ ]: gira"
 };
 function setTool(t){ if(!can.plan && planTools.includes(t)){ noPlan(); return; } tool = t; ghost = null; draft = null; measure = null; calib = null; askDel = false; if(t !== "sel") sel.clear(); tip(TIPS[t], 6000); all(); }
@@ -217,6 +231,11 @@ function panel(){
   else if(tool === "paste") h = `<h2>Enganxa</h2><p class="note">${TIPS.paste}</p><button class="tb" id="clipRot">Gira 90°</button>`;
   else if(tool === "poly") h = `<h2>Nova zona</h2>${chips("cpoly", POLYS, cur.poly)}<p class="note">${TIPS.poly}</p>${draft && draft.pts.length >= 3 ? `<button class="tb" id="closePoly">Tanca la forma</button>` : ""}`;
   else if(tool === "point") h = `<h2>Nou punt</h2>${chips("cpoint", POINTS, cur.point)}`;
+  else if(tool === "app"){ const v = doc.vista || autoVista(), px = v ? Math.round(phonePpm(v) * (BOATS.pati.l + MARGIN.l)) : 0;
+    h = `<h2>Vista de l'app</h2><p class="note">${TIPS.app}</p>
+      <p class="note">${doc.vista ? `Ara: <b>${fmt(doc.vista.w)} × ${fmt(doc.vista.h)} m</b>.` : "Ara és <b>automàtic</b>: tot el que hi ha dibuixat."}${v ? ` Al mòbil, una plaça de patí farà uns <b>${px} px</b>${px < 30 ? " (petita: enquadra menys espai)" : ""}.` : ""}</p>
+      <p class="note">El mòbil és vertical: un rectangle quadrat o més alt que ample s'hi veu més gran.</p>
+      <button class="tb" id="vistaAuto"${doc.vista ? "" : " disabled"}>Torna a l'automàtic</button>`; }
   else if(tool === "measure") h = `<h2>Mesura</h2><p class="note">${TIPS.measure}</p>${measure && measure.b ? `<p style="font:700 1.6rem var(--f-mono);margin:0">${fmt(Math.hypot(measure.b[0]-measure.a[0], measure.b[1]-measure.a[1]))} m</p>` : ""}`;
   else if(tool === "bg"){ const b = doc.bg;
     h = `<h2>Foto de fons</h2>${chips("bgsrc", SRC, b.src)}
@@ -282,6 +301,7 @@ $("side").addEventListener("click", e => {
   if(d.bgrot){ snapshot(); bgAround(viewC(), +d.bgrot, 1); save(); drawBg(); drawUi(); panelLater(); return; }
   if(d.bgsrc){ snapshot(); doc.bg.src = d.bgsrc; save(); all(); return; }
   if(b.id === "closePoly"){ finishPoly(); return; }
+  if(b.id === "vistaAuto"){ snapshot(); doc.vista = null; save(); drawUi(); panel(); return; }
   if(b.id === "bgFile"){ $("bgFileIn").click(); return; }
   if(b.id === "calib"){ calib = calib ? null : {}; panel(); drawUi(); btns(); return; }
   if(b.id === "calibOk"){ const m = parseFloat(String($("calibM").value).replace(",", ".")); if(!(m > 0) || !calib || !calib.b) return;
@@ -402,7 +422,7 @@ function moveObjs(S, dx, dy){ for(const o of S){ if(o.k === "poly") o.pts = o.pt
 /* ---------- ratolí i dits ---------- */
 const ptrs = new Map();
 function hitId(ev){ const g = ev.target.closest && ev.target.closest("[data-id]"); return g ? g.dataset.id : null; }
-const planTools = ["place", "poly", "point", "paste", "bg"];
+const planTools = ["place", "poly", "point", "paste", "bg", "app"];
 function noPlan(){ tip("No tens permís per editar el plànol (només les embarcacions).", 3000); }
 svg.addEventListener("pointerdown", ev => {
   svg.setPointerCapture(ev.pointerId); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
@@ -420,6 +440,7 @@ svg.addEventListener("pointerdown", ev => {
     if(draft.pts.length >= 3 && Math.hypot(p[0]-draft.pts[0][0], p[1]-draft.pts[0][1]) < 10/ppm()){ finishPoly(); return; }
     draft.pts.push(p); drawUi(); panel(); return; }
   if(tool === "measure"){ measure = {a:p, b:p}; drag = {measure:true}; drawUi(); return; }
+  if(tool === "app"){ drag = {vista:[p, p]}; drawUi(); return; }
   if(tool === "bg" && ev.target.classList.contains("h-bgrot")){ snapshot(); const c = viewC(); drag = {bgrot:true, c, a0:Math.atan2(p[1]-c[1], p[0]-c[0]) / D2R}; return; }
   if(tool === "bg"){ if(calib){ if(!calib.a) calib.a = p; else if(!calib.b) calib.b = p; else { calib.a = p; calib.b = null; } panel(); drawUi(); return; }
     snapshot(); drag = {bg:true, p0:p, dx:doc.bg.dx, dy:doc.bg.dy}; return; }
@@ -455,6 +476,7 @@ svg.addEventListener("pointermove", ev => {
     bgAround(drag.c, da, 1); drag.a0 = a; drawBg(); drawUi(); return; }
   if(drag.bg){ doc.bg.dx = drag.dx + p[0] - drag.p0[0]; doc.bg.dy = drag.dy + p[1] - drag.p0[1]; $("gBg").firstChild && $("gBg").firstChild.setAttribute("transform", bgTransform()); return; }
   if(drag.box){ drag.box[1] = p; drawUi(); return; }
+  if(drag.vista){ drag.vista[1] = p; drawUi(); return; }
   if(drag.rot){ const o = drag.rot; let a = Math.atan2(p[1] - o.y, p[0] - o.x) / D2R; if(!ev.altKey) a = Math.round(a / 5) * 5; o.r = (a + 360) % 360; if(o.k === "place") follow(o); drawObjs(); return; }
   if(drag.vx){ drag.vx.pts[drag.i] = p; drawObjs(); return; }
   if(drag.move){ let dx = p[0] - drag.p0[0], dy = p[1] - drag.p0[1]; drag.moved = drag.moved || Math.hypot(dx, dy) * ppm() > 2;
@@ -468,6 +490,7 @@ function endPtr(ev){
   if(!drag) return; const d = drag; drag = null;
   if(d.pinch){ bgLater(); return; }
   if(d.bgpinch){ save(); drawBg(); panel(); return; }
+  if(d.vista){ const v = rectOf(d.vista); if(v.w < 3 || v.h < 3){ drawUi(); tip("Arrossega un rectangle més gran.", 2500); return; } snapshot(); doc.vista = v; save(); drawUi(); panel(); tip("Enquadrament desat. Així es veurà a l'app.", 3000); return; }
   if(d.box){ const [a, b] = d.box, x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
     doc.objs.forEach(o => { if(o.k === "boat") return; const [bx0, by0, bx1, by1] = bbox(o); if(bx0 >= x0 && bx1 <= x1 && by0 >= y0 && by1 <= y1) sel.add(o.id); }); drawObjs(); panel(); return; }
   if(d.move){ if(!d.moved){ undoS.pop(); btns(); return; }
@@ -531,7 +554,7 @@ document.addEventListener("keydown", ev => {
   if(tool === "place" && "qQeErR".includes(k)){ cur.rot = ((cur.rot + ({q:-5, e:5, r:90})[k.toLowerCase()]) % 360 + 360) % 360; ghostPlace(lastPt); drawUi(); panel(); return; }
   if(tool === "paste" && "rR".includes(k)){ rotClip(90); return; }
   if(k === "q" || k === "Q"){ rotSel(-5); return; } if(k === "e" || k === "E"){ rotSel(5); return; } if(k === "r" || k === "R"){ rotSel(90); return; }
-  const T = {v:"sel", p:"place", z:"poly", s:"point", m:"measure", f:"bg"}[k.toLowerCase()]; if(T && !ctrl) setTool(T);
+  const T = {v:"sel", p:"place", z:"poly", s:"point", m:"measure", f:"bg", a:"app"}[k.toLowerCase()]; if(T && !ctrl) setTool(T);
 });
 
 /* ---------- barra superior ---------- */

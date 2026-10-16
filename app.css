@@ -1372,11 +1372,9 @@ body.wm-open{overflow:hidden}
 /* Club ▸ Base ▸ Embarcacions: plànol de la base */
 .cl-seg.cl-seg2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ovp-card{padding:8px;display:flex;flex-direction:column;gap:8px}
-.ovp{position:relative;height:min(62vh,560px);border-radius:12px;overflow:hidden;background:#e4dccb}
+.ovp{position:relative;width:100%;max-height:72vh;border-radius:12px;overflow:hidden;background:#e4dccb}
 :root[data-theme="dark"] .ovp{background:#3a3730}
-#ovpSvg{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-.ovp-z{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px}
-.ovp-z .btn{width:44px;min-height:44px;padding:0;justify-content:center;font-size:1.2rem;background:var(--surface)}
+#ovpSvg{width:100%;height:100%;display:block;touch-action:pan-y;user-select:none}
 .ovp-tx{fill:#0a1322;font-family:var(--f-body);font-weight:700;paint-order:stroke;stroke:#ffffffd9;stroke-width:.12px;stroke-linejoin:round}
 .ovp-code{font-family:var(--f-mono)}
 .ovp-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;font-weight:600;color:var(--muted);padding:0 4px}

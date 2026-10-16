@@ -493,7 +493,7 @@ function renderBoats(){
   const onPlace = D.boats.filter(b => b.place && placeById(b.place)), n = k => onPlace.filter(b => (b.estat || "lloc") === k).length, lliures = places.filter(p => !onPlace.some(b => b.place === p.id)).length;
   const M = myBoats(), E = PL().ESTATS;
   return baseTop() + `<article class="card ovp-card"><div class="ovp" id="ovp"><svg id="ovpSvg" xmlns="http://www.w3.org/2000/svg" aria-label="Plànol de la base: toca una plaça per veure'n l'embarcació"></svg>
-      <div class="ovp-z"><button type="button" class="btn" data-pz="in" aria-label="Apropa">+</button><button type="button" class="btn" data-pz="out" aria-label="Allunya">−</button><button type="button" class="btn" data-pz="fit" aria-label="Tot el plànol">⤢</button></div></div>
+</div>
     <div class="ovp-leg"><span><i style="background:#fff;border-color:#1c2530"></i>${n("lloc")} a la varada</span><span><i style="background:${E.navegant.f};border-color:${E.navegant.s}"></i>${n("navegant")} navegant</span><span><i style="background:${E.reparacio.f};border-color:${E.reparacio.s}"></i>${n("reparacio")} en reparació</span><span><i style="border-style:dashed"></i>${lliures} lliures</span></div></article>
     ${(P => canBoatsE() && P.length ? `<section class="card cl-pend"><div class="card-h"><span class="lbl">Pendents de validar · ${P.length}</span></div>${P.map(b => { const pl = placeById(b.place);
       return `<div class="cl-brow"><button type="button" class="cl-bname" data-boat="${esc(b.id)}"><b>${esc(b.label || PL().BOATS[b.t]?.n || "Embarcació")}</b><span>${esc(b.prop || "")} · ${pl ? "plaça " + esc(pl.label || "") : "sense plaça"}</span></button><button type="button" class="btn sm cl-pri" data-bvalid="${esc(b.id)}">Valida</button></div>`; }).join("")}</section>` : "")(D.boats.filter(b => b.pendent))}
@@ -504,30 +504,22 @@ function renderBoats(){
       <p class="note">Les dades que hi posis (tipus, nom, vela, plaça) les valida Manteniment. També pots tocar una plaça lliure del plànol.</p></section>
     ${fetsCard()}`;
 }
-// Vista del plànol: fit, + i −, arrossegar i pessigar; tocar una plaça obre la fitxa
-function planView(){ const ex = PL().extent(D.planol); if(!ex) return {x:-40, y:-30, w:80}; const w = Math.max(15, (ex[2] - ex[0]) * 1.08); return {x:(ex[0] + ex[2])/2 - w/2, y:(ex[1] + ex[3])/2 - w*.4, w}; }
+// Vista del plànol: fixa, enquadrada pels responsables a l'editor (vista = {x, y, w, h} en metres); sense enquadrament, tot el plànol. Tocar una plaça obre la fitxa.
+function planView(){ const v = D.planol && D.planol.vista; if(v && v.w > 1 && v.h > 1) return v;
+  const ex = PL().extent(D.planol); if(!ex) return {x:-40, y:-30, w:80, h:60}; const m = 1.5; return {x:ex[0] - m, y:ex[1] - m, w:ex[2] - ex[0] + 2*m, h:ex[3] - ex[1] + 2*m}; }
 function drawPlan(){
-  const svg = $("ovpSvg"); if(!svg || !PL()) return;
+  const svg = $("ovpSvg"); if(!svg || !PL()) return; const box0 = svg.parentNode;
+  const v = planView(); box0.style.aspectRatio = `${v.w} / ${v.h}`;
   const box = svg.getBoundingClientRect(); if(!box.width) return;
-  if(!ui.pv){ ui.pv = planView(); const ex = PL().extent(D.planol); if(ex){ const h = box.height / box.width; const need = (ex[3] - ex[1]) * 1.08 / h; if(need > ui.pv.w){ ui.pv.w = need; ui.pv.x = (ex[0] + ex[2])/2 - need/2; } ui.pv.y = (ex[1] + ex[3])/2 - ui.pv.w*h/2; } }
-  const v = ui.pv, h = box.height / box.width; svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.w * h}`);
-  svg.innerHTML = PL().render(D.planol, D.boats, {ppm:box.width / v.w, mine:new Set(myBoats().map(b => b.id)), sel:ui.psel});
+  svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`); svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  const ppm = Math.min(box.width / v.w, box.height / v.h);
+  svg.innerHTML = PL().render(D.planol, D.boats, {ppm, mine:new Set(myBoats().map(b => b.id)), sel:ui.psel});
 }
-const pp = new Map(); let pdrag = null;
-function pWorld(svg, x, y){ const b = svg.getBoundingClientRect(), k = ui.pv.w / b.width; return [ui.pv.x + (x - b.left)*k, ui.pv.y + (y - b.top)*k]; }
-function pZoom(svg, c, f){ const w = Math.max(6, Math.min(400, ui.pv.w * f)), k = w / ui.pv.w; ui.pv.x = c[0] - (c[0] - ui.pv.x)*k; ui.pv.y = c[1] - (c[1] - ui.pv.y)*k; ui.pv.w = w; drawPlan(); }
-document.addEventListener("pointerdown", e => { const svg = e.target.closest && e.target.closest("#ovpSvg"); if(!svg || !ui.pv) return;
-  svg.setPointerCapture(e.pointerId); pp.set(e.pointerId, [e.clientX, e.clientY]);
-  if(pp.size === 2){ const [a, b] = [...pp.values()]; pdrag = {pinch:true, d0:Math.hypot(a[0]-b[0], a[1]-b[1]), w0:ui.pv.w, c:pWorld(svg, (a[0]+b[0])/2, (a[1]+b[1])/2)}; return; }
-  const g = e.target.closest("[data-place]"); pdrag = {sx:e.clientX, sy:e.clientY, v:Object.assign({}, ui.pv), place:g && g.dataset.place, moved:false}; });
-document.addEventListener("pointermove", e => { if(!pdrag || !pp.has(e.pointerId)) return; const svg = $("ovpSvg"); if(!svg) return; pp.set(e.pointerId, [e.clientX, e.clientY]);
-  if(pdrag.pinch && pp.size === 2){ const [a, b] = [...pp.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]); pZoom(svg, pdrag.c, pdrag.w0 * pdrag.d0 / Math.max(10, d) / ui.pv.w); return; }
-  const dx = e.clientX - pdrag.sx, dy = e.clientY - pdrag.sy; if(Math.hypot(dx, dy) > 6) pdrag.moved = true; if(!pdrag.moved) return;
-  const k = ui.pv.w / svg.getBoundingClientRect().width; ui.pv.x = pdrag.v.x - dx*k; ui.pv.y = pdrag.v.y - dy*k; drawPlan(); });
-function pEnd(e){ if(!pp.has(e.pointerId)) return; pp.delete(e.pointerId); const d = pdrag; if(pp.size === 0) pdrag = null;
-  if(d && !d.pinch && !d.moved && d.place && e.type === "pointerup"){ ui.psel = d.place; drawPlan(); boatSheet(d.place); } }
-document.addEventListener("pointerup", pEnd); document.addEventListener("pointercancel", pEnd);
-document.addEventListener("wheel", e => { const svg = e.target.closest && e.target.closest("#ovpSvg"); if(!svg || !ui.pv) return; e.preventDefault(); pZoom(svg, pWorld(svg, e.clientX, e.clientY), e.deltaY > 0 ? 1.15 : 1/1.15); }, {passive:false});
+let ptap = null;
+document.addEventListener("pointerdown", e => { const g = e.target.closest && e.target.closest("#ovpSvg [data-place]"); ptap = g ? {x:e.clientX, y:e.clientY, place:g.dataset.place} : null; });
+document.addEventListener("pointerup", e => { const d = ptap; ptap = null; if(!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) return;
+  ui.psel = d.place; drawPlan(); boatSheet(d.place); });
+window.addEventListener("resize", () => { if($("ovpSvg")) drawPlan(); });
 
 /* ---------- fitxa de l'embarcació ---------- */
 // Dades que proposa el soci (i valida Manteniment): tipus, nom, vela, copropietaris i plaça
@@ -1018,7 +1010,6 @@ document.addEventListener("click", async e => {
   if(t.id === "clBoatNew"){ newBoatSheet(null); return; }
   if(ds.bvalid){ const b = D.boats.find(x => x.id === ds.bvalid); if(b){ try{ await boatSave(b, {pendent:false}, "Validada"); render(); }catch(err){ say(errText(err)); } } return; }
   if(ds.bscroll){ const el = $(ds.bscroll); if(el) el.scrollIntoView({behavior:"smooth", block:"start"}); return; }
-  if(ds.pz){ const svg = $("ovpSvg"); if(!svg || !ui.pv) return; if(ds.pz === "fit"){ ui.pv = null; drawPlan(); return; } pZoom(svg, [ui.pv.x + ui.pv.w/2, ui.pv.y + ui.pv.w*svg.getBoundingClientRect().height/svg.getBoundingClientRect().width/2], ds.pz === "in" ? 1/1.4 : 1.4); return; }
   if(ds.boat){ const b = D.boats.find(x => x.id === ds.boat); if(b){ ui.psel = b.place || null; drawPlan(); boatSheet(b.place, b.id); } return; }
   if(ds.bstate){ const b = D.boats.find(x => x.id === ds.id); if(!b || (b.estat || "lloc") === ds.bstate) return; try{ await boatSave(b, {estat:ds.bstate}, ESTAT_T(ds.bstate)); render(); }catch(err){ say(errText(err)); } return; }
   if(ds.fview){ filt.view = ds.fview; saveF(); return; }
