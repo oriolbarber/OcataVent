@@ -44,7 +44,7 @@ body.g-lock{overflow:hidden}
 @media (max-width:420px){.g-stats b{font-size:1.3rem}.g-stats span{font-size:.65rem}}
 .cl-chips{display:flex;flex-wrap:wrap;gap:6px}
 .g-tag.rol{border-color:var(--ideal);color:var(--ideal)}
-.g-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
 .g-rol .cl-chip{min-height:40px;font-size:.85rem}
 .g-tbl-w{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
 .g-tbl{border-collapse:collapse;width:100%;min-width:520px;font-size:.9rem}
@@ -57,4 +57,5 @@ body.g-lock{overflow:hidden}
 .g-lnk{all:unset;cursor:pointer;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .g-det summary{cursor:pointer;font-weight:700;padding:6px 0;color:var(--accent)}
 
-.g-planol{display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;color:var(--accent);text-decoration:none;border-bottom:2px solid transparent;padding:6px 4px}
+.g-wide .g-main{max-width:none}
+.g-plan{width:100%;height:calc(100dvh - 190px);min-height:520px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:block}

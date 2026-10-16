@@ -551,7 +551,7 @@ if(CLOUD){
   tool = "sel"; all(); tip("Carregant el plànol del club…", 0);
   CLOUD.ready.then(r => {
     if(r.error){ const T = {login:"Entra primer a l'app amb el teu compte (mateix navegador) i torna aquí.", perm:"No tens permís per editar el plànol ni les embarcacions. Ho pot fer la Junta, Manteniment o qui en tingui el permís.", net:"No s'ha pogut connectar amb el núvol.", load:"No s'ha pogut carregar el plànol. " + (r.msg || "")};
-      $("side").innerHTML = `<h2>Plànol del club</h2><p class="note">${T[r.error] || T.load}</p><a class="tb" href="./">Obre l'app</a><a class="tb" href="?local=1">Prova l'editor sense núvol</a>`; tip(""); return; }
+      $("side").innerHTML = `<h2>Plànol del club</h2><p class="note">${T[r.error] || T.load}</p><a class="tb" href="./" target="_top">Obre l'app</a><a class="tb" href="?local=1">Prova l'editor sense núvol</a>`; tip(""); return; }
     cl = r; can = r.can; doc = r.doc; undoS.length = 0; redoS.length = 0;
     try{ const im = JSON.parse(localStorage.getItem(KEY + "_img_" + cl.club)); if(im && im.img) Object.assign(doc.bg, im); }catch(e){}
     $("cloudSt").textContent = "Club: " + cl.clubNom + (can.plan ? "" : " · només embarcacions") + (can.boats ? "" : " · només plànol");

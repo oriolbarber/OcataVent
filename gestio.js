@@ -106,6 +106,10 @@ async function loadAll(){
   }catch(e){ say(errText(e)); }
 }
 
+/* ---------- plànol de la base: l'editor (planol.html) dins la web de gestió ---------- */
+const renderPlanol = () => `<iframe class="g-plan" title="Plànol de la base" src="planol.html?embed=1${club ? "&club=" + encodeURIComponent(club) : ""}"></iframe>
+  <p class="note">Es desa sol al núvol del club. Si el vols a pantalla completa: <a href="planol.html${club ? "?club=" + encodeURIComponent(club) : ""}">obre'l a part</a>.</p>`;
+
 /* ---------- utilitats de pantalla ---------- */
 function shell(html){ $("gMain").innerHTML = `<div class="msg err" id="gMsg" hidden></div>` + html; head(); }
 function say(t){ const m = $("gMsg"); if(m){ m.textContent = t || ""; m.hidden = !t; } }
@@ -147,9 +151,10 @@ function render(){
       <button type="button" data-view="socis"${view === "socis" ? ' aria-current="page"' : ""}>Socis${pend ? `<span class="cl-dot" aria-label="${pend} pendents">${pend}</span>` : ""}</button>
       <button type="button" data-view="rols"${view === "rols" ? ' aria-current="page"' : ""}>Rols</button>
       <button type="button" data-view="coms"${view === "coms" ? ' aria-current="page"' : ""}>Comissions</button>
-      <a class="g-planol" href="planol.html${club && (!me || club !== me.clubId) ? "?club=" + encodeURIComponent(club) : ""}">Plànol de la base ↗</a>
+      <button type="button" data-view="planol"${view === "planol" ? ' aria-current="page"' : ""}>Plànol</button>
     </nav>
-    ${({socis:renderSocis, rols:renderRols, coms:renderComs})[view](L)}`);
+    ${({socis:renderSocis, rols:renderRols, coms:renderComs, planol:renderPlanol})[view](L)}`);
+  document.body.classList.toggle("g-wide", view === "planol");
 }
 function stats(L){
   const n = e => L.filter(m => m.estat === e).length;
