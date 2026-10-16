@@ -1419,6 +1419,12 @@ body.wm-open{overflow:hidden}
 .bs-pc.late{border-color:var(--no);color:var(--no)}
 .bs-pc.aigua{border-color:var(--accent);color:var(--accent)}
 .bs-fets{display:flex;flex-direction:column;gap:6px}
+.bs-marks{display:flex;flex-direction:column;gap:4px}
+.bs-mark{display:flex;align-items:center;gap:8px;width:100%;padding:4px 6px;border:0;border-radius:10px;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer;min-height:36px}
+.bs-mark > span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.bs-mark .bs-fi{width:24px;height:24px;font-size:.85rem}
+.bs-mark.t-fet .bs-fi{background:var(--marg)}
+.bs-mark.new{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .bs-frow{display:flex;align-items:flex-start;gap:10px;width:100%;padding:8px 6px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .bs-frow.new{background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:10px}
 .bs-fi{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 1rem Georgia,serif;color:#fff;background:var(--accent)}

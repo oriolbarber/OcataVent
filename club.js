@@ -84,7 +84,7 @@ const visible = () => !$("view-club").hidden;
 
 /* ---------- avisos amb data: es mostren a la previsió de 7 dies (app.js, renderWeek) ---------- */
 // Puntet vermell a la pestanya «Club» del menú principal si hi ha avisos sense llegir
-const unreadN = () => C ? D.avisos.filter(a => alive(a) && !(a.vist || {})[uid()]).length : 0;
+const unreadN = () => C ? D.avisos.filter(a => alive(a) && !(a.vist || {})[uid()]).length + D.fets.filter(f => f.public && fetIsNew(f)).length : 0;
 function navDot(){
   const d = $("clubDot"); if(!d) return;
   const n = unreadN(); d.hidden = !n;
@@ -115,7 +115,7 @@ const canMod = () => !!(C && (C.perms || []).includes("moderar"));
 const modBtn = (n, x) => x.clubId === C.member.clubId || C.isAdm
   ? `<button type="button" class="btn sm cl-mod" data-askdel="${n}" data-id="${esc(x.id)}">Retira (moderació)</button>`
   : `<button type="button" class="btn sm cl-mod" data-askhide="${n}" data-id="${esc(x.id)}">Amaga per al club</button>`;
-const NEED = {mur:["pubs", "intents", "avisos"], avisos:["avisos"], anuncis:["anuncis", "avisos"], base:["pres", "avisos", "planol", "boats", "fets"]};
+const NEED = {mur:["pubs", "intents", "avisos"], avisos:["avisos", "fets", "boats", "planol"], anuncis:["anuncis", "avisos"], base:["pres", "avisos", "planol", "boats", "fets"]};
 async function fetchK(k){
   const club = C.member.clubId;
   if(k === "pubs") D.pubs = await getVisible("publicacions");
@@ -348,9 +348,11 @@ function renderAvisos(){
   const L = D.avisos.filter(a => alive(a) && (ui.avisCom === "totes" || a.comissio === ui.avisCom))
     .sort((a, b) => (b.fixat ? 1 : 0) - (a.fixat ? 1 : 0) || (a.data && b.data ? a.data.localeCompare(b.data) : (a.data ? -1 : b.data ? 1 : 0)) || ms(b.creat) - ms(a.creat));
   const coms = canPost(), mine = C.member.comissions || [];
-  return foldFilters("avis", ui.avisCom === "totes" ? "" : COMSm()[ui.avisCom], ui.avisOpen, [["totes", "Totes"]].concat(Object.entries(COMSm())).map(([k, t]) => chip("data-acom", k, ui.avisCom === k, t)).join(""))
-    + `${L.map(avisCard).join("")
-      || `<article class="card empty">${D.at.avisos ? "No hi ha cap avís." : "Carregant…"}</article>`}
+  const base = ui.avisCom === "totes" || ui.avisCom === "base", P = base ? fetsPub() : [];
+  return foldFilters("avis", ui.avisCom === "totes" ? "" : ui.avisCom === "base" ? "Base" : COMSm()[ui.avisCom], ui.avisOpen, [["totes", "Totes"], ["base", "Base"]].concat(Object.entries(COMSm())).map(([k, t]) => chip("data-acom", k, ui.avisCom === k, t)).join(""))
+    + (P.length || ui.avisCom === "base" ? `<section class="card bs-fets"><div class="card-h"><span class="lbl">Base nàutica</span><button type="button" class="btn sm cl-pri" id="clFetNew">+ Nou</button></div>${P.map(fetRow).join("") || `<p class="note">Res pendent a la base.</p>`}</section>` : "")
+    + `${ui.avisCom === "base" ? "" : L.map(avisCard).join("")
+      || (P.length || ui.avisCom === "base" ? "" : `<article class="card empty">${D.at.avisos ? "No hi ha cap avís." : "Carregant…"}</article>`)}
     ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Hi publiquen les comissions amb permís per fer avisos${mine.length ? ". Tu hi publiques com a: " + esc(mine.map(k => COMSm()[k]).join(", ")) : ""}.</p>` : ""}`;
 }
 
@@ -437,17 +439,21 @@ const fetBoat = f => f.boatId ? D.boats.find(b => b.id === f.boatId) : null;
 const fetWhere = f => { const b = fetBoat(f), pl = b ? placeById(b.place) : f.placeId ? placeById(f.placeId) : null; return [pl ? "Plaça " + (pl.label || "") : "", b ? (b.label || PL()?.BOATS[b.t]?.n || "") : ""].filter(Boolean).join(" · "); };
 const fetLast = f => ms(f.darrer && f.darrer.at) || ms(f.creat) || 0;
 const fetIsNew = f => f.estat === "obert" && !(f.vist || {})[uid()] && (f.darrer ? f.darrer.uid !== uid() : f.userId !== uid());
-const fetsUnread = () => C ? D.fets.filter(fetIsNew).length : 0;
+const fetsUnread = () => C ? D.fets.filter(f => !f.public && fetIsNew(f)).length : 0;   // les notes i avisos generals compten a «Avisos»
+const fetsPub = () => D.fets.filter(f => f.public && f.estat !== "tancat").sort((a, b) => fetLast(b) - fetLast(a));
 const canClose = f => f.userId === uid() || f.propUid === uid() || (f.tipus !== "pregunta" && canBoatsE());
 function fetRow(f){
   const n = (f.respostes || []).length, w = fetWhere(f);
   return `<button type="button" class="bs-frow t-${esc(f.tipus)}${fetIsNew(f) ? " new" : ""}" data-fet="${esc(f.id)}"><span class="bs-fi" aria-hidden="true">${FET_T[f.tipus]?.i || "i"}</span>
     <span class="bs-ft"><b>${esc(f.text)}</b><small>${esc(f.autorNom || "")}${w ? " · " + esc(w) : ""} · ${esc(ago(fetLast(f)))}${n ? " · " + n + (n === 1 ? " resposta" : " respostes") : ""}</small></span></button>`;
 }
+// A la Base: les notes i avisos generals (que surten sencers a «Avisos») com a marques d'una línia; els de les embarcacions, sencers
 function fetsCard(){
-  const open = D.fets.filter(f => f.estat !== "tancat").sort((a, b) => fetLast(b) - fetLast(a)), closed = D.fets.filter(f => f.estat === "tancat" && now() - fetLast(f) < 30*DAY);
+  const open = D.fets.filter(f => !f.public && f.estat !== "tancat").sort((a, b) => fetLast(b) - fetLast(a)), closed = D.fets.filter(f => !f.public && f.estat === "tancat" && now() - fetLast(f) < 30*DAY), P = fetsPub();
+  const marks = P.map(f => `<button type="button" class="bs-mark t-${esc(f.tipus)}${fetIsNew(f) ? " new" : ""}" data-fet="${esc(f.id)}"><span class="bs-fi" aria-hidden="true">${FET_T[f.tipus]?.i || "i"}</span><span>${esc(f.text)}</span></button>`).join("");
   return `<section class="card bs-fets"><div class="card-h"><span class="lbl">Avisos de la base</span><button type="button" class="btn sm cl-pri" id="clFetNew">+ Nou</button></div>
-    ${open.map(fetRow).join("") || `<p class="note">Res pendent a la base.</p>`}
+    ${marks ? `<div class="bs-marks">${marks}</div>` : ""}
+    ${open.map(fetRow).join("") || (marks ? "" : `<p class="note">Res pendent a la base.</p>`)}
     ${closed.length ? `<details><summary class="lbl">Tancats (${closed.length})</summary>${closed.map(fetRow).join("")}</details>` : ""}</section>`;
 }
 function fetNewSheet(b){
@@ -512,8 +518,13 @@ function drawPlan(){
   const box = svg.getBoundingClientRect(); if(!box.width) return;
   svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`); svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   const ppm = Math.min(box.width / v.w, box.height / v.h);
-  svg.innerHTML = PL().render(D.planol, D.boats, {ppm, mine:new Set(myBoats().map(b => b.id)), sel:ui.psel});
+  svg.innerHTML = PL().render(D.planol, D.boats, {ppm, mine:new Set(myBoats().map(b => b.id)), sel:ui.psel}) + fetMarks(ppm);
 }
+// marca «!» o «?» a la plaça que té un avís o una pregunta oberts (dels que veus)
+function fetMarks(ppm){ const R = 9 / ppm, by = {};
+  D.fets.filter(f => !f.public && f.estat !== "tancat").forEach(f => { const b = fetBoat(f), id = (b && b.place) || f.placeId; if(id && !by[id]) by[id] = f; });
+  return Object.entries(by).map(([id, f]) => { const o = placeById(id); if(!o) return ""; const [dx, dy] = PL().rot(o.l/2 - R*.9, -o.w/2 + R*.9, o.r || 0);
+    return `<g pointer-events="none"><circle cx="${o.x + dx}" cy="${o.y + dy}" r="${R}" fill="${f.tipus === "pregunta" ? "var(--ideal)" : "var(--marg)"}" stroke="#fff" stroke-width="${R*.2}"/><text x="${o.x + dx}" y="${o.y + dy}" font-size="${R*1.3}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-weight="800" font-family="Georgia,serif">${FET_T[f.tipus]?.i || "!"}</text></g>`; }).join(""); }
 let ptap = null;
 document.addEventListener("pointerdown", e => { const g = e.target.closest && e.target.closest("#ovpSvg [data-place]"); ptap = g ? {x:e.clientX, y:e.clientY, place:g.dataset.place} : null; });
 document.addEventListener("pointerup", e => { const d = ptap; ptap = null; if(!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) return;
