@@ -1430,3 +1430,6 @@ body.wm-open{overflow:hidden}
 .bs-qui > .card-h{padding:0 4px}
 :root[data-size="big"] .bs-kn b{font-size:2rem}:root[data-size="big"] .bs-ft small,:root[data-size="big"] .bs-wd{font-size:1rem}
 @media (max-width:360px){.bs-top{grid-template-columns:1fr}}
+.tn-boat{display:flex;flex-direction:column;gap:6px;padding:2px 2px 0}
+.tn-boat .cl-chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tn-boat .cl-chip:disabled{opacity:.5}

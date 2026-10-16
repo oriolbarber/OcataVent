@@ -375,6 +375,38 @@ const myBoats = () => D.boats.filter(b => b.propUid === uid());
 const placeById = id => ((D.planol && D.planol.objs) || []).find(o => o.id === id && o.k === "place");
 // Base: tot en una pàgina. Vent i qui hi ha · plànol · avisos de la base · les meves embarcacions · qui hi ha (mapa i llistes)
 function renderBaseTab(){ return renderBoats() + `<section id="bsQui" class="bs-qui"><div class="card-h"><span class="lbl">Qui hi ha</span></div>${renderBase()}</section>`; }
+/* ---------- Fase B: l'embarcació de la sortida passa a «navegant» i, en acabar, torna a «a la varada» ---------- */
+// Tria: la que el soci ha marcat a «Nova sortida» (ov2_trip_pick), si no la del mateix tipus que l'embarcació triada a dalt, si no la primera. Les que són en reparació no.
+const TB_K = "ov2_trip_boat";
+const tripBoats = () => myBoats().filter(b => (b.estat || "lloc") !== "reparacio");
+function boatForTrip(){
+  const M = tripBoats(), pick = store.get("ov2_trip_pick");
+  if(pick === "cap") return null; if(M.some(b => b.id === pick)) return pick;
+  return ((M.filter(b => b.t === act)[0]) || M[0] || {}).id || null;
+}
+async function ensureBoats(){ if(C && !D.at.boats){ try{ await fetchK("boats"); }catch(e){} } }
+function tripBoatUI(){
+  const el = $("tripBoat"); if(!el) return;
+  const M = C ? myBoats() : []; if(!M.length){ el.hidden = true; el.innerHTML = ""; return; }
+  const cur = boatForTrip(), B = PL() ? PL().BOATS : {};
+  el.hidden = false;
+  el.innerHTML = `<span class="lbl">Embarcació del club</span><div class="cl-chips">${M.map(b => { const rep = (b.estat || "lloc") === "reparacio";
+      return `<button type="button" class="cl-chip" data-tboat="${esc(b.id)}" aria-pressed="${cur === b.id}"${rep ? " disabled" : ""}>${esc(b.label || B[b.t]?.n || "Embarcació")}${rep ? " · en reparació" : ""}</button>`; }).join("")}
+    <button type="button" class="cl-chip" data-tboat="cap" aria-pressed="${cur === null}">Cap</button></div>
+    <p class="note">${cur ? "Mentre duri la sortida sortirà com a «navegant» al plànol del club." : "No es marcarà cap embarcació com a navegant."}</p>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("#tripBoat [data-tboat]"); if(!b) return; store.set("ov2_trip_pick", b.dataset.tboat); tripBoatUI(); });
+async function tripBoatStart(){
+  if(!C || store.get(TB_K)) return; await ensureBoats();
+  const id = boatForTrip(), b = id && D.boats.find(x => x.id === id); if(!b) return;
+  try{ if((b.estat || "lloc") !== "navegant") await boatSave(b, {estat:"navegant"}, "Navegant (sortida)"); store.set(TB_K, {id:b.id, at:now()}); if(visible()) render(); }catch(e){}
+}
+async function tripBoatEnd(){
+  const tb = store.get(TB_K); if(!tb || !C) return; await ensureBoats();
+  const b = D.boats.find(x => x.id === tb.id);
+  try{ if(b && b.estat === "navegant") await boatSave(b, {estat:"lloc"}, "A la varada (fi de la sortida)"); store.del(TB_K); if(visible()) render(); }catch(e){}   // si falla, es torna a provar en tornar a obrir l'app
+}
+
 /* ---------- capçalera de Base: vent d'ara i qui hi ha ---------- */
 function windCard(){
   if(typeof DATA === "undefined" || !DATA || !DATA.now || typeof scoreWindow !== "function") return "";
@@ -1016,7 +1048,7 @@ document.addEventListener("click", async e => {
   if(t.id === "clNewAn") anunciSheet(null);
 });
 document.addEventListener("change", e => { if(e.target.id === "clAll"){ filt.all = e.target.checked; store.set("ov2_club_filt", Object.assign({}, filt, {open:false})); render(); } });
-$("actSeg").addEventListener("click", () => { if(visible() && tab === "mur") setTimeout(render, 0); });
+$("actSeg").addEventListener("click", () => { if(visible() && tab === "mur") setTimeout(render, 0); setTimeout(tripBoatUI, 0); });
 
 /* ---------- mur: lliscar per arxivar (→) o esborrar (←), amb «Desfés» ---------- */
 let sw = null, undoT = null;
@@ -1139,8 +1171,11 @@ window.addEventListener("ov-coms", () => { publishEvents(); if(visible()) render
 window.addEventListener("ov-cloud", async () => {
   await ctx(); tabBtn(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { navDot(); window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
+  else if(C && store.get(TB_K)) tripBoatEnd();   // la sortida es va acabar sense connexió: torna-la a la varada ara
+  if(C) ensureBoats().then(tripBoatUI);
   if(C && visible()) load(true); else if(!C && visible()) render();
 });
+window.addEventListener("mm-view", e => { if(e.detail === "trip" && C) ensureBoats().then(tripBoatUI); });
 window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load(); loadAlerts(); } else if(accSt()) renderWait(); else go("fc"); } else { if(mapObj){ mapObj.remove(); mapObj = null; } clearRouteMaps(); } });
 
 /* ---------- connexió amb trip.js i cloud.js ---------- */
@@ -1156,6 +1191,7 @@ const OV_CLUB = window.OV_CLUB = {
     el.firstChild.onclick = () => pubSheet(t, p || null);
   },
   async tripStart(Lv){
+    if(C && Lv) tripBoatStart();   // l'embarcació, encara que la presència sigui «Ningú»
     if(!C || vis() === "ningu" || !Lv) return;
     const last = Lv.pts && Lv.pts[Lv.pts.length - 1];
     try{ await setPres(presDoc("aigua", {act:String(Lv.act || act), desde:Lv.start, lat:last ? last.lat : HOME[0], lon:last ? last.lon : HOME[1]})); lastPos = now(); }catch(e){}
@@ -1166,7 +1202,7 @@ const OV_CLUB = window.OV_CLUB = {
     const s10 = window.OV_AVISOS?.sog10();
     C.F.updateDoc(ref("presencia", uid()), {lat:p.lat, lon:p.lon, sog: s10 == null ? null : Math.round(s10*10)/10, actualitzat:C.F.serverTimestamp()}).catch(() => {});
   },
-  async tripEnd(){ if(!C || !D.myPres) return; try{ await delPres(); }catch(e){} },
+  async tripEnd(){ tripBoatEnd(); if(!C || !D.myPres) return; try{ await delPres(); }catch(e){} },
   async arrived(){ if(!C || vis() === "ningu") return; try{ await setPres(presDoc("base")); }catch(e){} },   // tornada a la base detectada pel GPS
   // Avís de seguretat que el navegant ha decidit enviar (avisos.js). Si a Confidencialitat té «Ningú», s'envia al club:
   // prémer «Avisa el club» és un consentiment explícit. Retorna true quan el núvol l'ha desat.

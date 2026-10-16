@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=140">
+<link rel="stylesheet" href="app.css?v=141">
 </head>
 <body>
 <div class="app">
@@ -228,6 +228,7 @@
       <button class="btn sm ck-allow" type="button" id="pmBatBtn" hidden>Ja ho he fet</button>
     </article>
     <input type="checkbox" id="ecoMode" hidden>
+    <div class="tn-boat" id="tripBoat" hidden></div>
     <label class="tn-name" for="tripName"><span class="lbl">Nom de la sortida <small>(opcional)</small></span>
       <input class="field" id="tripName" type="text" placeholder="P. ex. Regata de dissabte" autocomplete="off" style="font-family:var(--f-body)"></label>
     <button class="cta" type="button" id="startTrip"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Comença la sortida</button>
@@ -393,7 +394,7 @@
 <script src="cloud.js?v=120"></script>
 <script src="amics.js?v=113"></script>
 <script src="planol-core.js?v=3"></script>
-<script src="club.js?v=128"></script>
+<script src="club.js?v=129"></script>
 <script src="admin.js?v=111"></script>
 <script src="avisos.js?v=207"></script>
 <script src="sos.js?v=2"></script>

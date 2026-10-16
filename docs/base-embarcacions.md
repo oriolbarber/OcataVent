@@ -39,7 +39,7 @@ Pestanya Club ▸ **Base** (primera: Base · Mur · Avisos · Anuncis). Dins de 
 ## Fases
 - A (feta, 16-10-2026): plànol, editor al núvol, places, fitxes, foto, nom ocult, historial i pestanya Base a l'app.
 - C (feta, 16-10-2026): avisos de la base (notes i incidències per a tot el club), «Avisa d'un fet» (propietari + Manteniment) i «Pregunta al propietari» (fil privat), amb respostes i tancament.
-- B (pendent): «navegant» automàtic.
+- B (feta, 16-10-2026): a «Nova sortida» es tria l'embarcació (o «Cap»); en començar passa a «navegant» i en acabar torna «a la varada», amb historial.
 - Base és una sola pàgina (16-10-2026): vent i qui hi ha a dalt, plànol, avisos, les meves embarcacions i mapa de presència. L'app no enllaça l'editor (només la web de gestió).
 
 ## Mides estàndard (eslora × mànega)
