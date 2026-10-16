@@ -22,7 +22,7 @@ const DAY = 864e5, MIN = 6e4, INT_DIES = 15, AN_MAX = 60;   // «Qui surt»: fin
 const now = () => Date.now();
 
 let C = null, tab = store.get("ov2_club_tab") || "base", mapObj = null, lastPos = 0;
-const D = {pubs:[], intents:[], avisos:[], anuncis:[], pres:[], myPres:null, alertes:[], planol:null, boats:[], at:{}};
+const D = {pubs:[], intents:[], avisos:[], anuncis:[], pres:[], myPres:null, alertes:[], planol:null, boats:[], fets:[], at:{}};
 const WARN = svgI('<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>', 22);
 const F0 = {open:false, date:"mes", person:"tots", order:"recents", vent:false, onada:false, all:false, view:"mur"};
 let filt = Object.assign({}, F0, store.get("ov2_club_filt") || {}, {open:false});
@@ -73,7 +73,7 @@ const vis = () => window.OV_PRIV ? OV_PRIV.pref("presencia") : "club";   // Conf
 const NIVT = v => (window.OV_PRIV?.NIV || {})[v] || v;
 // Publicar avisos: administració i premium, a qualsevol comissió; la resta, a les seves i amb el permís «avisos»
 const canPost = () => !C ? [] : (C.isAdm || C.isPremium) ? Object.keys(COMSm()) : C.perms.includes("avisos") ? (C.member.comissions || []).filter(k => COMSm()[k]) : [];
-const ERRS = {"ocupada":"Aquesta plaça ja té una embarcació. Tria'n una altra.","permission-denied":"El núvol ho ha refusat (permís). Comprova que les regles estan publicades.", "unavailable":"Sense connexió amb el núvol.", "timeout":"El núvol no respon."};
+const ERRS = {"buit":"Escriu-hi alguna cosa.","ocupada":"Aquesta plaça ja té una embarcació. Tria'n una altra.","permission-denied":"El núvol ho ha refusat (permís). Comprova que les regles estan publicades.", "unavailable":"Sense connexió amb el núvol.", "timeout":"El núvol no respon."};
 const errText = e => ERRS[e && e.code] || "No s'ha pogut fer" + (e && e.code ? " (" + e.code + ")." : ".");
 function say(t){ const m = $("clubMsg"); if(m){ m.textContent = t || ""; m.hidden = !t; } }
 function sheetSay(t){ const m = $("shMsg"); if(m){ m.textContent = t || ""; m.hidden = !t; } }
@@ -115,7 +115,7 @@ const canMod = () => !!(C && (C.perms || []).includes("moderar"));
 const modBtn = (n, x) => x.clubId === C.member.clubId || C.isAdm
   ? `<button type="button" class="btn sm cl-mod" data-askdel="${n}" data-id="${esc(x.id)}">Retira (moderació)</button>`
   : `<button type="button" class="btn sm cl-mod" data-askhide="${n}" data-id="${esc(x.id)}">Amaga per al club</button>`;
-const NEED = {mur:["pubs", "intents", "avisos"], avisos:["avisos"], anuncis:["anuncis", "avisos"], base:["pres", "avisos", "planol", "boats"]};
+const NEED = {mur:["pubs", "intents", "avisos"], avisos:["avisos"], anuncis:["anuncis", "avisos"], base:["pres", "avisos", "planol", "boats", "fets"]};
 async function fetchK(k){
   const club = C.member.clubId;
   if(k === "pubs") D.pubs = await getVisible("publicacions");
@@ -129,6 +129,11 @@ async function fetchK(k){
     }));
   }
   if(k === "planol"){ const d = await C.F.getDoc(ref("clubs", C.member.clubId, "planol", "actual")).catch(() => null); D.planol = d && d.exists() ? d.data() : null; if(D.planol) D.planol.objs = PL() ? PL().fromStore(D.planol.objs) : []; }
+  if(k === "fets"){   // una consulta per cada manera de veure'ls (les regles no deixen llegir-los tots de cop)
+    const club = C.member.clubId, qs = [[W("clubId", "==", club), W("public", "==", true)], [W("clubId", "==", club), W("userId", "==", uid())], [W("propUid", "==", uid())]];
+    if(canBoatsE()) qs.push([W("clubId", "==", club), W("tipus", "==", "fet")]);
+    const out = new Map(); (await Promise.all(qs.map(w => getAll("fets", ...w).catch(() => [])))).flat().forEach(x => out.set(x.id, x));
+    D.fets = [...out.values()].filter(f => f.clubId === club); }
   if(k === "boats") D.boats = await getAll("embarcacions", W("clubId", "==", C.member.clubId)).catch(() => []);
   if(k === "pres"){
     D.pres = await getVisible("presencia");
@@ -176,11 +181,11 @@ function render(){
   clearRouteMaps();
   const unread = unreadN(); navDot();
   const tabs = [["base", "Base"], ["mur", "Mur"], ["avisos", "Avisos"], ["anuncis", "Anuncis"]];
-  el.innerHTML = `<nav class="cl-tabs" aria-label="Seccions del club">${tabs.map(([k, t]) => `<button type="button" data-ctab="${k}"${k === tab ? ' aria-current="page"' : ""}>${t}${k === "avisos" && unread ? `<span class="cl-dot" aria-label="${unread} sense llegir">${unread}</span>` : ""}</button>`).join("")}</nav>
+  el.innerHTML = `<nav class="cl-tabs" aria-label="Seccions del club">${tabs.map(([k, t]) => `<button type="button" data-ctab="${k}"${k === tab ? ' aria-current="page"' : ""}>${t}${k === "base" && fetsUnread() ? `<span class="cl-dot" aria-label="${fetsUnread()} avisos de la base nous">${fetsUnread()}</span>` : ""}${k === "avisos" && unread ? `<span class="cl-dot" aria-label="${unread} sense llegir">${unread}</span>` : ""}</button>`).join("")}</nav>
     <div class="msg err" id="clubMsg" hidden></div>
     ${alertBanner()}
     ${({mur:renderMur, avisos:renderAvisos, anuncis:renderAnuncis, base:renderBaseTab})[tab]()}`;
-  if(tab === "base") setTimeout(ui.baseView === "qui" ? drawMap : drawPlan, 0);
+  if(tab === "base") setTimeout(() => { drawPlan(); drawMap(); }, 0);
   if(tab === "mur") setTimeout(drawRouteMaps, 0);
 }
 
@@ -368,18 +373,94 @@ const canPlanE = () => !!C && (C.isAdm || C.isPremium || C.perms.includes("plano
 const canBoatsE = () => !!C && (C.isAdm || C.isPremium || C.perms.includes("embarcacions") || (C.member.comissions || []).includes("manteniment"));
 const myBoats = () => D.boats.filter(b => b.propUid === uid());
 const placeById = id => ((D.planol && D.planol.objs) || []).find(o => o.id === id && o.k === "place");
-function renderBaseTab(){
-  const npres = presLive().length;
-  const seg = `<div class="cl-seg cl-seg2" role="tablist">${[["emb", "Embarcacions"], ["qui", "Qui hi ha" + (npres ? " (" + npres + ")" : "")]].map(([k, t]) => `<button type="button" role="tab" data-bview="${k}" aria-pressed="${ui.baseView === k}">${t}</button>`).join("")}</div>`;
-  return seg + (ui.baseView === "qui" ? renderBase() : renderBoats());
+// Base: tot en una pàgina. Vent i qui hi ha · plànol · avisos de la base · les meves embarcacions · qui hi ha (mapa i llistes)
+function renderBaseTab(){ return renderBoats() + `<section id="bsQui" class="bs-qui"><div class="card-h"><span class="lbl">Qui hi ha</span></div>${renderBase()}</section>`; }
+/* ---------- capçalera de Base: vent d'ara i qui hi ha ---------- */
+function windCard(){
+  if(typeof DATA === "undefined" || !DATA || !DATA.now || typeof scoreWindow !== "function") return "";
+  const live = typeof stFresh === "function" && stFresh(), n = live ? {wind:ST.wind, gust:ST.gust, dir:ST.dir} : DATA.now;
+  if(n.wind == null) return "";
+  const v = verdict(scoreWindow(Object.assign({}, DATA.now, n), crit[act] || crit.pati)), R = 34, P = (a, r) => [Math.sin(a*Math.PI/180)*r, -Math.cos(a*Math.PI/180)*r];
+  const d = n.dir, [ax, ay] = P(d, R - 4), [bx, by] = P(d + 180, R*.55), [l1x, l1y] = P(d + 180 + 28, R*.55 - 9), [l2x, l2y] = P(d + 180 - 28, R*.55 - 9);
+  const lbl = [["N", 0], ["E", 90], ["S", 180], ["O", 270]].map(([t, a]) => { const [x, y] = P(a, R + 9); return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" fill="var(--muted)">${t}</text>`; }).join("");
+  const rose = `<svg class="bs-rose" viewBox="-48 -48 96 96" aria-hidden="true"><circle r="${R}" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.5"/>${lbl}
+    ${d != null ? `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="var(--${v.k})" stroke-width="4" stroke-linecap="round"/><path d="M${bx.toFixed(1)} ${by.toFixed(1)}L${l1x.toFixed(1)} ${l1y.toFixed(1)}L${l2x.toFixed(1)} ${l2y.toFixed(1)}Z" fill="var(--${v.k})"/>` : ""}</svg>`;
+  const mins = live ? Math.max(0, Math.round((now() - ST.at)/MIN)) : null;
+  return `<div class="bs-wind">${rose}<div class="bs-wt"><span class="bs-kn"><b>${r0(n.wind)}</b> kn${n.gust != null ? ` <small>ratxa ${r0(n.gust)}</small>` : ""}</span>
+    <span class="bs-wd">${d != null ? esc(windName(d)) + " · " + Math.round(d) + "°" : ""}</span><span class="cl-fit k-${v.k}" style="align-self:flex-start"><b>${Math.round((v.score ?? 0) / 10) || "–"}</b>${esc(v.t)}</span>
+    <span class="note">${live ? "Estació · fa " + mins + " min" : "Previsió (sense estació)"}</span></div></div>`;
 }
+function baseTop(){
+  const L = presLive(), ai = L.filter(x => x.estat === "aigua"), ba = L.filter(x => x.estat === "base");
+  const names = A => A.slice(0, 6).map(x => `<span class="bs-pc${warned(x) ? " late" : ""}">${esc(x.id === uid() ? "Tu" : String(x.nom || "").split(" ")[0])}</span>`).join("") + (A.length > 6 ? `<span class="bs-pc">+${A.length - 6}</span>` : "");
+  return `<div class="bs-top"><article class="card bs-card">${windCard() || `<p class="note">Sense dades de vent ara.</p>`}</article>
+    <button type="button" class="card bs-card bs-pres" data-bscroll="bsQui" aria-label="Qui hi ha: ${ba.length} a la base, ${ai.length} navegant">
+      <div class="bs-prow"><span class="bs-n" style="color:var(--ideal)">${ba.length}</span><span class="lbl">A la base</span></div>${ba.length ? `<div class="bs-pcs">${names(ba)}</div>` : ""}
+      <div class="bs-prow"><span class="bs-n" style="color:var(--accent)">${ai.length}</span><span class="lbl">Navegant</span></div>${ai.length ? `<div class="bs-pcs">${names(ai)}</div>` : ""}
+      <span class="note">Mapa i llista, a baix ↓</span></button></div>`;
+}
+
+/* ---------- avisos de la base: notes, fets i preguntes (col·lecció «fets») ---------- */
+const FET_T = {nota:{n:"Nota", i:"i"}, fet:{n:"Avís", i:"!"}, pregunta:{n:"Pregunta al propietari", i:"?"}};
+const fetBoat = f => f.boatId ? D.boats.find(b => b.id === f.boatId) : null;
+const fetWhere = f => { const b = fetBoat(f), pl = b ? placeById(b.place) : f.placeId ? placeById(f.placeId) : null; return [pl ? "Plaça " + (pl.label || "") : "", b ? (b.label || PL()?.BOATS[b.t]?.n || "") : ""].filter(Boolean).join(" · "); };
+const fetLast = f => ms(f.darrer && f.darrer.at) || ms(f.creat) || 0;
+const fetIsNew = f => f.estat === "obert" && !(f.vist || {})[uid()] && (f.darrer ? f.darrer.uid !== uid() : f.userId !== uid());
+const fetsUnread = () => C ? D.fets.filter(fetIsNew).length : 0;
+const canClose = f => f.userId === uid() || f.propUid === uid() || (f.tipus !== "pregunta" && canBoatsE());
+function fetRow(f){
+  const n = (f.respostes || []).length, w = fetWhere(f);
+  return `<button type="button" class="bs-frow t-${esc(f.tipus)}${fetIsNew(f) ? " new" : ""}" data-fet="${esc(f.id)}"><span class="bs-fi" aria-hidden="true">${FET_T[f.tipus]?.i || "i"}</span>
+    <span class="bs-ft"><b>${esc(f.text)}</b><small>${esc(f.autorNom || "")}${w ? " · " + esc(w) : ""} · ${esc(ago(fetLast(f)))}${n ? " · " + n + (n === 1 ? " resposta" : " respostes") : ""}</small></span></button>`;
+}
+function fetsCard(){
+  const open = D.fets.filter(f => f.estat !== "tancat").sort((a, b) => fetLast(b) - fetLast(a)), closed = D.fets.filter(f => f.estat === "tancat" && now() - fetLast(f) < 30*DAY);
+  return `<section class="card bs-fets"><div class="card-h"><span class="lbl">Avisos de la base</span><button type="button" class="btn sm cl-pri" id="clFetNew">+ Nou</button></div>
+    ${open.map(fetRow).join("") || `<p class="note">Res pendent a la base.</p>`}
+    ${closed.length ? `<details><summary class="lbl">Tancats (${closed.length})</summary>${closed.map(fetRow).join("")}</details>` : ""}</section>`;
+}
+function fetNewSheet(b){
+  const own = b && b.propUid === uid(), kinds = b ? (own || !b.propUid ? ["fet"] : ["fet", "pregunta"]) : ["fet", "nota"];
+  let kind = kinds[0];
+  const who = k => k === "pregunta" ? "Només la veuen tu i el propietari." : b ? "La veuen el propietari i Manteniment." : k === "nota" ? "La veu tot el club." : "El veu tot el club; Manteniment el pot tancar.";
+  sheet(b ? (b.label || PL().BOATS[b.t]?.n || "Embarcació") : "Nou avís de la base", `${kinds.length > 1 ? `<div class="cl-seg cl-seg2">${kinds.map(k => `<button type="button" data-fkind="${k}" aria-pressed="${k === kind}">${k === "fet" ? (b ? "Avisa d'un fet" : "Avís / incidència") : k === "nota" ? "Nota informativa" : "Pregunta"}</button>`).join("")}</div>` : ""}
+    ${field("fText", "Text", `<textarea class="field cl-ta" id="fText" rows="3" maxlength="500" placeholder="${b ? "Ex.: la vela ha quedat mal plegada" : "Ex.: la dutxa de l'esquerra no funciona"}"></textarea>`)}
+    <p class="note" id="fWho">${who(kind)}</p><button type="button" class="btn cl-pri cl-wide" id="shSave">Envia</button>`, sh => {
+    sh.querySelectorAll("[data-fkind]").forEach(x => x.onclick = () => { kind = x.dataset.fkind; sh.querySelectorAll("[data-fkind]").forEach(y => y.setAttribute("aria-pressed", String(y === x))); $("fWho").textContent = who(kind); });
+    $("shSave").onclick = e => busy(e.currentTarget, async () => { const text = $("fText").value.trim().slice(0, 500); if(!text) throw {code:"buit"};
+      const data = {clubId:C.member.clubId, userId:uid(), autorNom:C.member.nom || "", tipus:kind, text, boatId:b ? b.id : null, placeId:b ? b.place || null : null, propUid:b ? b.propUid || null : null,
+        public:!b, estat:"obert", respostes:[], vist:{[uid()]:true}, creat:C.F.serverTimestamp()};
+      const rf = C.F.doc(col("fets")); await TO(C.F.setDoc(rf, data)); D.fets.push(Object.assign({id:rf.id}, data, {creat:now()})); closeSheet(); render(); });
+  });
+}
+function fetSheet(id){
+  const f = D.fets.find(x => x.id === id); if(!f) return;
+  const close = canClose(f), del = f.userId === uid() || canBoatsE(), b = fetBoat(f);
+  const msg = (who, at, t) => `<div class="bs-msg"><small>${esc(who)} · ${esc(at ? new Date(at).toLocaleString("ca", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"}) : "")}</small><p>${esc(t)}</p></div>`;
+  sheet(FET_T[f.tipus]?.n || "Avís", `${fetWhere(f) ? `<p class="note">${esc(fetWhere(f))}</p>` : ""}
+    <div class="bs-thread">${msg(f.autorNom || "", ms(f.creat), f.text)}${(f.respostes || []).map(x => msg(x.nom || "", x.at, x.text)).join("")}</div>
+    ${f.estat === "tancat" ? `<p class="note"><b>Tancat.</b></p>` : `${field("fRep", "Resposta", `<textarea class="field cl-ta" id="fRep" rows="2" maxlength="500"></textarea>`)}<button type="button" class="btn cl-pri cl-wide" id="fSend">Respon</button>`}
+    <div class="cl-row2">${close ? `<button type="button" class="btn" id="fClose">${f.estat === "tancat" ? "Torna'l a obrir" : "Tanca'l"}</button>` : "<span></span>"}${b ? `<button type="button" class="btn" id="fBoat">Veure l'embarcació</button>` : ""}</div>
+    ${del ? `<div data-delbox="fDel"></div><button type="button" class="btn sm" id="fDelAsk">Esborra'l</button>` : ""}`, sh => {
+    if(!(f.vist || {})[uid()]){ f.vist = Object.assign({}, f.vist, {[uid()]:true}); C.F.updateDoc(ref("fets", f.id), {["vist." + uid()]:true}).catch(() => {}); render(); }
+    const send = $("fSend"); if(send) send.onclick = () => busy(send, async () => { const text = $("fRep").value.trim().slice(0, 500); if(!text) return;
+      const x = {uid:uid(), nom:C.member.nom || "", text, at:now()}, R = (f.respostes || []).concat([x]).slice(-40);
+      await TO(C.F.updateDoc(ref("fets", f.id), {respostes:R, darrer:{uid:uid(), at:x.at}, vist:{[uid()]:true}})); f.respostes = R; f.darrer = {uid:uid(), at:x.at}; f.vist = {[uid()]:true}; fetSheet(f.id); render(); });
+    const cl = $("fClose"); if(cl) cl.onclick = () => busy(cl, async () => { const st = f.estat === "tancat" ? "obert" : "tancat";
+      await TO(C.F.updateDoc(ref("fets", f.id), {estat:st, darrer:{uid:uid(), at:now()}})); f.estat = st; f.darrer = {uid:uid(), at:now()}; closeSheet(); render(); });
+    const fb = $("fBoat"); if(fb) fb.onclick = () => { ui.psel = b.place || null; closeSheet(); boatSheet(b.place, b.id); drawPlan(); };
+    const da = $("fDelAsk"); if(da) da.onclick = () => { da.hidden = true; slideConfirm(sh.querySelector('[data-delbox="fDel"]'), "Llisca per esborrar-lo", async () => {
+      try{ await TO(C.F.deleteDoc(ref("fets", f.id))); D.fets = D.fets.filter(x => x.id !== f.id); closeSheet(); render(); }catch(err){ sheetSay(errText(err)); } }); };
+  });
+}
+
 function renderBoats(){
   if(!PL()) return `<article class="card empty">Carregant…</article>`;
   const plan = D.planol, places = ((plan && plan.objs) || []).filter(o => o.k === "place"), edit = canPlanE() || canBoatsE();
-  if(!places.length && !((plan && plan.objs) || []).length) return `<article class="card empty">${D.at.planol ? "Encara no s'ha dibuixat el plànol de la base." : "Carregant…"}${edit ? `<p class="note" style="margin-top:8px">Es dibuixa des d'un ordinador: <a href="planol.html">Plànol de la base</a>.</p>` : ""}</article>`;
+  if(!places.length && !((plan && plan.objs) || []).length) return baseTop() + `<article class="card empty">${D.at.planol ? "Encara no s'ha dibuixat el plànol de la base." : "Carregant…"}${edit ? `<p class="note" style="margin-top:8px">Es dibuixa des de la web de gestió del club.</p>` : ""}</article>` + fetsCard();
   const onPlace = D.boats.filter(b => b.place && placeById(b.place)), n = k => onPlace.filter(b => (b.estat || "lloc") === k).length, lliures = places.filter(p => !onPlace.some(b => b.place === p.id)).length;
   const M = myBoats(), E = PL().ESTATS;
-  return `<article class="card ovp-card"><div class="ovp" id="ovp"><svg id="ovpSvg" xmlns="http://www.w3.org/2000/svg" aria-label="Plànol de la base: toca una plaça per veure'n l'embarcació"></svg>
+  return baseTop() + `<article class="card ovp-card"><div class="ovp" id="ovp"><svg id="ovpSvg" xmlns="http://www.w3.org/2000/svg" aria-label="Plànol de la base: toca una plaça per veure'n l'embarcació"></svg>
       <div class="ovp-z"><button type="button" class="btn" data-pz="in" aria-label="Apropa">+</button><button type="button" class="btn" data-pz="out" aria-label="Allunya">−</button><button type="button" class="btn" data-pz="fit" aria-label="Tot el plànol">⤢</button></div></div>
     <div class="ovp-leg"><span><i style="background:#fff;border-color:#1c2530"></i>${n("lloc")} a la varada</span><span><i style="background:${E.navegant.f};border-color:${E.navegant.s}"></i>${n("navegant")} navegant</span><span><i style="background:${E.reparacio.f};border-color:${E.reparacio.s}"></i>${n("reparacio")} en reparació</span><span><i style="border-style:dashed"></i>${lliures} lliures</span></div></article>
     ${(P => canBoatsE() && P.length ? `<section class="card cl-pend"><div class="card-h"><span class="lbl">Pendents de validar · ${P.length}</span></div>${P.map(b => { const pl = placeById(b.place);
@@ -389,7 +470,7 @@ function renderBoats(){
         <div class="cl-bst">${Object.entries(E).map(([k, T]) => `<button type="button" class="cl-chip" data-bstate="${k}" data-id="${esc(b.id)}" aria-pressed="${(b.estat || "lloc") === k}" style="--c:${T.s}">${T.n}</button>`).join("")}</div></div>`; }).join("")}
       <button type="button" class="btn cl-dash" id="clBoatNew">+ ${M.length ? "Afegeix-ne una altra" : "Afegeix la meva embarcació"}</button>
       <p class="note">Les dades que hi posis (tipus, nom, vela, plaça) les valida Manteniment. També pots tocar una plaça lliure del plànol.</p></section>
-    ${edit ? `<p class="note">${canPlanE() ? "Pots editar el plànol" : "Pots gestionar les embarcacions"} des d'un ordinador: <a href="planol.html">Plànol de la base</a>.</p>` : ""}`;
+    ${fetsCard()}`;
 }
 // Vista del plànol: fit, + i −, arrossegar i pessigar; tocar una plaça obre la fitxa
 function planView(){ const ex = PL().extent(D.planol); if(!ex) return {x:-40, y:-30, w:80}; const w = Math.max(15, (ex[2] - ex[0]) * 1.08); return {x:(ex[0] + ex[2])/2 - w/2, y:(ex[1] + ex[3])/2 - w*.4, w}; }
@@ -470,6 +551,8 @@ function boatSheet(placeId, boatId){
       ${edit ? `<details${b.pendent && own ? " open" : ""}><summary class="lbl">Dades de l'embarcació</summary><div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">${dataForm(b)}
         <button type="button" class="btn" id="shData">${mgr ? "Desa les dades" : "Proposa els canvis"}</button>${!mgr ? `<p class="note">Els canvis queden pendents fins que els validi Manteniment.</p>` : ""}</div></details>` : ""}
       ${(b.pendent && own) || mgr ? `<div data-delbox="shDel"></div><button type="button" class="btn sm" id="shDelAsk">${mgr ? (b.pendent ? "Rebutja-la" : "Dona-la de baixa") : "Retira la proposta"}</button>` : ""}
+      ${(F => F.length ? `<div class="bs-fets-in"><span class="lbl">Avisos d'aquesta embarcació</span>${F.map(fetRow).join("")}</div>` : "")(D.fets.filter(f => f.boatId === b.id && f.estat !== "tancat"))}
+      <div class="cl-row2"><button type="button" class="btn" id="shFet">Avisa d'un fet</button>${!own && b.propUid ? `<button type="button" class="btn" id="shAsk">Pregunta al propietari</button>` : "<span></span>"}</div>
       ${(b.historial || []).length ? `<details><summary class="lbl">Historial (${b.historial.length})</summary><p class="note">${b.historial.slice().reverse().map(x => `${new Date(x.at).toLocaleDateString("ca", {day:"numeric", month:"short"})} · ${esc(x.que)}${x.qui ? " · " + esc(x.qui) : ""}`).join("<br>")}</p></details>` : ""}
       ${edit ? `<button type="button" class="btn cl-pri cl-wide" id="shSave">Desa les notes</button>` : ""}`;
   sheet(title, body, async sh => {
@@ -478,6 +561,9 @@ function boatSheet(placeId, boatId){
       await boatSave(x, {place:pl.id}, "Plaça " + (pl.label || "")); closeSheet(); render(); }); return; }
     // foto (es descarrega només en obrir la fitxa)
     C.F.getDoc(ref("embarcacions", b.id, "foto", "f")).then(d => { const el = $("shPhoto"); if(el && d.exists()) el.insertAdjacentHTML("afterbegin", `<img src="${d.data().data}" alt="Foto de l'embarcació">`); if(d.exists() && $("shPhotoBtn")) $("shPhotoBtn").textContent = "Canvia la foto"; }).catch(() => {});
+    $("shFet").onclick = () => { closeSheet(); fetNewSheet(b); };
+    const ask = $("shAsk"); if(ask) ask.onclick = () => { closeSheet(); fetNewSheet(b); setTimeout(() => { const q = document.querySelector('[data-fkind="pregunta"]'); if(q) q.click(); }, 0); };
+    sh.querySelectorAll("[data-fet]").forEach(x => x.onclick = () => fetSheet(x.dataset.fet));
     if(b.ocult && edit) C.F.getDoc(ref("embarcacions", b.id, "privat", "p")).then(d => { if(d.exists() && $("shProp")) $("shProp").textContent = (d.data().prop || "—") + " (ocult al club)"; }).catch(() => {});
     if(!edit) return;
     const va = $("shValid"); if(va) va.onclick = () => busy(va, async () => { await boatSave(b, {pendent:false}, "Validada"); closeSheet(); render(); });
@@ -515,7 +601,6 @@ function renderBase(){
     <span class="note">${esc(ago(ms(x.actualitzat) || now()))}</span></div>`; };
   const rec = typeof LIVE !== "undefined" && LIVE;
   return `<button class="cta" type="button" data-go="trip">${rec ? svgI('<circle cx="12" cy="12" r="6" fill="currentColor"/>', 22) : svgI('<path d="M12 3v14"/><path d="M12 4l7 11h-7"/><path d="M3 19c3 2 6 2 9 0s6-2 9 0"/>', 22)}${rec ? "Sortida en curs" : "Comença una sortida"}</button>
-    <div class="cl-counts"><div class="stat"><span class="lbl">A l'aigua</span><span class="v" style="color:var(--accent)">${ai.length}</span></div><div class="stat"><span class="lbl">A la base</span><span class="v" style="color:var(--ideal)">${ba.length}</span></div></div>
     <article class="card"><div class="map short" id="clMap"></div>
       <div class="legend"><span><span class="sw cl-sw-base"></span>A la base</span><span><span class="sw cl-sw-aigua"></span>Navegant</span><span><span class="sw cl-sw-late"></span>Amb un avís de seguretat</span></div></article>
     <section class="card"><div class="card-h"><span class="lbl">A l'aigua</span></div>${ai.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}</section>
@@ -896,9 +981,11 @@ document.addEventListener("click", async e => {
   if(ds.forder){ filt.order = ds.forder; saveF(); return; }
   if(ds.fflag){ filt[ds.fflag] = !filt[ds.fflag]; saveF(); return; }
   if(ds.who){ ui.whoOpen[ds.who] = !ui.whoOpen[ds.who]; const [n, ...r] = ds.who.split(":"); paintItem(n, r.join(":")); return; }
+  if(t.id === "clFetNew"){ fetNewSheet(null); return; }
+  if(ds.fet){ fetSheet(ds.fet); return; }
   if(t.id === "clBoatNew"){ newBoatSheet(null); return; }
   if(ds.bvalid){ const b = D.boats.find(x => x.id === ds.bvalid); if(b){ try{ await boatSave(b, {pendent:false}, "Validada"); render(); }catch(err){ say(errText(err)); } } return; }
-  if(ds.bview){ ui.baseView = ds.bview; store.set("ov2_base_view", ds.bview); render(); return; }
+  if(ds.bscroll){ const el = $(ds.bscroll); if(el) el.scrollIntoView({behavior:"smooth", block:"start"}); return; }
   if(ds.pz){ const svg = $("ovpSvg"); if(!svg || !ui.pv) return; if(ds.pz === "fit"){ ui.pv = null; drawPlan(); return; } pZoom(svg, [ui.pv.x + ui.pv.w/2, ui.pv.y + ui.pv.w*svg.getBoundingClientRect().height/svg.getBoundingClientRect().width/2], ds.pz === "in" ? 1/1.4 : 1.4); return; }
   if(ds.boat){ const b = D.boats.find(x => x.id === ds.boat); if(b){ ui.psel = b.place || null; drawPlan(); boatSheet(b.place, b.id); } return; }
   if(ds.bstate){ const b = D.boats.find(x => x.id === ds.id); if(!b || (b.estat || "lloc") === ds.bstate) return; try{ await boatSave(b, {estat:ds.bstate}, ESTAT_T(ds.bstate)); render(); }catch(err){ say(errText(err)); } return; }
@@ -988,7 +1075,7 @@ function flushUndo(){
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") flushUndo(); });
 
 /* ---------- actualització en segon pla: el que fan els altres surt sense sortir i tornar ---------- */
-const snap = () => JSON.stringify(NEED[tab].map(k => ({pubs:D.pubs, intents:D.intents, avisos:D.avisos, anuncis:D.anuncis, pres:D.pres, planol:D.planol, boats:D.boats})[k]).concat([ui.interest, ui.interested]));
+const snap = () => JSON.stringify(NEED[tab].map(k => ({pubs:D.pubs, intents:D.intents, avisos:D.avisos, anuncis:D.anuncis, pres:D.pres, planol:D.planol, boats:D.boats, fets:D.fets})[k]).concat([ui.interest, ui.interested]));
 setInterval(async () => {
   if(!C || !visible() || document.visibilityState !== "visible" || $("clSheet") || sw || undoT || filt.open
     || Object.keys(busyT).length || Object.keys(reactBusy).length || document.querySelector("#clubView [data-delbox] *")) return;

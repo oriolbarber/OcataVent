@@ -414,6 +414,32 @@ service cloud.firestore {
       }
     }
 
+    // ---------- avisos de la base: notes, fets (incidències) i preguntes al propietari ----------
+    // nota/fet sense embarcació: públic al club. fet d'una embarcació: autor, propietari i Manteniment. pregunta: només autor i propietari.
+    match /fets/{id} {
+      function part(d) { return d.userId == me() || d.get('propUid', '') == me() || (d.tipus != 'pregunta' && canBoats(d.clubId)); }
+      function veuFet(d) { return isApproved() && d.clubId == myClub() && (d.get('public', false) == true || part(d)); }
+      allow read: if isAdmin() || veuFet(resource.data);
+      allow create: if isApproved() && request.resource.data.clubId == myClub() && request.resource.data.userId == me()
+        && request.resource.data.keys().hasOnly(['clubId', 'userId', 'autorNom', 'tipus', 'text', 'boatId', 'placeId', 'propUid', 'public', 'estat', 'respostes', 'vist', 'creat', 'darrer'])
+        && request.resource.data.tipus in ['nota', 'fet', 'pregunta']
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+        && nomOk(request.resource.data.autorNom, 80)
+        && request.resource.data.estat == 'obert' && request.resource.data.respostes.size() == 0
+        && request.resource.data.public == (request.resource.data.get('boatId', null) == null)
+        && (request.resource.data.tipus != 'pregunta' || request.resource.data.get('boatId', null) != null)
+        && (request.resource.data.get('boatId', null) == null
+          || request.resource.data.get('propUid', null) == get(/databases/$(database)/documents/embarcacions/$(request.resource.data.boatId)).data.get('propUid', null))
+        && request.resource.data.creat == request.time;
+      // respondre i marcar vist: qui hi participa (en els públics, qualsevol soci del club); tancar: autor, propietari o Manteniment
+      allow update: if veuFet(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['respostes', 'vist', 'darrer', 'estat'])
+        && request.resource.data.respostes is list && request.resource.data.respostes.size() <= 40
+        && request.resource.data.estat in ['obert', 'tancat']
+        && (part(resource.data) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estat']));
+      allow delete: if signedIn() && (resource.data.userId == me() || canBoats(resource.data.clubId) || isAdmin());
+    }
+
     // ---------- amics (mutus) i perfils ----------
     // Perfil mínim per trobar socis i afegir-los com a amics: només el nom i el club.
     match /perfils/{uid} {

@@ -38,7 +38,9 @@ Pestanya Club ▸ **Base** (primera: Base · Mur · Avisos · Anuncis). Dins de 
 
 ## Fases
 - A (feta, 16-10-2026): plànol, editor al núvol, places, fitxes, foto, nom ocult, historial i pestanya Base a l'app.
-- B: «navegant» automàtic. C: avisos de fets i preguntes al propietari.
+- C (feta, 16-10-2026): avisos de la base (notes i incidències per a tot el club), «Avisa d'un fet» (propietari + Manteniment) i «Pregunta al propietari» (fil privat), amb respostes i tancament.
+- B (pendent): «navegant» automàtic.
+- Base és una sola pàgina (16-10-2026): vent i qui hi ha a dalt, plànol, avisos, les meves embarcacions i mapa de presència. L'app no enllaça l'editor (només la web de gestió).
 
 ## Mides estàndard (eslora × mànega)
 - Patí català 5,60 × 1,60 m · Hobie Cat 5,11 × 2,34 m · Llaüd català 6 × 2 m · Barca 4 × 1,6 m.
