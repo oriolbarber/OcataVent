@@ -178,15 +178,17 @@ function drawUi(){
   for(const m of [measure, calib && calib.a && {a:calib.a, b:calib.b || calib.hover}].filter(Boolean)) if(m.a && m.b){ const d = Math.hypot(m.b[0]-m.a[0], m.b[1]-m.a[1]);
     h += `<g pointer-events="none"><line x1="${m.a[0]}" y1="${m.a[1]}" x2="${m.b[0]}" y2="${m.b[1]}" stroke="#ffcf33" stroke-width="${lw*2.5}"/><line x1="${m.a[0]}" y1="${m.a[1]}" x2="${m.b[0]}" y2="${m.b[1]}" stroke="#0a1322" stroke-width="${lw}" stroke-dasharray="${lw*4} ${lw*4}"/>`
       + `<text x="${(m.a[0]+m.b[0])/2}" y="${(m.a[1]+m.b[1])/2 - 10/ppm()}" font-size="${14/ppm()}" text-anchor="middle" class="tx measure">${fmt(d)} m</text></g>`; }
-  if(tool === "bg" && !calib && doc.bg.src !== "cap"){ const c = viewC(), R = Math.min(view.w, view.w*aspect()) * .32, a = doc.bg.r * D2R, hx = c[0] + Math.cos(a - Math.PI/2)*R, hy = c[1] + Math.sin(a - Math.PI/2)*R;
+  if(tool === "bg" && !calib && doc.bg.src !== "cap"){ const c = viewC(), R = Math.min(view.w, view.w*aspect()) * .28, a = doc.bg.r * D2R, hx = c[0] + Math.cos(a)*R, hy = c[1] + Math.sin(a)*R;
     h += `<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="none" stroke="#ffcf33" stroke-width="${lw*1.5}" stroke-dasharray="${lw*6} ${lw*4}" pointer-events="none"/>`
       + `<line x1="${c[0]}" y1="${c[1]}" x2="${hx}" y2="${hy}" stroke="#ffcf33" stroke-width="${lw*1.5}" pointer-events="none"/><circle cx="${c[0]}" cy="${c[1]}" r="${H*.6}" fill="#ffcf33" pointer-events="none"/>`
       + `<circle class="h-bgrot" cx="${hx}" cy="${hy}" r="${H*1.6}" fill="#ffcf33" stroke="#0a1322" stroke-width="${lw*1.5}"/>`
       + `<text x="${hx}" y="${hy}" font-size="${H*1.7}" text-anchor="middle" dominant-baseline="central" pointer-events="none" fill="#0a1322">⟳</text>`; }
-  $("gUi").innerHTML = h;
+  $("gUi").innerHTML = h; if($("bgbar")) bgBar();
 }
 function all(){ setView(); drawBg(); drawObjs(); panel(); btns(); }
-function btns(){ $("undo").disabled = !undoS.length; $("redo").disabled = !redoS.length; document.querySelectorAll("[data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === tool)));
+function bgBar(){ const on = tool === "bg" && doc.bg.src !== "cap" && !calib; $("bgbar").hidden = !on; mapEl.classList.toggle("bgmode", tool === "bg");
+  $("bgdeg").textContent = String(Math.round(doc.bg.r * 10) / 10).replace(".", ",") + "°"; }
+function btns(){ bgBar(); $("undo").disabled = !undoS.length; $("redo").disabled = !redoS.length; document.querySelectorAll("[data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === tool)));
   svg.classList.toggle("draw", ["boat", "place", "poly", "point", "measure"].includes(tool) || !!(calib && tool === "bg")); }
 let tipT = 0; function tip(t, ms){ $("tip").textContent = t || ""; clearTimeout(tipT); if(t && ms !== 0) tipT = setTimeout(() => $("tip").textContent = "", ms || 3500); }
 const TIPS = {
@@ -429,6 +431,9 @@ function fit(){ if(!doc.objs.length){ view = {x:-45, y:-35, w:90}; all(); return
 $("zin").onclick = () => zoomAt([view.x + view.w/2, view.y + view.w*aspect()/2], 1/1.4);
 $("zout").onclick = () => zoomAt([view.x + view.w/2, view.y + view.w*aspect()/2], 1.4);
 $("zfit").onclick = fit;
+$("bgbar").addEventListener("click", e => { const b = e.target.closest("button"); if(!b) return; snapshot();
+  if(b.dataset.bgrot) bgAround(viewC(), +b.dataset.bgrot, 1); else if(b.dataset.bgsc) bgAround(viewC(), 0, +b.dataset.bgsc);
+  save(); drawBg(); drawUi(); panelLater(); });
 
 /* ---------- teclat ---------- */
 document.addEventListener("keydown", ev => {

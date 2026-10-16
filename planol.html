@@ -52,6 +52,12 @@ aside h2{margin:0;font:700 1.05rem var(--f-head);letter-spacing:.06em;text-trans
 .zoom .tb{width:44px;justify-content:center;padding:0;background:var(--surface)}
 .tip{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:#0a1322e6;color:#fff;padding:6px 12px;border-radius:10px;font-size:.88rem;pointer-events:none;max-width:90%;text-align:center}
 .tip:empty{display:none}
+.bgbar{position:absolute;left:8px;right:8px;top:8px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;padding:6px;border-radius:14px;background:#0a1322e0;color:#fff;z-index:2}
+.bgbar[hidden]{display:none}
+.bgbar .tb{min-height:42px;min-width:44px;padding:0 8px;justify-content:center;background:#ffcf33;border-color:#ffcf33;color:#0a1322;font:700 .95rem var(--f-mono)}
+.bgbar b{min-width:58px;text-align:center;font:700 1rem var(--f-mono)}
+.bgbar .sep{width:6px}
+#map.bgmode .tip{top:auto;bottom:56px}
 .attr{position:absolute;right:62px;bottom:6px;font-size:.7rem;background:#fffc;color:#0a1322;padding:1px 6px;border-radius:6px}
 details summary{cursor:pointer;font-weight:600}
 @media (max-width:820px){
@@ -91,6 +97,12 @@ details summary{cursor:pointer;font-weight:600}
     </defs>
     <g id="gBg"></g><g id="gPoly"></g><g id="gPlace"></g><g id="gBoat"></g><g id="gPoint"></g><g id="gUi"></g>
   </svg>
+  <div class="bgbar" id="bgbar" hidden role="toolbar" aria-label="Gira i escala la foto">
+    <button class="tb" data-bgrot="-5" aria-label="Gira 5° a l'esquerra">↺5°</button><button class="tb" data-bgrot="-1" aria-label="Gira 1° a l'esquerra">↺1°</button><button class="tb" data-bgrot="-0.1" aria-label="Gira 0,1° a l'esquerra">↺.1</button>
+    <b id="bgdeg">0°</b>
+    <button class="tb" data-bgrot="0.1" aria-label="Gira 0,1° a la dreta">↻.1</button><button class="tb" data-bgrot="1" aria-label="Gira 1° a la dreta">↻1°</button><button class="tb" data-bgrot="5" aria-label="Gira 5° a la dreta">↻5°</button>
+    <span class="sep"></span><button class="tb" data-bgsc="0.98" aria-label="Fes la foto més petita">−</button><button class="tb" data-bgsc="1.02" aria-label="Fes la foto més gran">+</button>
+  </div>
   <div class="tip" id="tip"></div>
   <div class="hud"><div class="scale" id="scale"></div></div>
   <div class="attr" id="attr"></div>
@@ -99,6 +111,6 @@ details summary{cursor:pointer;font-weight:600}
 
 <aside id="side" aria-live="polite"></aside>
 
-<script src="planol.js?v=2"></script>
+<script src="planol.js?v=3"></script>
 </body>
 </html>
