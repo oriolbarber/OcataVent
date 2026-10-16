@@ -178,7 +178,7 @@ footer a,.note a{color:var(--accent)}
 
 /* pestanyes */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:1000;background:var(--surface);border-top:1px solid var(--line);padding:6px 12px calc(6px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
-.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;max-width:560px}
+.tabs .in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%;max-width:560px}
 .tabs button{border:0;background:none;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--muted);font-family:var(--f-head);font-weight:700;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;position:relative}
 .tabs button[aria-current="page"]{color:var(--accent);background:var(--surface-2)}
 .tabs .rec{position:absolute;top:6px;right:calc(50% - 20px);width:9px;height:9px;border-radius:50%;background:var(--no)}
@@ -910,7 +910,11 @@ footer #iSrc{text-align:left;margin:8px 0}
 :root[data-size="big"] .acc-who span{font-size:1rem}
 
 /* ---------- club (club.js) ---------- */
-.tabs .in.n5{grid-template-columns:repeat(5,1fr);gap:4px}
+.tabs .in.n5{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.tabs button{min-width:0;overflow:hidden;white-space:nowrap}
+:root[data-size="big"] .tabs .in.n5{gap:2px}
+:root[data-size="big"] .tabs:has(.n5){padding-inline:6px}
+:root[data-size="big"] .tabs .in.n5 button{font-size:min(1rem,3.4vw);letter-spacing:0}
 .cl-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
 .cl-tabs button{position:relative;min-height:46px;border:0;border-bottom:3px solid var(--line);background:none;color:var(--muted);font-family:var(--f-head);font-weight:700;font-size:1rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .cl-tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
