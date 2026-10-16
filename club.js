@@ -550,14 +550,43 @@ async function boatSave(b, patch, hist){
   const data = Object.assign({}, patch, {historial:h, actualitzat:C.F.serverTimestamp(), actualitzatPer:uid()});
   await TO(C.F.updateDoc(ref("embarcacions", b.id), data)); Object.assign(b, patch, {historial:h});
 }
-function photoData(file){ return new Promise((ok, ko) => { const rd = new FileReader(); rd.onerror = ko; rd.onload = () => { const im = new Image(); im.onerror = ko; im.onload = () => {
-  let side = 800, q = .72, out = "";
-  for(let i = 0; i < 6; i++){ const k = Math.min(1, side / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width*k); c.height = Math.round(im.height*k);
-    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); out = c.toDataURL("image/jpeg", q); if(out.length < 140000) break; side *= .8; q -= .08; }
-  out.length < 150000 ? ok(out) : ko({code:"massa-gran"}); }; im.src = rd.result; }; rd.readAsDataURL(file); }); }
+// Foto de l'embarcació: el soci l'enquadra (arrossegar i pessigar, roda o la barra) dins un marc 3:2 i es desa com a JPEG < 150 kB
+const readURL = file => new Promise((ok, ko) => { const rd = new FileReader(); rd.onerror = ko; rd.onload = () => ok(rd.result); rd.readAsDataURL(file); });
+const loadImg = src => new Promise((ok, ko) => { const im = new Image(); im.onerror = ko; im.onload = () => ok(im); im.src = src; });
+function jpegCrop(im, sx, sy, sw, sh){ let W = 960, q = .74, out = "";
+  for(let i = 0; i < 7; i++){ const k = Math.min(1, W / sw), c = document.createElement("canvas"); c.width = Math.round(sw*k); c.height = Math.round(sh*k);
+    c.getContext("2d").drawImage(im, sx, sy, sw, sh, 0, 0, c.width, c.height); out = c.toDataURL("image/jpeg", q); if(out.length < 140000) break; W *= .82; q -= .07; }
+  if(out.length >= 150000) throw {code:"massa-gran"}; return out; }
+function cropPhoto(host, src){ return new Promise(async (done, ko) => {
+  let im; try{ im = await loadImg(src); }catch(e){ ko(e); return; }
+  const prev = host.innerHTML; host.innerHTML = `<div class="cl-crop" id="cropF"><img src="${src}" alt="" draggable="false"></div>
+    <label class="cl-cropz"><span class="lbl">Zoom</span><input type="range" id="cropZ" min="1" max="4" step="0.01" value="1"></label>
+    <p class="note">Arrossega la foto i fes zoom fins que quedi ben enquadrada.</p>
+    <div class="cl-row"><button type="button" class="btn" id="cropNo">Cancel·la</button><button type="button" class="btn cl-pri" id="cropOk">Desa la foto</button></div>`;
+  const F = $("cropF"), I = F.querySelector("img"), Z = $("cropZ"), W = () => F.clientWidth, H = () => F.clientHeight;
+  const base = () => Math.max(W() / im.width, H() / im.height); let z = 1, ox = 0, oy = 0;
+  const S = () => base() * z;
+  function clamp(){ ox = Math.min(0, Math.max(W() - im.width*S(), ox)); oy = Math.min(0, Math.max(H() - im.height*S(), oy)); }
+  function paint(){ clamp(); I.style.width = im.width*S() + "px"; I.style.transform = `translate(${ox}px,${oy}px)`; Z.value = z; }
+  function zoomTo(nz, cx, cy){ nz = Math.max(1, Math.min(4, nz)); const k = nz / z; ox = cx - (cx - ox)*k; oy = cy - (cy - oy)*k; z = nz; paint(); }
+  ox = (W() - im.width*S())/2; oy = (H() - im.height*S())/2; paint();
+  const P = new Map(); let st = null;
+  F.onpointerdown = e => { F.setPointerCapture(e.pointerId); P.set(e.pointerId, [e.clientX, e.clientY]);
+    const v = [...P.values()]; st = v.length === 2 ? {d:Math.hypot(v[0][0]-v[1][0], v[0][1]-v[1][1]), z} : {x:e.clientX, y:e.clientY, ox, oy}; };
+  F.onpointermove = e => { if(!P.has(e.pointerId)) return; P.set(e.pointerId, [e.clientX, e.clientY]); const v = [...P.values()], r = F.getBoundingClientRect();
+    if(v.length === 2 && st && st.d){ const d = Math.hypot(v[0][0]-v[1][0], v[0][1]-v[1][1]); zoomTo(st.z * d / Math.max(10, st.d), (v[0][0]+v[1][0])/2 - r.left, (v[0][1]+v[1][1])/2 - r.top); return; }
+    if(st && st.ox != null){ ox = st.ox + e.clientX - st.x; oy = st.oy + e.clientY - st.y; paint(); } };
+  const up = e => { P.delete(e.pointerId); const v = [...P.values()]; st = v.length === 1 ? {x:v[0][0], y:v[0][1], ox, oy} : null; };
+  F.onpointerup = up; F.onpointercancel = up;
+  F.onwheel = e => { e.preventDefault(); const r = F.getBoundingClientRect(); zoomTo(z * (e.deltaY > 0 ? 1/1.1 : 1.1), e.clientX - r.left, e.clientY - r.top); };
+  Z.oninput = () => zoomTo(+Z.value, W()/2, H()/2);
+  $("cropNo").onclick = () => { host.innerHTML = prev; done(null); };
+  $("cropOk").onclick = () => { try{ const s = S(); done(jpegCrop(im, -ox/s, -oy/s, W()/s, H()/s)); }catch(e){ host.innerHTML = prev; ko(e); } };
+}); }
 function boatSheet(placeId, boatId){
   const pl = placeId ? placeById(placeId) : null, b = boatId ? D.boats.find(x => x.id === boatId) : D.boats.find(x => x.place === placeId);
   const B = PL().BOATS, own = b && b.propUid === uid(), mgr = canBoatsE(), edit = own || mgr;
+  const photoHtml = src => (src ? `<img src="${src}" alt="Foto de l'embarcació">` : "") + (edit ? `<div class="cl-row"><button type="button" class="btn sm" id="shPhotoBtn">${src ? "Canvia la foto" : "Afegeix una foto"}</button>${src ? `<button type="button" class="btn sm" id="shPhotoCrop">Enquadra</button>` : ""}<input type="file" id="shPhotoIn" accept="image/*" hidden></div>` : "");
   const title = b ? (b.label || B[b.t]?.n || "Embarcació") : "Plaça " + ((pl && pl.label) || "");
   const free = mgr ? ((D.planol && D.planol.objs) || []).filter(o => o.k === "place" && !D.boats.some(x => x.place === o.id)) : [];
   const unplaced = mgr && pl && !b ? D.boats.filter(x => !x.place || !placeById(x.place)) : [];
@@ -567,7 +596,7 @@ function boatSheet(placeId, boatId){
     : `${b.pendent ? `<div class="cl-pendbox"><span><b>Pendent de validar</b>${own ? " per Manteniment" : " · proposada per " + esc(b.prop || "un soci")}</span>${mgr ? `<button type="button" class="btn sm cl-pri" id="shValid">Valida</button>` : ""}</div>` : ""}
       <div class="cl-binfo">${pl ? `<span><b>Plaça</b> ${esc(pl.label || "")}</span>` : `<span>Sense plaça</span>`}<span>${esc(B[b.t]?.n || "")}</span>${b.vela ? `<span><b>Vela</b> ${esc(b.vela)}</span>` : ""}</div>
       <div class="cl-bstate">${Object.entries(PL().ESTATS).map(([k, T]) => edit ? `<button type="button" class="cl-chip" data-sstate="${k}" aria-pressed="${(b.estat || "lloc") === k}" style="--c:${T.s}">${T.n}</button>` : (b.estat || "lloc") === k ? `<span class="cl-chip" aria-pressed="true" style="--c:${T.s}">${T.n}</span>` : "").join("")}</div>
-      <div class="cl-bphoto" id="shPhoto">${edit ? `<button type="button" class="btn sm" id="shPhotoBtn">Afegeix una foto</button><input type="file" id="shPhotoIn" accept="image/*" hidden>` : ""}</div>
+      <div class="cl-bphoto" id="shPhoto">${photoHtml(null)}</div>
       <div class="cl-binfo"><span><b>Propietari/a</b> <span id="shProp">${b.ocult && !edit ? "nom ocult" : esc(b.prop || (b.ocult ? "…" : "—"))}</span></span>${b.coprop ? `<span><b>Amb</b> ${esc(b.coprop)}</span>` : ""}</div>
       ${edit ? `${field("shNotes", "Notes", `<textarea class="field cl-ta" id="shNotes" rows="2" maxlength="500" placeholder="Observacions">${esc(b.notes || "")}</textarea>`)}
         <label class="cl-sw"><span>Amaga el nom del propietari al club</span><input type="checkbox" class="switch" id="shOcult"${b.ocult ? " checked" : ""}></label>` : b.notes ? `<p class="cl-text">${esc(b.notes)}</p>` : ""}
@@ -584,7 +613,8 @@ function boatSheet(placeId, boatId){
     if(!b){ $("shMine").onclick = () => newBoatSheet(pl); const put = $("shPut"); if(put) put.onchange = () => busy(put, async () => { const x = D.boats.find(y => y.id === put.value); if(!x) return;
       await boatSave(x, {place:pl.id}, "Plaça " + (pl.label || "")); closeSheet(); render(); }); return; }
     // foto (es descarrega només en obrir la fitxa)
-    C.F.getDoc(ref("embarcacions", b.id, "foto", "f")).then(d => { const el = $("shPhoto"); if(el && d.exists()) el.insertAdjacentHTML("afterbegin", `<img src="${d.data().data}" alt="Foto de l'embarcació">`); if(d.exists() && $("shPhotoBtn")) $("shPhotoBtn").textContent = "Canvia la foto"; }).catch(() => {});
+    ui.bphoto = null;
+    C.F.getDoc(ref("embarcacions", b.id, "foto", "f")).then(d => { const el = $("shPhoto"); if(el && d.exists() && !el.querySelector(".cl-crop")){ ui.bphoto = d.data().data; el.innerHTML = photoHtml(ui.bphoto); bindPhoto(); } }).catch(() => {});
     $("shFet").onclick = () => { closeSheet(); fetNewSheet(b); };
     const ask = $("shAsk"); if(ask) ask.onclick = () => { closeSheet(); fetNewSheet(b); setTimeout(() => { const q = document.querySelector('[data-fkind="pregunta"]'); if(q) q.click(); }, 0); };
     sh.querySelectorAll("[data-fet]").forEach(x => x.onclick = () => fetSheet(x.dataset.fet));
@@ -601,10 +631,16 @@ function boatSheet(placeId, boatId){
           await TO(C.F.deleteDoc(ref("embarcacions", b.id))); D.boats = D.boats.filter(x => x.id !== b.id); closeSheet(); render(); }catch(err){ sheetSay(errText(err)); } }); };
     sh.querySelectorAll("[data-sstate]").forEach(x => x.onclick = () => busy(x, async () => { const k = x.dataset.sstate; if((b.estat || "lloc") === k) return;
       await boatSave(b, {estat:k}, ESTAT_T(k)); sh.querySelectorAll("[data-sstate]").forEach(y => y.setAttribute("aria-pressed", String(y.dataset.sstate === k))); render(); }));
-    const pb = $("shPhotoBtn"), pin = $("shPhotoIn");
-    if(pb){ pb.onclick = () => pin.click(); pin.onchange = () => { const f = pin.files[0]; if(!f) return; busy(pb, async () => { const data = await photoData(f);
-      await TO(C.F.setDoc(ref("embarcacions", b.id, "foto", "f"), {data, at:now(), per:uid()})); const el = $("shPhoto"), im = el.querySelector("img");
-      if(im) im.src = data; else el.insertAdjacentHTML("afterbegin", `<img src="${data}" alt="Foto de l'embarcació">`); pb.textContent = "Canvia la foto"; }); }; }
+    // foto: triar-la o tornar a enquadrar l'actual
+    const putPhoto = async src => { const host = $("shPhoto"), data = await cropPhoto(host, src); if(!data){ bindPhoto(); return; }
+      host.innerHTML = `<p class="note">Desant la foto…</p>`;
+      try{ await TO(C.F.setDoc(ref("embarcacions", b.id, "foto", "f"), {data, at:now(), per:uid()})); ui.bphoto = data; }
+      catch(err){ sheetSay(errText(err)); }
+      host.innerHTML = photoHtml(ui.bphoto); bindPhoto(); };
+    function bindPhoto(){ const pb = $("shPhotoBtn"), pin = $("shPhotoIn"), pc = $("shPhotoCrop"); if(!pb) return;
+      pb.onclick = () => pin.click(); pin.onchange = async () => { const f = pin.files[0]; if(!f) return; try{ await putPhoto(await readURL(f)); }catch(err){ sheetSay(errText(err)); } };
+      if(pc) pc.onclick = async () => { if(ui.bphoto) try{ await putPhoto(ui.bphoto); }catch(err){ sheetSay(errText(err)); } }; }
+    bindPhoto();
     $("shSave").onclick = e => busy(e.currentTarget, async () => { await boatSave(b, {notes:$("shNotes").value.slice(0, 500)}); closeSheet(); });
     $("shOcult").onchange = e => busy(e.target, async () => { const on = e.target.checked;
       if(on){ await TO(C.F.setDoc(ref("embarcacions", b.id, "privat", "p"), {prop:b.prop || ""})); await boatSave(b, {ocult:true, prop:""}); }
