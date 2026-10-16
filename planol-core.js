@@ -89,5 +89,13 @@ function render(plan, boats, opts){
 function extent(plan){ const B = ((plan && plan.objs) || []).map(bbox); if(!B.length) return null;
   return [Math.min(...B.map(b => b[0])), Math.min(...B.map(b => b[1])), Math.max(...B.map(b => b[2])), Math.max(...B.map(b => b[3]))]; }
 
-window.OV_PLAN = {BOATS, POLYS, POINTS, ESTATS, MARGIN, SHADOW, D2R, rot, esc, hullPath, shape, corners, bbox, shadowSvg, render, extent, DEFS};
+// Firestore no accepta llistes dins de llistes: els vèrtexs es desen com una llista plana [x1, y1, x2, y2…] (camp «p»), arrodonits al mil·límetre
+const r3 = v => Math.round(v * 1000) / 1000;
+function toStore(objs){ return (objs || []).map(o => { const c = Object.assign({}, o);
+  if(c.pts){ c.p = c.pts.flatMap(q => [r3(q[0]), r3(q[1])]); delete c.pts; }
+  ["x", "y", "l", "w", "r", "h"].forEach(k => { if(typeof c[k] === "number") c[k] = r3(c[k]); }); return c; }); }
+function fromStore(objs){ return (objs || []).map(o => { if(!o.p) return o; const c = Object.assign({}, o), P = [];
+  for(let i = 0; i + 1 < c.p.length; i += 2) P.push([c.p[i], c.p[i + 1]]); c.pts = P; delete c.p; return c; }); }
+
+window.OV_PLAN = {toStore, fromStore, BOATS, POLYS, POINTS, ESTATS, MARGIN, SHADOW, D2R, rot, esc, hullPath, shape, corners, bbox, shadowSvg, render, extent, DEFS};
 })();

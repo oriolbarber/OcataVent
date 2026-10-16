@@ -128,7 +128,7 @@ async function fetchK(k){
       else ui.interest[a.id] = (await C.F.getDoc(ref("anuncis", a.id, "interessats", uid()))).exists();
     }));
   }
-  if(k === "planol"){ const d = await C.F.getDoc(ref("clubs", C.member.clubId, "planol", "actual")).catch(() => null); D.planol = d && d.exists() ? d.data() : null; }
+  if(k === "planol"){ const d = await C.F.getDoc(ref("clubs", C.member.clubId, "planol", "actual")).catch(() => null); D.planol = d && d.exists() ? d.data() : null; if(D.planol) D.planol.objs = PL() ? PL().fromStore(D.planol.objs) : []; }
   if(k === "boats") D.boats = await getAll("embarcacions", W("clubId", "==", C.member.clubId)).catch(() => []);
   if(k === "pres"){
     D.pres = await getVisible("presencia");

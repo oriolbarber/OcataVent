@@ -546,7 +546,7 @@ st.textContent = `.tx{fill:#0a1322;font-family:var(--f-body);font-weight:700;pai
 .o{cursor:move} .tr{fill:inherit} .h-rot{cursor:grab} .h-vx{cursor:move}`;
 document.head.appendChild(st);
 
-window.addEventListener("ov-plan-status", e => { const el = $("cloudSt"); if(el){ el.textContent = e.detail.t; el.classList.toggle("err", e.detail.err); } });
+window.addEventListener("ov-plan-status", e => { const el = $("cloudSt"); if(el){ el.textContent = e.detail.t; el.classList.toggle("err", e.detail.err); } if(e.detail.err) tip(e.detail.t + " Els canvis es tornaran a provar de desar al proper canvi; si continua, exporta'l.", 0); });
 if(CLOUD){
   tool = "sel"; all(); tip("Carregant el plànol del club…", 0);
   CLOUD.ready.then(r => {
