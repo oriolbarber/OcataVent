@@ -13,7 +13,9 @@ const PERMS = {
   permisos:{t:"Permisos", d:"Donar i treure aquests permisos a altres persones sòcies."},
   moderar: {t:"Moderar",  d:"Retirar publicacions, «Qui surt» i anuncis d'altres persones."},
   seguretat:{t:"Seguretat", d:"Marcar com a resolts els avisos de seguretat en ruta (sense vent, vent fort, onades)."},
-  avisos:  {t:"Fer avisos", d:"Publicar avisos al Club en nom de les comissions de què forma part."}
+  avisos:  {t:"Fer avisos", d:"Publicar avisos al Club en nom de les comissions de què forma part."},
+  planol:  {t:"Plànol", d:"Dibuixar el plànol de la base: places, edificis, zones i punts. La Junta també ho pot fer."},
+  embarcacions:{t:"Embarcacions", d:"Donar d'alta i de baixa embarcacions, assignar-les a les places i posar-ne el propietari. Manteniment també ho pot fer."}
 };
 const COMS0 = {junta:"Junta", manteniment:"Manteniment", economica:"Econòmica"};
 let COMS = COMS0, CLUBNOM = "";

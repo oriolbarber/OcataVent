@@ -1,7 +1,7 @@
 "use strict";
 /* ============ Ocata Vent · Editor del plànol de la base (prototip) ============
    Unitats: metres. Origen (0,0) = base nàutica del club. x cap a l'est, y cap al sud (com l'SVG).
-   Es desa en aquest navegador (localStorage) i s'exporta/importa en JSON. Encara no va al núvol. */
+   Amb sessió i permís, es desa al núvol del club (planol-cloud.js). Amb ?local=1 (o sense permís), és el prototip local (localStorage + JSON). */
 (() => {
 const $ = id => document.getElementById(id);
 const NS = "http://www.w3.org/2000/svg";
@@ -11,44 +11,27 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;", "<":"&lt
 const r2 = v => Math.round(v * 100) / 100;
 const fmt = v => String(r2(v)).replace(".", ",");
 
-/* ---------- catàleg ---------- */
-// Mides estàndard (eslora l × mànega w, metres). El windsurf és provisional: cal confirmar-lo.
-const BOATS = {
-  pati:     {n:"Patí català", l:5.60, w:1.60},
-  hobie:    {n:"Hobie Cat",   l:5.11, w:2.34},
-  llaud:    {n:"Llaüd català", l:6.00, w:2.00},
-  barca:    {n:"Barca",       l:4.00, w:1.60},
-  windsurf: {n:"Windsurf (provisional)", l:2.50, w:0.70}
-};
-const POLYS = {
-  edifici:   {n:"Edifici",          fill:"#9aa3ad", stroke:"#5b636c", op:1},
-  mar:       {n:"Mar",              fill:"#8fc3ea", stroke:"#3d86c6", op:1},
-  varada:    {n:"Zona de varada",   fill:"#e9d3a6", stroke:"#b58b3d", op:.9},
-  pas:       {n:"Pas",              fill:"#ffffff", stroke:"#8a8f96", op:.55, dash:true},
-  caiacs:    {n:"Espai de caiacs",  fill:"#cdbdf3", stroke:"#6f55c9", op:.9},
-  prohibida: {n:"Zona prohibida",   fill:"url(#hatch)", stroke:"#c3162a", op:1}
-};
-const POINTS = {
-  dutxa:{n:"Dutxa", c:"#2f7fe0", s:"D"}, aigua:{n:"Aigua", c:"#0a9bd6", s:"A"}, extintor:{n:"Extintor", c:"#c3162a", s:"E"},
-  dea:{n:"Desfibril·lador", c:"#0a8a4a", s:"♥"}, contenidor:{n:"Contenidors", c:"#5b636c", s:"C"}
-};
-const ESTATS = {lloc:{n:"A la varada", f:"#ffffff", s:"#1c2530"}, navegant:{n:"Navegant", f:"#4ea6ff", s:"#1f6fc4"}, reparacio:{n:"En reparació", f:"#ffb547", s:"#b86a00"}};
-const MARGIN = {l:0.40, w:0.40};   // la plaça és una mica més gran que l'embarcació
+/* ---------- catàleg (planol-core.js) ---------- */
+const {BOATS, POLYS, POINTS, ESTATS, MARGIN} = window.OV_PLAN;
 
 /* ---------- estat ---------- */
 const BLANK = () => ({v:1, origin:ORIGIN, bg:{src:"icgc", dx:0, dy:0, s:1, r:0, op:.75, img:null, imgW:100, imgAR:1}, objs:[]});
-let doc = load() || BLANK();
+const CLOUD = window.OV_PLAN_CLOUD || null;
+let cl = null, can = {plan:true, boats:true};          // cl: connexió amb el núvol un cop carregada
+let doc = CLOUD ? BLANK() : (load() || BLANK());
 doc.objs.forEach(o => { if(o.k === "boat"){ delete o.x; delete o.y; delete o.r; delete o.l; delete o.w; if(o.estat === undefined) o.estat = "lloc"; } });
 let view = {x:-45, y:-35, w:90};           // finestra visible en metres (x, y = cantonada superior esquerra)
 let tool = "sel", sel = new Set(), cur = {boat:"pati", place:"pati", poly:"edifici", point:"dutxa"};
 let ghost = null, clip = null, lastPt = [0, 0];   // ghost: plaça (o enganxat) que segueix el cursor abans de deixar-la
 cur.rot = 0;
+let askBoatDel = false;
 let drag = null, draft = null, measure = null, calib = null, askDel = false, rowN = 5, rowGap = 0.4, rowDir = "w";
 const undoS = [], redoS = [];
 
 function load(){ try{ const d = JSON.parse(localStorage.getItem(KEY)); return d && d.objs ? d : null; }catch(e){ return null; } }
 let saveT = 0;
-function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try{ localStorage.setItem(KEY, JSON.stringify(doc)); }catch(e){ tip("No s'ha pogut desar en aquest navegador (massa gran?). Exporta'l."); } }, 250); }
+function save(){ if(cl){ cl.save(doc); if(doc.bg.img) try{ localStorage.setItem(KEY + "_img_" + cl.club, JSON.stringify({img:doc.bg.img, imgW:doc.bg.imgW, imgAR:doc.bg.imgAR})); }catch(e){} return; }
+  clearTimeout(saveT); saveT = setTimeout(() => { try{ localStorage.setItem(KEY, JSON.stringify(doc)); }catch(e){ tip("No s'ha pogut desar en aquest navegador (massa gran?). Exporta'l."); } }, 250); }
 function snapshot(){ undoS.push(JSON.stringify(doc)); if(undoS.length > 80) undoS.shift(); redoS.length = 0; btns(); }
 function undo(){ if(!undoS.length) return; redoS.push(JSON.stringify(doc)); doc = JSON.parse(undoS.pop()); clean(); all(); save(); }
 function redo(){ if(!redoS.length) return; undoS.push(JSON.stringify(doc)); doc = JSON.parse(redoS.pop()); clean(); all(); save(); }
@@ -84,23 +67,7 @@ function bbox(o){ if(o.k === "boat"){ const p = o.place && byId(o.place); return
   const xs = P.map(p => p[0]), ys = P.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }
 
 /* ---------- siluetes (coordenades locals: proa cap a +x) ---------- */
-function hullPath(L, W, x0, y0){   // un buc estret de catamarà, centrat a (x0, y0)
-  const l = L/2, w = W/2;
-  return `M${x0-l} ${y0-w*.8} L${x0+l*.55} ${y0-w} Q${x0+l*.92} ${y0-w*.7} ${x0+l} ${y0} Q${x0+l*.92} ${y0+w*.7} ${x0+l*.55} ${y0+w} L${x0-l} ${y0+w*.8} Z`;
-}
-function shape(t, L, W){
-  const l = L/2, w = W/2;
-  if(t === "pati"){ const hw = 0.36, yy = w - hw/2;
-    return `<path d="${hullPath(L, hw, 0, -yy)} ${hullPath(L, hw, 0, yy)}"/>`
-      + `<path class="tr" d="M${-l*.30} ${-yy} L${-l*.30} ${yy} M${l*.18} ${-yy} L${l*.18} ${yy}" fill="none" stroke-width="0.12"/>`
-      + `<rect class="tr" x="${-l*.27}" y="${-w*.42}" width="${l*.42}" height="${w*.84}" rx=".08" fill-opacity=".55"/>`; }
-  if(t === "hobie"){ const hw = 0.42, yy = w - hw/2;
-    return `<path d="${hullPath(L, hw, 0, -yy)} ${hullPath(L, hw, 0, yy)}"/>`
-      + `<rect class="tr" x="${-l*.62}" y="${-yy}" width="${l*1.05}" height="${yy*2}" fill-opacity=".45"/>`; }
-  if(t === "llaud") return `<path d="M${-l} 0 Q${-l*.85} ${-w*.95} ${-l*.2} ${-w} Q${l*.55} ${-w} ${l} 0 Q${l*.55} ${w} ${-l*.2} ${w} Q${-l*.85} ${w*.95} ${-l} 0 Z"/>`;
-  if(t === "barca") return `<path d="M${-l} ${-w*.8} L${l*.25} ${-w} Q${l*.85} ${-w*.75} ${l} 0 Q${l*.85} ${w*.75} ${l*.25} ${w} L${-l} ${w*.8} Z"/>`;
-  return `<path d="M${-l} ${-w*.6} Q${-l} ${-w} ${-l*.5} ${-w} L${l*.35} ${-w*.85} Q${l} ${-w*.4} ${l} 0 Q${l} ${w*.4} ${l*.35} ${w*.85} L${-l*.5} ${w} Q${-l} ${w} ${-l} ${w*.6} Z"/>`;
-}
+const shape = window.OV_PLAN.shape;
 
 /* ---------- fons: ortofoto ICGC (o Esri), o imatge pròpia ---------- */
 const SRC = {
@@ -232,7 +199,7 @@ const TIPS = {
   measure:"Arrossega per mesurar una distància.",
   bg:"Arrossega per moure la foto · roda: escala · cercle groc ⟳, Maj+roda o [ ]: gira"
 };
-function setTool(t){ tool = t; ghost = null; draft = null; measure = null; calib = null; askDel = false; if(t !== "sel") sel.clear(); tip(TIPS[t], 6000); all(); }
+function setTool(t){ if(!can.plan && planTools.includes(t)){ noPlan(); return; } tool = t; ghost = null; draft = null; measure = null; calib = null; askDel = false; if(t !== "sel") sel.clear(); tip(TIPS[t], 6000); all(); }
 
 /* ---------- panell lateral ---------- */
 const field = (lab, inp) => `<label class="f"><span class="lbl">${lab}</span>${inp}</label>`;
@@ -264,21 +231,26 @@ function panel(){
   else if(S.length === 1){ const o = S[0];
     if(o.k === "place"){ const b = doc.objs.find(x => x.k === "boat" && x.place === o.id), free = doc.objs.filter(x => x.k === "boat" && (!x.place || !byId(x.place)));
       h = `<h2>Plaça ${esc(o.label || "")}</h2>
-        <div class="row2">${field("Codi", txt("label", o.label, "A1"))}${field("Per a", opts("pt", BOATS, o.t))}</div>
+        ${can.plan ? `<div class="row2">${field("Codi", txt("label", o.label, "A1"))}${field("Per a", opts("pt", BOATS, o.t))}</div>` : `<p class="note">Per a ${esc(BOATS[o.t]?.n || "")}</p>`}
         <span class="lbl">Embarcació</span>
-        ${b ? `<div class="row2">${field("Nom", `<input type="text" data-bk="label" value="${esc(b.label || "")}" placeholder="Garbinada">`)}${field("Vela / matrícula", `<input type="text" data-bk="vela" value="${esc(b.vela || "")}" placeholder="1234">`)}</div>
-          ${field("Propietari/a", `<input type="text" data-bk="prop" value="${esc(b.prop || "")}" placeholder="Nom i cognoms">`)}
+        ${!can.boats ? `<p class="note">${b ? esc((b.label || BOATS[b.t]?.n) + " · " + (ESTATS[b.estat] || ESTATS.lloc).n) : "Lliure"}. Les embarcacions les gestiona Manteniment.</p>` : b ? `<div class="row2">${field("Nom", `<input type="text" data-bk="label" value="${esc(b.label || "")}" placeholder="Garbinada">`)}${field("Vela / matrícula", `<input type="text" data-bk="vela" value="${esc(b.vela || "")}" placeholder="1234">`)}</div>
+          ${cl ? field("Propietari/a (soci de l'app)", `<select data-bk="propUid"><option value="">— Ningú amb app / del club —</option>${cl.members.map(m => `<option value="${m.uid}"${m.uid === b.propUid ? " selected" : ""}>${esc(m.nom)}</option>`).join("")}</select>`) : ""}
+          ${field(cl ? "Nom del propietari/a (si no té app, o del club)" : "Propietari/a", `<input type="text" data-bk="prop" value="${esc(b.prop || "")}" placeholder="Nom i cognoms">`)}
+          ${cl ? `${field("Copropietaris", `<input type="text" data-bk="coprop" value="${esc(b.coprop || "")}" placeholder="Separats per comes">`)}
+            <label class="cl-sw" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="note">Amaga el nom del propietari al club (només el veuen Manteniment i Junta)</span><input type="checkbox" data-bk="ocult"${b.ocult ? " checked" : ""}></label>
+            ${field("Notes", `<input type="text" data-bk="notes" value="${esc(b.notes || "")}" placeholder="Observacions">`)}
+            ${(b.historial || []).length ? `<details><summary>Historial (${b.historial.length})</summary><p class="note">${b.historial.slice().reverse().map(x => `${new Date(x.at).toLocaleDateString("ca", {day:"numeric", month:"short"})} · ${esc(x.que)}${x.qui ? " · " + esc(x.qui) : ""}`).join("<br>")}</p></details>` : ""}` : ""}
           <div class="row2">${field("Estat", `<select data-bk="estat">${Object.entries(ESTATS).map(([k, T]) => `<option value="${k}"${k === (b.estat || "lloc") ? " selected" : ""}>${T.n}</option>`).join("")}</select>`)}${field("Tipus", `<select data-bk="t">${Object.entries(BOATS).map(([k, T]) => `<option value="${k}"${k === b.t ? " selected" : ""}>${esc(T.n)}</option>`).join("")}</select>`)}</div>
-          <button class="tb" id="boatOut">Treu-la de la plaça</button>`
+          <div class="row2"><button class="tb" id="boatOut">Treu-la de la plaça</button><button class="tb" id="boatDelAsk">Dona-la de baixa</button></div>
+          ${askBoatDel ? `<div class="slide" id="boatSlide"><input type="range" min="0" max="100" value="0" aria-label="Llisca per donar de baixa l'embarcació"><i></i><span>Llisca per donar-la de baixa</span></div>` : ""}`
         : `<p class="note">Lliure.</p><button class="tb" id="boatNew">Hi poso una embarcació</button>
           ${free.length ? field("O una de les que no tenen plaça", `<select id="boatPick"><option value="">Tria-la…</option>${free.map(x => `<option value="${x.id}">${esc((x.label || BOATS[x.t]?.n) + (x.prop ? " · " + x.prop : ""))}</option>`).join("")}</select>`) : ""}`}
-        <details><summary>Mida i gir</summary><div class="row3" style="margin-top:8px">${field("Llarg", num("l", o.l, .05, .5))}${field("Ample", num("w", o.w, .05, .2))}${field("Gir °", num("r", o.r, 5))}</div></details>`; }
+        ${can.plan ? `<details><summary>Mida i gir</summary><div class="row3" style="margin-top:8px">${field("Llarg", num("l", o.l, .05, .5))}${field("Ample", num("w", o.w, .05, .2))}${field("Gir °", num("r", o.r, 5))}</div></details>` : ""}`; }
     else if(o.k === "poly") h = `<h2>${esc(POLYS[o.t]?.n || "Zona")}</h2>${field("Tipus", opts("t", POLYS, o.t))}${field("Etiqueta", txt("label", o.label, POLYS[o.t]?.n))}
         ${o.t === "edifici" ? `<div class="row2" style="align-items:end"><label class="f"><span class="lbl">Ombra</span><select data-k="ombra"><option value="si"${o.ombra !== "no" ? " selected" : ""}>Sí</option><option value="no"${o.ombra === "no" ? " selected" : ""}>No</option></select></label>${field("Alçada (m)", num("h", o.h || 3, .5, .5))}</div>` : ""}
         <p class="note">Arrossega els quadrats per moure vèrtexs · doble clic a la vora per afegir-ne un · Alt+clic en un vèrtex per treure'l.</p>`;
     else if(o.k === "point") h = `<h2>${esc(POINTS[o.t]?.n || "Punt")}</h2>${field("Tipus", opts("t", POINTS, o.t))}${field("Etiqueta", txt("label", o.label, ""))}`;
-    if(o.k === "place") h += rowBox();
-    h += clipRow() + delBox(1);
+    if(can.plan){ if(o.k === "place") h += rowBox(); h += clipRow() + delBox(1); }
   }
   else if(S.length > 1) h = `<h2>${S.length} elements</h2><p class="note">Arrossega'n un per moure'ls tots (s'enganxen a les cantonades; Alt per no enganxar) · fletxes: 10 cm (Maj: 1 m) · Q/E: gira 5° cadascun.</p>${clipRow()}${delBox(S.length)}`;
   else h = `<h2>Plànol</h2><p class="note">${TIPS.sel}</p>
@@ -287,7 +259,7 @@ function panel(){
       ${clip ? `<button class="tb" id="pst">Enganxa (${clip.objs.length})</button>` : ""}
       <p class="note">Tecles: Ctrl+C / Ctrl+X / Ctrl+V copia, retalla i enganxa · V selecciona · P plaça · Z zona · S punt · M mesura · F fons · Ctrl+D duplica · Supr esborra · Ctrl+Z desfés.</p>
       <p class="note"><b>${doc.objs.filter(o => o.k === "boat").length}</b> embarcacions · <b>${doc.objs.filter(o => o.k === "place").length}</b> places (${doc.objs.filter(o => o.k === "place" && !doc.objs.some(b => b.place === o.id)).length} lliures)</p>
-      <p class="note">Prototip: es desa en aquest navegador. Fes servir «Exporta» per guardar-ne una còpia.</p>
+      <p class="note">${cl ? "Els canvis es desen sols al núvol del club. «Exporta» en guarda una còpia." : "Prototip local: es desa en aquest navegador. «Exporta» en guarda una còpia."}</p>
       <details><summary>Mides de les plantilles</summary><p class="note">${Object.values(BOATS).map(b => `${esc(b.n)}: ${fmt(b.l)} × ${fmt(b.w)} m`).join("<br>")}</p></details>`;
   el.innerHTML = h;
 }
@@ -318,6 +290,8 @@ $("side").addEventListener("click", e => {
   if(b.id === "delNo"){ askDel = false; panel(); return; }
   if(b.id === "rowGo"){ makeRow(); return; }
   if(b.id === "boatNew"){ const p = selObjs()[0]; if(!p) return; snapshot(); doc.objs.push({id:uid(), k:"boat", t:p.t || "pati", label:"", vela:"", prop:"", estat:"lloc", place:p.id}); save(); drawObjs(); panel(); return; }
+  if(b.id === "boatDelAsk"){ askBoatDel = !askBoatDel; panel(); bindSlide("boatSlide", () => { const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return;
+    snapshot(); doc.objs = doc.objs.filter(x => x !== bt); askBoatDel = false; save(); drawObjs(); panel(); tip("Embarcació donada de baixa. Ctrl+Z per desfer.", 3000); }); return; }
   if(b.id === "boatOut"){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return; snapshot(); bt.place = null; save(); drawObjs(); panel(); tip("Ara és a «Sense plaça» (panell general).", 3000); return; }
 });
 $("side").addEventListener("input", e => { const t = e.target; if(!t.dataset.bg) return; const k = t.dataset.bg, v = parseFloat(String(t.value).replace(",", ".")); if(!isFinite(v)) return;
@@ -337,7 +311,9 @@ $("side").addEventListener("change", e => {
   if(t.dataset.bg){ snapshot(); const k = t.dataset.bg, v = parseFloat(String(t.value).replace(",", ".")); if(!isFinite(v)) return;
     doc.bg[k] = k === "s" ? Math.max(.01, v/100) : k === "op" ? Math.max(0, Math.min(1, v/100)) : v; save(); drawBg(); return; }
   if(t.id === "boatPick" && t.value){ const p = selObjs()[0], bt = byId(t.value); if(!p || !bt) return; snapshot(); bt.place = p.id; save(); drawObjs(); panel(); return; }
-  if(t.dataset.bk){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return; snapshot(); bt[t.dataset.bk] = t.value; save(); drawObjs(); if(t.tagName === "SELECT") panel(); return; }
+  if(t.dataset.bk){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt || !can.boats) return; snapshot();
+    const k = t.dataset.bk; bt[k] = t.type === "checkbox" ? t.checked : t.value;
+    if(k === "propUid" && cl){ const m = cl.members.find(x => x.uid === t.value); if(m) bt.prop = m.nom; } save(); drawObjs(); if(t.tagName === "SELECT" || t.type === "checkbox") panel(); return; }
   const k = t.dataset.k, S = selObjs(); if(!k || S.length !== 1) return; const o = S[0]; snapshot();
   let v = t.value;
   if(["l", "w", "r", "h"].includes(k)){ v = parseFloat(String(v).replace(",", ".")); if(!isFinite(v)) return; }
@@ -347,10 +323,10 @@ $("side").addEventListener("change", e => {
   if(o.k === "place" && ["l", "w", "r"].includes(k)) follow(o);
   save(); drawObjs(); panel();
 });
-function bindSlide(){ const s = $("delSlide"); if(!s) return; const inp = s.querySelector("input"), knob = s.querySelector("i");
+function bindSlide(id, fn){ const s = $(id || "delSlide"); if(!s) return; fn = fn || delSel; const inp = s.querySelector("input"), knob = s.querySelector("i");
   const upd = () => knob.style.left = `calc(${inp.value}% - ${inp.value * .41}px + 3px)`;
   inp.addEventListener("input", upd);
-  const end = () => { if(+inp.value >= 92) delSel(); else { inp.value = 0; upd(); } };
+  const end = () => { if(+inp.value >= 92) fn(); else { inp.value = 0; upd(); } };
   inp.addEventListener("change", end); inp.addEventListener("pointerup", end); }
 
 /* ---------- accions ---------- */
@@ -422,11 +398,14 @@ function moveObjs(S, dx, dy){ for(const o of S){ if(o.k === "poly") o.pts = o.pt
 /* ---------- ratolí i dits ---------- */
 const ptrs = new Map();
 function hitId(ev){ const g = ev.target.closest && ev.target.closest("[data-id]"); return g ? g.dataset.id : null; }
+const planTools = ["place", "poly", "point", "paste", "bg"];
+function noPlan(){ tip("No tens permís per editar el plànol (només les embarcacions).", 3000); }
 svg.addEventListener("pointerdown", ev => {
   svg.setPointerCapture(ev.pointerId); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
   if(ptrs.size === 2 && tool === "bg"){ const [a, b] = [...ptrs.values()]; if(drag && drag.bg){ /* ja hi havia un dit movent */ } snapshot(); drag = {bgpinch:true, d0:Math.hypot(a[0]-b[0], a[1]-b[1]), a0:Math.atan2(b[1]-a[1], b[0]-a[0]) / D2R}; return; }
   if(ptrs.size === 2){ const [a, b] = [...ptrs.values()]; drag = {pinch:true, d0:Math.hypot(a[0]-b[0], a[1]-b[1]), w0:view.w, c:toWorld({clientX:(a[0]+b[0])/2, clientY:(a[1]+b[1])/2})}; return; }
   const p = toWorld(ev);
+  if(!can.plan && planTools.includes(tool)){ noPlan(); return; }
   if(ev.button === 1 || ev.button === 2){ drag = {pan:true, sx:ev.clientX, sy:ev.clientY, v:{...view}}; svg.classList.add("panning"); return; }
   if(tool === "boat"){ const T = BOATS[cur.boat], pl = placeAt(p); const o = add({k:"boat", t:cur.boat, x:p[0], y:p[1], r:0, l:T.l, w:T.w, label:"", vela:"", prop:"", estat:"lloc", place:null});
     if(pl && !doc.objs.some(b => b.k === "boat" && b.place === pl.id && b !== o)) assign(o, pl.id); save(); drawObjs(); panel(); return; }
@@ -446,8 +425,9 @@ svg.addEventListener("pointerdown", ev => {
     if(ev.altKey && o.pts.length > 3){ snapshot(); o.pts.splice(i, 1); save(); drawObjs(); return; }
     snapshot(); drag = {vx:o, i}; return; }
   const id = hitId(ev);
+  if(id && !can.plan){ askBoatDel = false; sel = new Set([id]); drawObjs(); panel(); return; }   // sense permís de plànol: només selecciona (per obrir la fitxa)
   if(id){ if(ev.shiftKey){ sel.has(id) ? sel.delete(id) : sel.add(id); } else if(!sel.has(id)) sel = new Set([id]);
-    askDel = false; snapshot(); drag = {move:true, p0:p, last:p, moved:false, orig:JSON.parse(JSON.stringify(selObjs()))}; drawObjs(); panel(); return; }
+    askDel = false; askBoatDel = false; snapshot(); drag = {move:true, p0:p, last:p, moved:false, orig:JSON.parse(JSON.stringify(selObjs()))}; drawObjs(); panel(); return; }
   if(ev.shiftKey){ drag = {box:[p, p]}; return; }
   if(sel.size){ sel.clear(); askDel = false; drawObjs(); panel(); }
   drag = {pan:true, sx:ev.clientX, sy:ev.clientY, v:{...view}}; svg.classList.add("panning");
@@ -531,6 +511,7 @@ document.addEventListener("keydown", ev => {
   const k = ev.key, ctrl = ev.ctrlKey || ev.metaKey;
   if(ctrl && k.toLowerCase() === "z"){ ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
   if(ctrl && k.toLowerCase() === "y"){ ev.preventDefault(); redo(); return; }
+  if(!can.plan && (ctrl && "dxv".includes(k.toLowerCase()) || ["Delete", "Backspace", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "q", "Q", "e", "E", "r", "R"].includes(k))){ if(sel.size || ctrl) noPlan(); return; }
   if(ctrl && k.toLowerCase() === "d"){ ev.preventDefault(); dupSel(); return; }
   if(ctrl && k.toLowerCase() === "c"){ ev.preventDefault(); copySel(false); return; }
   if(ctrl && k.toLowerCase() === "x"){ ev.preventDefault(); copySel(true); return; }
@@ -565,6 +546,19 @@ st.textContent = `.tx{fill:#0a1322;font-family:var(--f-body);font-weight:700;pai
 .o{cursor:move} .tr{fill:inherit} .h-rot{cursor:grab} .h-vx{cursor:move}`;
 document.head.appendChild(st);
 
-setTool("sel"); if(doc.objs.length) fit(); else all();
-tip("Prototip de l'editor. Comença per «Fons» per ajustar la foto, o posa-hi places i embarcacions.", 7000);
+window.addEventListener("ov-plan-status", e => { const el = $("cloudSt"); if(el){ el.textContent = e.detail.t; el.classList.toggle("err", e.detail.err); } });
+if(CLOUD){
+  tool = "sel"; all(); tip("Carregant el plànol del club…", 0);
+  CLOUD.ready.then(r => {
+    if(r.error){ const T = {login:"Entra primer a l'app amb el teu compte (mateix navegador) i torna aquí.", perm:"No tens permís per editar el plànol ni les embarcacions. Ho pot fer la Junta, Manteniment o qui en tingui el permís.", net:"No s'ha pogut connectar amb el núvol.", load:"No s'ha pogut carregar el plànol. " + (r.msg || "")};
+      $("side").innerHTML = `<h2>Plànol del club</h2><p class="note">${T[r.error] || T.load}</p><a class="tb" href="./">Obre l'app</a><a class="tb" href="?local=1">Prova l'editor sense núvol</a>`; tip(""); return; }
+    cl = r; can = r.can; doc = r.doc; undoS.length = 0; redoS.length = 0;
+    try{ const im = JSON.parse(localStorage.getItem(KEY + "_img_" + cl.club)); if(im && im.img) Object.assign(doc.bg, im); }catch(e){}
+    $("cloudSt").textContent = "Club: " + cl.clubNom + (can.plan ? "" : " · només embarcacions") + (can.boats ? "" : " · només plànol");
+    document.querySelectorAll("[data-tool]").forEach(b => { if(!can.plan && planTools.includes(b.dataset.tool)) b.hidden = true; });
+    ["imp"].forEach(id => { if(!can.plan) $(id).hidden = true; });
+    setTool("sel"); fit(); tip("Plànol del club carregat. Els canvis es desen sols al núvol.", 4000);
+  });
+} else { setTool("sel"); if(doc.objs.length) fit(); else all(); }
+if(!CLOUD) tip("Prototip local (sense núvol). Comença per «Fons» per ajustar la foto, o posa-hi places.", 7000);
 })();

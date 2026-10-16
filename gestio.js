@@ -17,6 +17,8 @@ const GLOBAL = document.body.dataset.mode === "global";
 const PERMS = {
   seguretat:{t:"Seguretat", d:"Marcar com a resolts els avisos de seguretat en ruta (sense vent, vent fort, onades)."},
   avisos:  {t:"Fer avisos", d:"Publicar avisos al Club en nom de les comissions de què forma part."},
+  planol:  {t:"Plànol", d:"Dibuixar el plànol de la base: places, edificis, zones i punts. La Junta també ho pot fer."},
+  embarcacions:{t:"Embarcacions", d:"Donar d'alta i de baixa embarcacions, assignar-les a les places i posar-ne el propietari. Manteniment també ho pot fer."},
   altes:   {t:"Altes", d:"Aprovar o rebutjar altes i treure l'accés."},
   rols:    {t:"Rols i comissions", d:"Crear i editar comissions i rols, i assignar-hi persones."},
   permisos:{t:"Permisos", d:"Donar i treure aquests permisos a altres persones."},
@@ -145,6 +147,7 @@ function render(){
       <button type="button" data-view="socis"${view === "socis" ? ' aria-current="page"' : ""}>Socis${pend ? `<span class="cl-dot" aria-label="${pend} pendents">${pend}</span>` : ""}</button>
       <button type="button" data-view="rols"${view === "rols" ? ' aria-current="page"' : ""}>Rols</button>
       <button type="button" data-view="coms"${view === "coms" ? ' aria-current="page"' : ""}>Comissions</button>
+      <a class="g-planol" href="planol.html${club && (!me || club !== me.clubId) ? "?club=" + encodeURIComponent(club) : ""}">Plànol de la base ↗</a>
     </nav>
     ${({socis:renderSocis, rols:renderRols, coms:renderComs})[view](L)}`);
 }

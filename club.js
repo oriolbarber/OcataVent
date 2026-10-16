@@ -21,12 +21,12 @@ const XI = svgI('<path d="M6 6l12 12M18 6L6 18"/>', 20);
 const DAY = 864e5, MIN = 6e4, INT_DIES = 15, AN_MAX = 60;   // «Qui surt»: fins a 15 dies vista
 const now = () => Date.now();
 
-let C = null, tab = store.get("ov2_club_tab") || "mur", mapObj = null, lastPos = 0;
-const D = {pubs:[], intents:[], avisos:[], anuncis:[], pres:[], myPres:null, alertes:[], at:{}};
+let C = null, tab = store.get("ov2_club_tab") || "base", mapObj = null, lastPos = 0;
+const D = {pubs:[], intents:[], avisos:[], anuncis:[], pres:[], myPres:null, alertes:[], planol:null, boats:[], at:{}};
 const WARN = svgI('<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>', 22);
 const F0 = {open:false, date:"mes", person:"tots", order:"recents", vent:false, onada:false, all:false, view:"mur"};
 let filt = Object.assign({}, F0, store.get("ov2_club_filt") || {}, {open:false});
-const ui = {whoOpen:{}, avisCom:"totes", anCat:"tots", avisOpen:false, anOpen:false, interest:{}, interested:{}, avOpen:{}};
+const ui = {baseView:store.get("ov2_base_view") || "emb", pv:null, psel:null, whoOpen:{}, avisCom:"totes", anCat:"tots", avisOpen:false, anOpen:false, interest:{}, interested:{}, avOpen:{}};
 // Avisos vistos: es pleguen sols 1 h després de marcar-los (l'hora es desa en aquest mòbil; vistos des d'un altre mòbil, plegats)
 const AV_FOLD = 60*MIN;
 const seenAt = () => store.get("ov2_avis_vist") || {};
@@ -115,7 +115,7 @@ const canMod = () => !!(C && (C.perms || []).includes("moderar"));
 const modBtn = (n, x) => x.clubId === C.member.clubId || C.isAdm
   ? `<button type="button" class="btn sm cl-mod" data-askdel="${n}" data-id="${esc(x.id)}">Retira (moderació)</button>`
   : `<button type="button" class="btn sm cl-mod" data-askhide="${n}" data-id="${esc(x.id)}">Amaga per al club</button>`;
-const NEED = {mur:["pubs", "intents", "avisos"], avisos:["avisos"], anuncis:["anuncis", "avisos"], base:["pres", "avisos"]};
+const NEED = {mur:["pubs", "intents", "avisos"], avisos:["avisos"], anuncis:["anuncis", "avisos"], base:["pres", "avisos", "planol", "boats"]};
 async function fetchK(k){
   const club = C.member.clubId;
   if(k === "pubs") D.pubs = await getVisible("publicacions");
@@ -128,6 +128,8 @@ async function fetchK(k){
       else ui.interest[a.id] = (await C.F.getDoc(ref("anuncis", a.id, "interessats", uid()))).exists();
     }));
   }
+  if(k === "planol"){ const d = await C.F.getDoc(ref("clubs", C.member.clubId, "planol", "actual")).catch(() => null); D.planol = d && d.exists() ? d.data() : null; }
+  if(k === "boats") D.boats = await getAll("embarcacions", W("clubId", "==", C.member.clubId)).catch(() => []);
   if(k === "pres"){
     D.pres = await getVisible("presencia");
     const mine = await C.F.getDoc(ref("presencia", uid()));
@@ -173,12 +175,12 @@ function render(){
   if(mapObj){ mapObj.remove(); mapObj = null; }
   clearRouteMaps();
   const unread = unreadN(); navDot();
-  const tabs = [["mur", "Mur"], ["avisos", "Avisos"], ["anuncis", "Anuncis"], ["base", "Base"]];
+  const tabs = [["base", "Base"], ["mur", "Mur"], ["avisos", "Avisos"], ["anuncis", "Anuncis"]];
   el.innerHTML = `<nav class="cl-tabs" aria-label="Seccions del club">${tabs.map(([k, t]) => `<button type="button" data-ctab="${k}"${k === tab ? ' aria-current="page"' : ""}>${t}${k === "avisos" && unread ? `<span class="cl-dot" aria-label="${unread} sense llegir">${unread}</span>` : ""}</button>`).join("")}</nav>
     <div class="msg err" id="clubMsg" hidden></div>
     ${alertBanner()}
-    ${({mur:renderMur, avisos:renderAvisos, anuncis:renderAnuncis, base:renderBase})[tab]()}`;
-  if(tab === "base") setTimeout(drawMap, 0);
+    ${({mur:renderMur, avisos:renderAvisos, anuncis:renderAnuncis, base:renderBaseTab})[tab]()}`;
+  if(tab === "base") setTimeout(ui.baseView === "qui" ? drawMap : drawPlan, 0);
   if(tab === "mur") setTimeout(drawRouteMaps, 0);
 }
 
@@ -360,6 +362,110 @@ function renderAnuncis(){
 /* ---------- BASE ---------- */
 const presLive = () => D.pres.filter(x => now() - (ms(x.actualitzat) || 0) < DAY);
 const warned = x => x.estat === "aigua" && D.alertes.some(a => a.userId === x.id);
+/* ---------- BASE ▸ Embarcacions: plànol de la base (planol-core.js) ---------- */
+const PL = () => window.OV_PLAN;
+const canPlanE = () => !!C && (C.isAdm || C.isPremium || C.perms.includes("planol") || (C.member.comissions || []).includes("junta"));
+const canBoatsE = () => !!C && (C.isAdm || C.isPremium || C.perms.includes("embarcacions") || (C.member.comissions || []).includes("manteniment"));
+const myBoats = () => D.boats.filter(b => b.propUid === uid());
+const placeById = id => ((D.planol && D.planol.objs) || []).find(o => o.id === id && o.k === "place");
+function renderBaseTab(){
+  const npres = presLive().length;
+  const seg = `<div class="cl-seg cl-seg2" role="tablist">${[["emb", "Embarcacions"], ["qui", "Qui hi ha" + (npres ? " (" + npres + ")" : "")]].map(([k, t]) => `<button type="button" role="tab" data-bview="${k}" aria-pressed="${ui.baseView === k}">${t}</button>`).join("")}</div>`;
+  return seg + (ui.baseView === "qui" ? renderBase() : renderBoats());
+}
+function renderBoats(){
+  if(!PL()) return `<article class="card empty">Carregant…</article>`;
+  const plan = D.planol, places = ((plan && plan.objs) || []).filter(o => o.k === "place"), edit = canPlanE() || canBoatsE();
+  if(!places.length && !((plan && plan.objs) || []).length) return `<article class="card empty">${D.at.planol ? "Encara no s'ha dibuixat el plànol de la base." : "Carregant…"}${edit ? `<p class="note" style="margin-top:8px">Es dibuixa des d'un ordinador: <a href="planol.html">Plànol de la base</a>.</p>` : ""}</article>`;
+  const onPlace = D.boats.filter(b => b.place && placeById(b.place)), n = k => onPlace.filter(b => (b.estat || "lloc") === k).length, lliures = places.filter(p => !onPlace.some(b => b.place === p.id)).length;
+  const M = myBoats(), E = PL().ESTATS;
+  return `<article class="card ovp-card"><div class="ovp" id="ovp"><svg id="ovpSvg" xmlns="http://www.w3.org/2000/svg" aria-label="Plànol de la base: toca una plaça per veure'n l'embarcació"></svg>
+      <div class="ovp-z"><button type="button" class="btn" data-pz="in" aria-label="Apropa">+</button><button type="button" class="btn" data-pz="out" aria-label="Allunya">−</button><button type="button" class="btn" data-pz="fit" aria-label="Tot el plànol">⤢</button></div></div>
+    <div class="ovp-leg"><span><i style="background:#fff;border-color:#1c2530"></i>${n("lloc")} a la varada</span><span><i style="background:${E.navegant.f};border-color:${E.navegant.s}"></i>${n("navegant")} navegant</span><span><i style="background:${E.reparacio.f};border-color:${E.reparacio.s}"></i>${n("reparacio")} en reparació</span><span><i style="border-style:dashed"></i>${lliures} lliures</span></div></article>
+    ${M.length ? `<section class="card"><div class="card-h"><span class="lbl">${M.length === 1 ? "La meva embarcació" : "Les meves embarcacions"}</span></div>${M.map(b => { const pl = placeById(b.place);
+      return `<div class="cl-brow"><button type="button" class="cl-bname" data-boat="${esc(b.id)}"><b>${esc(b.label || PL().BOATS[b.t]?.n || "Embarcació")}</b><span>${pl ? "Plaça " + esc(pl.label || "") : "Sense plaça"}</span></button>
+        <div class="cl-bst">${Object.entries(E).map(([k, T]) => `<button type="button" class="cl-chip" data-bstate="${k}" data-id="${esc(b.id)}" aria-pressed="${(b.estat || "lloc") === k}" style="--c:${T.s}">${T.n}</button>`).join("")}</div></div>`; }).join("")}</section>` : ""}
+    ${edit ? `<p class="note">${canPlanE() ? "Pots editar el plànol" : "Pots gestionar les embarcacions"} des d'un ordinador: <a href="planol.html">Plànol de la base</a>.</p>` : ""}`;
+}
+// Vista del plànol: fit, + i −, arrossegar i pessigar; tocar una plaça obre la fitxa
+function planView(){ const ex = PL().extent(D.planol); if(!ex) return {x:-40, y:-30, w:80}; const w = Math.max(15, (ex[2] - ex[0]) * 1.08); return {x:(ex[0] + ex[2])/2 - w/2, y:(ex[1] + ex[3])/2 - w*.4, w}; }
+function drawPlan(){
+  const svg = $("ovpSvg"); if(!svg || !PL()) return;
+  const box = svg.getBoundingClientRect(); if(!box.width) return;
+  if(!ui.pv){ ui.pv = planView(); const ex = PL().extent(D.planol); if(ex){ const h = box.height / box.width; const need = (ex[3] - ex[1]) * 1.08 / h; if(need > ui.pv.w){ ui.pv.w = need; ui.pv.x = (ex[0] + ex[2])/2 - need/2; } ui.pv.y = (ex[1] + ex[3])/2 - ui.pv.w*h/2; } }
+  const v = ui.pv, h = box.height / box.width; svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.w * h}`);
+  svg.innerHTML = PL().render(D.planol, D.boats, {ppm:box.width / v.w, mine:new Set(myBoats().map(b => b.id)), sel:ui.psel});
+}
+const pp = new Map(); let pdrag = null;
+function pWorld(svg, x, y){ const b = svg.getBoundingClientRect(), k = ui.pv.w / b.width; return [ui.pv.x + (x - b.left)*k, ui.pv.y + (y - b.top)*k]; }
+function pZoom(svg, c, f){ const w = Math.max(6, Math.min(400, ui.pv.w * f)), k = w / ui.pv.w; ui.pv.x = c[0] - (c[0] - ui.pv.x)*k; ui.pv.y = c[1] - (c[1] - ui.pv.y)*k; ui.pv.w = w; drawPlan(); }
+document.addEventListener("pointerdown", e => { const svg = e.target.closest && e.target.closest("#ovpSvg"); if(!svg || !ui.pv) return;
+  svg.setPointerCapture(e.pointerId); pp.set(e.pointerId, [e.clientX, e.clientY]);
+  if(pp.size === 2){ const [a, b] = [...pp.values()]; pdrag = {pinch:true, d0:Math.hypot(a[0]-b[0], a[1]-b[1]), w0:ui.pv.w, c:pWorld(svg, (a[0]+b[0])/2, (a[1]+b[1])/2)}; return; }
+  const g = e.target.closest("[data-place]"); pdrag = {sx:e.clientX, sy:e.clientY, v:Object.assign({}, ui.pv), place:g && g.dataset.place, moved:false}; });
+document.addEventListener("pointermove", e => { if(!pdrag || !pp.has(e.pointerId)) return; const svg = $("ovpSvg"); if(!svg) return; pp.set(e.pointerId, [e.clientX, e.clientY]);
+  if(pdrag.pinch && pp.size === 2){ const [a, b] = [...pp.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]); pZoom(svg, pdrag.c, pdrag.w0 * pdrag.d0 / Math.max(10, d) / ui.pv.w); return; }
+  const dx = e.clientX - pdrag.sx, dy = e.clientY - pdrag.sy; if(Math.hypot(dx, dy) > 6) pdrag.moved = true; if(!pdrag.moved) return;
+  const k = ui.pv.w / svg.getBoundingClientRect().width; ui.pv.x = pdrag.v.x - dx*k; ui.pv.y = pdrag.v.y - dy*k; drawPlan(); });
+function pEnd(e){ if(!pp.has(e.pointerId)) return; pp.delete(e.pointerId); const d = pdrag; if(pp.size === 0) pdrag = null;
+  if(d && !d.pinch && !d.moved && d.place && e.type === "pointerup"){ ui.psel = d.place; drawPlan(); boatSheet(d.place); } }
+document.addEventListener("pointerup", pEnd); document.addEventListener("pointercancel", pEnd);
+document.addEventListener("wheel", e => { const svg = e.target.closest && e.target.closest("#ovpSvg"); if(!svg || !ui.pv) return; e.preventDefault(); pZoom(svg, pWorld(svg, e.clientX, e.clientY), e.deltaY > 0 ? 1.15 : 1/1.15); }, {passive:false});
+
+/* ---------- fitxa de l'embarcació ---------- */
+const ESTAT_T = k => (PL() ? PL().ESTATS[k] || PL().ESTATS.lloc : {n:k}).n;
+async function boatSave(b, patch, hist){
+  const h = (b.historial || []).slice(-19); if(hist) h.push({at:now(), qui:C.member.nom || "", que:hist});
+  const data = Object.assign({}, patch, {historial:h, actualitzat:C.F.serverTimestamp(), actualitzatPer:uid()});
+  await TO(C.F.updateDoc(ref("embarcacions", b.id), data)); Object.assign(b, patch, {historial:h});
+}
+function photoData(file){ return new Promise((ok, ko) => { const rd = new FileReader(); rd.onerror = ko; rd.onload = () => { const im = new Image(); im.onerror = ko; im.onload = () => {
+  let side = 800, q = .72, out = "";
+  for(let i = 0; i < 6; i++){ const k = Math.min(1, side / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width*k); c.height = Math.round(im.height*k);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); out = c.toDataURL("image/jpeg", q); if(out.length < 140000) break; side *= .8; q -= .08; }
+  out.length < 150000 ? ok(out) : ko({code:"massa-gran"}); }; im.src = rd.result; }; rd.readAsDataURL(file); }); }
+function boatSheet(placeId, boatId){
+  const pl = placeId ? placeById(placeId) : null, b = boatId ? D.boats.find(x => x.id === boatId) : D.boats.find(x => x.place === placeId);
+  const B = PL().BOATS, own = b && b.propUid === uid(), mgr = canBoatsE(), edit = own || mgr;
+  const title = b ? (b.label || B[b.t]?.n || "Embarcació") : "Plaça " + ((pl && pl.label) || "");
+  const free = mgr ? ((D.planol && D.planol.objs) || []).filter(o => o.k === "place" && !D.boats.some(x => x.place === o.id)) : [];
+  const unplaced = mgr && pl && !b ? D.boats.filter(x => !x.place || !placeById(x.place)) : [];
+  const body = !b ? `<p class="note">${pl ? `Plaça lliure per a ${esc(B[pl.t]?.n || "")}.` : ""}</p>
+      ${unplaced.length ? field("shPut", "Hi poso", `<select class="field" id="shPut"><option value="">Tria una embarcació sense plaça…</option>${unplaced.map(x => `<option value="${esc(x.id)}">${esc((x.label || B[x.t]?.n) + (x.prop ? " · " + x.prop : ""))}</option>`).join("")}</select>`) : ""}
+      ${mgr ? `<p class="note">Per donar d'alta una embarcació nova, fes-ho des del <a href="planol.html">plànol</a>.</p>` : ""}`
+    : `<div class="cl-binfo">${pl ? `<span><b>Plaça</b> ${esc(pl.label || "")}</span>` : `<span>Sense plaça</span>`}<span>${esc(B[b.t]?.n || "")}</span>${b.vela ? `<span><b>Vela</b> ${esc(b.vela)}</span>` : ""}</div>
+      <div class="cl-bstate">${Object.entries(PL().ESTATS).map(([k, T]) => edit ? `<button type="button" class="cl-chip" data-sstate="${k}" aria-pressed="${(b.estat || "lloc") === k}" style="--c:${T.s}">${T.n}</button>` : (b.estat || "lloc") === k ? `<span class="cl-chip" aria-pressed="true" style="--c:${T.s}">${T.n}</span>` : "").join("")}</div>
+      <div class="cl-bphoto" id="shPhoto">${edit ? `<button type="button" class="btn sm" id="shPhotoBtn">Afegeix una foto</button><input type="file" id="shPhotoIn" accept="image/*" hidden>` : ""}</div>
+      <div class="cl-binfo"><span><b>Propietari/a</b> <span id="shProp">${b.ocult && !edit ? "nom ocult" : esc(b.prop || (b.ocult ? "…" : "—"))}</span></span>${b.coprop ? `<span><b>Amb</b> ${esc(b.coprop)}</span>` : ""}</div>
+      ${edit ? `${field("shNotes", "Notes", `<textarea class="field cl-ta" id="shNotes" rows="2" maxlength="500" placeholder="Observacions">${esc(b.notes || "")}</textarea>`)}
+        <label class="cl-sw"><span>Amaga el nom del propietari al club</span><input type="checkbox" class="switch" id="shOcult"${b.ocult ? " checked" : ""}></label>` : b.notes ? `<p class="cl-text">${esc(b.notes)}</p>` : ""}
+      ${mgr ? `<details><summary class="lbl">Canvia de plaça</summary><div class="cl-row2" style="margin-top:8px">${field("shMove", "Plaça lliure", `<select class="field" id="shMove"><option value="">Tria…</option>${free.map(o => `<option value="${esc(o.id)}">${esc(o.label || "")} · ${esc(B[o.t]?.n || "")}</option>`).join("")}</select>`)}<button type="button" class="btn" id="shOut">Treu de la plaça</button></div></details>` : ""}
+      ${(b.historial || []).length ? `<details><summary class="lbl">Historial (${b.historial.length})</summary><p class="note">${b.historial.slice().reverse().map(x => `${new Date(x.at).toLocaleDateString("ca", {day:"numeric", month:"short"})} · ${esc(x.que)}${x.qui ? " · " + esc(x.qui) : ""}`).join("<br>")}</p></details>` : ""}
+      ${edit ? `<button type="button" class="btn cl-pri cl-wide" id="shSave">Desa les notes</button>` : ""}`;
+  sheet(title, body, async sh => {
+    sh.addEventListener("click", ev => { if(ev.target.closest("[data-close]") || ev.target === sh){ ui.psel = null; drawPlan(); } });
+    if(!b){ const put = $("shPut"); if(put) put.onchange = () => busy(put, async () => { const x = D.boats.find(y => y.id === put.value); if(!x) return;
+      await boatSave(x, {place:pl.id}, "Plaça " + (pl.label || "")); closeSheet(); render(); }); return; }
+    // foto (es descarrega només en obrir la fitxa)
+    C.F.getDoc(ref("embarcacions", b.id, "foto", "f")).then(d => { const el = $("shPhoto"); if(el && d.exists()) el.insertAdjacentHTML("afterbegin", `<img src="${d.data().data}" alt="Foto de l'embarcació">`); if(d.exists() && $("shPhotoBtn")) $("shPhotoBtn").textContent = "Canvia la foto"; }).catch(() => {});
+    if(b.ocult && edit) C.F.getDoc(ref("embarcacions", b.id, "privat", "p")).then(d => { if(d.exists() && $("shProp")) $("shProp").textContent = (d.data().prop || "—") + " (ocult al club)"; }).catch(() => {});
+    if(!edit) return;
+    sh.querySelectorAll("[data-sstate]").forEach(x => x.onclick = () => busy(x, async () => { const k = x.dataset.sstate; if((b.estat || "lloc") === k) return;
+      await boatSave(b, {estat:k}, ESTAT_T(k)); sh.querySelectorAll("[data-sstate]").forEach(y => y.setAttribute("aria-pressed", String(y.dataset.sstate === k))); render(); }));
+    const pb = $("shPhotoBtn"), pin = $("shPhotoIn");
+    if(pb){ pb.onclick = () => pin.click(); pin.onchange = () => { const f = pin.files[0]; if(!f) return; busy(pb, async () => { const data = await photoData(f);
+      await TO(C.F.setDoc(ref("embarcacions", b.id, "foto", "f"), {data, at:now(), per:uid()})); const el = $("shPhoto"), im = el.querySelector("img");
+      if(im) im.src = data; else el.insertAdjacentHTML("afterbegin", `<img src="${data}" alt="Foto de l'embarcació">`); pb.textContent = "Canvia la foto"; }); }; }
+    $("shSave").onclick = e => busy(e.currentTarget, async () => { await boatSave(b, {notes:$("shNotes").value.slice(0, 500)}); closeSheet(); });
+    $("shOcult").onchange = e => busy(e.target, async () => { const on = e.target.checked;
+      if(on){ await TO(C.F.setDoc(ref("embarcacions", b.id, "privat", "p"), {prop:b.prop || ""})); await boatSave(b, {ocult:true, prop:""}); }
+      else { const d = await C.F.getDoc(ref("embarcacions", b.id, "privat", "p")).catch(() => null), name = d && d.exists() ? d.data().prop || "" : b.prop || "";
+        await boatSave(b, {ocult:false, prop:name}); await C.F.deleteDoc(ref("embarcacions", b.id, "privat", "p")).catch(() => {}); } });
+    if(mgr){ const mv = $("shMove"); mv.onchange = () => busy(mv, async () => { const o = placeById(mv.value); if(!o) return; await boatSave(b, {place:o.id}, "Plaça " + (o.label || "")); ui.psel = o.id; closeSheet(); render(); });
+      $("shOut").onclick = e => busy(e.currentTarget, async () => { await boatSave(b, {place:null}, "Sense plaça"); closeSheet(); render(); }); }
+  });
+}
+
 function renderBase(){
   const L = presLive(), ai = L.filter(x => x.estat === "aigua").sort((a, b) => (warned(b) ? 1 : 0) - (warned(a) ? 1 : 0)), ba = L.filter(x => x.estat === "base");
   const me = D.myPres && now() - (ms(D.myPres.actualitzat) || 0) < DAY ? D.myPres : null, v = vis();
@@ -751,6 +857,10 @@ document.addEventListener("click", async e => {
   if(ds.forder){ filt.order = ds.forder; saveF(); return; }
   if(ds.fflag){ filt[ds.fflag] = !filt[ds.fflag]; saveF(); return; }
   if(ds.who){ ui.whoOpen[ds.who] = !ui.whoOpen[ds.who]; const [n, ...r] = ds.who.split(":"); paintItem(n, r.join(":")); return; }
+  if(ds.bview){ ui.baseView = ds.bview; store.set("ov2_base_view", ds.bview); render(); return; }
+  if(ds.pz){ const svg = $("ovpSvg"); if(!svg || !ui.pv) return; if(ds.pz === "fit"){ ui.pv = null; drawPlan(); return; } pZoom(svg, [ui.pv.x + ui.pv.w/2, ui.pv.y + ui.pv.w*svg.getBoundingClientRect().height/svg.getBoundingClientRect().width/2], ds.pz === "in" ? 1/1.4 : 1.4); return; }
+  if(ds.boat){ const b = D.boats.find(x => x.id === ds.boat); if(b){ ui.psel = b.place || null; drawPlan(); boatSheet(b.place, b.id); } return; }
+  if(ds.bstate){ const b = D.boats.find(x => x.id === ds.id); if(!b || (b.estat || "lloc") === ds.bstate) return; try{ await boatSave(b, {estat:ds.bstate}, ESTAT_T(ds.bstate)); render(); }catch(err){ say(errText(err)); } return; }
   if(ds.fview){ filt.view = ds.fview; saveF(); return; }
   if(ds.avopen){ ui.avOpen[ds.avopen] = true; render(); return; }
   if(ds.avfold){ delete ui.avOpen[ds.avfold]; const m = seenAt(); m[ds.avfold] = 0; store.set("ov2_avis_vist", m); render(); return; }
@@ -837,7 +947,7 @@ function flushUndo(){
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") flushUndo(); });
 
 /* ---------- actualització en segon pla: el que fan els altres surt sense sortir i tornar ---------- */
-const snap = () => JSON.stringify(NEED[tab].map(k => ({pubs:D.pubs, intents:D.intents, avisos:D.avisos, anuncis:D.anuncis, pres:D.pres})[k]).concat([ui.interest, ui.interested]));
+const snap = () => JSON.stringify(NEED[tab].map(k => ({pubs:D.pubs, intents:D.intents, avisos:D.avisos, anuncis:D.anuncis, pres:D.pres, planol:D.planol, boats:D.boats})[k]).concat([ui.interest, ui.interested]));
 setInterval(async () => {
   if(!C || !visible() || document.visibilityState !== "visible" || $("clSheet") || sw || undoT || filt.open
     || Object.keys(busyT).length || Object.keys(reactBusy).length || document.querySelector("#clubView [data-delbox] *")) return;

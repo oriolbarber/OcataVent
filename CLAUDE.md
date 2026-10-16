@@ -58,7 +58,12 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Anuncis: categoria i «fins al» a dalt; al peu, autor i data (o, si és teu, quants interessats i qui) amb llapis i paperera.
 - Avisos vistos: es pleguen en una línia 1 h després de marcar-los (`AV_FOLD`; hora local a `ov2_avis_vist`; vistos des d'un altre mòbil, plegats). Es despleguen tocant-los i es tornen a plegar amb la fletxa.
 - Mur: lliscar una sortida → arxiva, ← esborra (`ov2_mur_arx_{uid}` / `ov2_mur_del_{uid}`, només en aquest mòbil), amb «Desfés» 6 s. Si és pròpia, ← la retira del mur per a tothom quan s'acaba el temps de desfer. Filtres ▸ Mostra: Mur / Arxivades.
-- **Base i embarcacions (en disseny):** decisions a `docs/base-embarcacions.md`. Prototip de l'editor: `planol.html` + `planol.js` (pàgina a part, fora del service worker; metres amb origen a la base, y cap al sud; es desa a `localStorage` `ov_planol_v1` i s'exporta en JSON; fons ICGC/Esri/imatge pròpia ajustable).
+- **Base i embarcacions (Fase A feta):** decisions a `docs/base-embarcacions.md`. Pestanyes del Club: Base · Mur · Avisos · Anuncis; dins de Base, «Embarcacions» (per defecte, `renderBoats`/`drawPlan`/`boatSheet` a `club.js`) i «Qui hi ha» (`renderBase`, la presència).
+  - Nucli compartit `planol-core.js` (`window.OV_PLAN`: catàleg BOATS/POLYS/POINTS/ESTATS, `shape`, `render`, ombres). Unitats: metres, origen = base nàutica, y cap al sud.
+  - Editor `planol.html` + `planol.js` + `planol-cloud.js` (fora del service worker, per a ordinador; enllaç a la web de gestió i a Club ▸ Base). Amb sessió desa al núvol; amb `?local=1`, prototip a `localStorage`. Només es dibuixen places (amb tipus); l'embarcació s'assigna a la plaça i la silueta surt quan és a la varada.
+  - Firestore: `clubs/{club}/planol/actual` (objs, bg sense imatge pròpia) i `embarcacions/{id}` (clubId, t, label, vela, prop, propUid, coprop, ocult, estat lloc|navegant|reparacio, notes, place, historial ≤ 20) + `privat/p` (nom ocult) + `foto/f` (JPEG base64 < 150 kB; Storage demana pla de pagament).
+  - Permisos: `planol` (o comissió Junta) dibuixa; `embarcacions` (o Manteniment) gestiona fitxes i places; el propietari (`propUid`) canvia estat, notes, foto i nom ocult. Regles `canPlan`/`canBoats`.
+  - Pendent: Fase B («navegant» automàtic en començar una sortida i tornar a la varada en acabar) i Fase C (avisar d'un fet i preguntar al propietari).
 - Base nàutica del Club Ocata Vent: 41.479804, 2.324024 (`LOCS.masnou.home` a `app.js`).
 - Al document del soci: `comissions` (ids de `clubs/{clubId}.comissions`), rols i permisos (vegeu Web de gestió). L'antic camp `responsable` es converteix en el permís `seguretat` quan es desen els rols d'aquella persona; mentrestant les regles el continuen acceptant.
 

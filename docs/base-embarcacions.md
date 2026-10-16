@@ -36,7 +36,8 @@ Pestanya Club ▸ **Base** (primera: Base · Mur · Avisos · Anuncis). Dins de 
 - Llista d'espera, quotes de plaça, inventari de material. Les dades s'entren a mà (no hi ha llista per importar).
 
 ## Fases
-- A: plànol, editor, places i fitxes. B: estats i «navegant» automàtic. C: avisos de fets i preguntes.
+- A (feta, 16-10-2026): plànol, editor al núvol, places, fitxes, foto, nom ocult, historial i pestanya Base a l'app.
+- B: «navegant» automàtic. C: avisos de fets i preguntes al propietari.
 
 ## Mides estàndard (eslora × mànega)
 - Patí català 5,60 × 1,60 m · Hobie Cat 5,11 × 2,34 m · Llaüd català 6 × 2 m · Barca 4 × 1,6 m.

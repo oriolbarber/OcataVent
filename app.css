@@ -1368,3 +1368,28 @@ body.wm-open{overflow:hidden}
 .cl-ib .cl-wnames li,.cl-an .cl-wnames li{background:var(--surface-2)}
 .cl-ia{display:block;-webkit-line-clamp:unset}
 :root[data-size="big"] .cl-wnames li{font-size:1.05rem}
+
+/* Club ▸ Base ▸ Embarcacions: plànol de la base */
+.cl-seg.cl-seg2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ovp-card{padding:8px;display:flex;flex-direction:column;gap:8px}
+.ovp{position:relative;height:min(62vh,560px);border-radius:12px;overflow:hidden;background:#e4dccb}
+:root[data-theme="dark"] .ovp{background:#3a3730}
+#ovpSvg{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.ovp-z{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px}
+.ovp-z .btn{width:44px;min-height:44px;padding:0;justify-content:center;font-size:1.2rem;background:var(--surface)}
+.ovp-tx{fill:#0a1322;font-family:var(--f-body);font-weight:700;paint-order:stroke;stroke:#ffffffd9;stroke-width:.12px;stroke-linejoin:round}
+.ovp-code{font-family:var(--f-mono)}
+.ovp-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;font-weight:600;color:var(--muted);padding:0 4px}
+.ovp-leg span{display:inline-flex;align-items:center;gap:6px}
+.ovp-leg i{width:18px;height:12px;border-radius:3px;border:2px solid #3b4450}
+.cl-brow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.cl-bname{flex:1;min-width:140px;display:flex;flex-direction:column;align-items:flex-start;border:0;background:none;padding:0;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.cl-bname span{font-size:.82rem;font-weight:600;color:var(--muted)}
+.cl-bst,.cl-bstate{display:flex;gap:6px;flex-wrap:wrap}
+.cl-bst .cl-chip,.cl-bstate .cl-chip{min-height:38px;font-size:.82rem}
+.cl-bst .cl-chip[aria-pressed="true"],.cl-bstate .cl-chip[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.cl-binfo{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.92rem}
+.cl-binfo b{font-family:var(--f-head);letter-spacing:.06em;text-transform:uppercase;font-size:.78rem;color:var(--muted)}
+.cl-bphoto{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.cl-bphoto img{width:100%;max-height:260px;object-fit:cover;border-radius:12px}
+:root[data-size="big"] .cl-binfo{font-size:1.05rem}

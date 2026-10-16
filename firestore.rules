@@ -19,7 +19,10 @@ service cloud.firestore {
     function isPremium() { return isApproved() && memberData().get('premium', false) == true; }
     // Permisos delegables (members/{uid}.permisos): altes, rols, permisos, moderar, avisos. Administració i premium els tenen tots.
     function hasPerm(p) { return isAdmin() || isPremium() || (isApproved() && p in memberData().get('permisos', [])); }
-    function permList() { return ['altes', 'rols', 'permisos', 'moderar', 'avisos', 'seguretat']; }
+    function permList() { return ['altes', 'rols', 'permisos', 'moderar', 'avisos', 'seguretat', 'planol', 'embarcacions']; }
+    // Plànol de la base: dibuixar-lo (Junta o permís «planol») i gestionar-ne les embarcacions (Manteniment o permís «embarcacions»)
+    function canPlan(club) { return isAdmin() || (isApproved() && club == myClub() && (hasPerm('planol') || inComissio('junta'))); }
+    function canBoats(club) { return isAdmin() || (isApproved() && club == myClub() && (hasPerm('embarcacions') || inComissio('manteniment'))); }
     // Gestionar un soci (o un club): l'administració, qualsevol; la resta, només el seu club
     function sameClub(club) { return isAdmin() || club == myClub(); }
     function comsOf(club) {
@@ -365,6 +368,43 @@ service cloud.firestore {
         && request.resource.data.comissions is map && request.resource.data.comissions.size() <= 20
         && 'junta' in request.resource.data.comissions.keys()
         && request.resource.data.actualitzatPer == me() && request.resource.data.actualitzat == request.time;
+    }
+
+    // ---------- plànol de la base i embarcacions ----------
+    match /clubs/{club}/planol/{d} {
+      allow read: if isAdmin() || (isApproved() && club == myClub());
+      allow write: if canPlan(club) && d == 'actual'
+        && request.resource.data.keys().hasOnly(['objs', 'bg', 'origin', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.objs is list && request.resource.data.objs.size() <= 600
+        && request.resource.data.actualitzatPer == me();
+    }
+    match /embarcacions/{id} {
+      function boatOk(d) {
+        return d.keys().hasOnly(['clubId', 't', 'label', 'vela', 'prop', 'propUid', 'coprop', 'ocult', 'estat', 'notes', 'place', 'historial', 'actualitzat', 'actualitzatPer'])
+          && d.estat in ['lloc', 'navegant', 'reparacio'] && d.get('historial', []) is list && d.get('historial', []).size() <= 20
+          && d.get('notes', '') is string && d.get('notes', '').size() <= 500 && d.actualitzatPer == me();
+      }
+      allow read: if isAdmin() || (isApproved() && resource.data.clubId == myClub());
+      allow create: if canBoats(request.resource.data.clubId) && boatOk(request.resource.data);
+      allow update: if boatOk(request.resource.data) && request.resource.data.clubId == resource.data.clubId
+        && (canBoats(resource.data.clubId)
+          // el propietari: estat, notes, nom ocult i l'historial (no la plaça ni el propietari)
+          || (resource.data.propUid == me() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estat', 'notes', 'ocult', 'prop', 'historial', 'actualitzat', 'actualitzatPer'])));
+      allow delete: if canBoats(resource.data.clubId);
+      function boat() { return get(/databases/$(database)/documents/embarcacions/$(id)).data; }
+      // nom del propietari quan és ocult: el veuen el propietari i qui gestiona les embarcacions (Manteniment) o la Junta
+      match /privat/{d} {
+        allow read: if signedIn() && (boat().propUid == me() || canBoats(boat().clubId) || canPlan(boat().clubId));
+        allow write: if signedIn() && (boat().propUid == me() || canBoats(boat().clubId)) && request.resource.data.keys().hasOnly(['prop']);
+        allow delete: if signedIn() && (boat().propUid == me() || canBoats(boat().clubId));
+      }
+      // foto comprimida (JPEG en base64, < 150 kB)
+      match /foto/{d} {
+        allow read: if isAdmin() || (isApproved() && boat().clubId == myClub());
+        allow write: if signedIn() && (boat().propUid == me() || canBoats(boat().clubId))
+          && request.resource.data.keys().hasOnly(['data', 'at', 'per']) && request.resource.data.data is string && request.resource.data.data.size() < 150000;
+        allow delete: if signedIn() && (boat().propUid == me() || canBoats(boat().clubId));
+      }
     }
 
     // ---------- amics (mutus) i perfils ----------
