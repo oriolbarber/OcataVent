@@ -32,12 +32,13 @@ const POINTS = {
   dutxa:{n:"Dutxa", c:"#2f7fe0", s:"D"}, aigua:{n:"Aigua", c:"#0a9bd6", s:"A"}, extintor:{n:"Extintor", c:"#c3162a", s:"E"},
   dea:{n:"Desfibril·lador", c:"#0a8a4a", s:"♥"}, contenidor:{n:"Contenidors", c:"#5b636c", s:"C"}
 };
-const ESTATS = {lloc:{n:"Al seu lloc", f:"#ffffff"}, navegant:{n:"Navegant", f:"#4ea6ff"}, reparacio:{n:"En reparació", f:"#ffb547"}};
+const ESTATS = {lloc:{n:"A la varada", f:"#ffffff", s:"#1c2530"}, navegant:{n:"Navegant", f:"#4ea6ff", s:"#1f6fc4"}, reparacio:{n:"En reparació", f:"#ffb547", s:"#b86a00"}};
 const MARGIN = {l:0.40, w:0.40};   // la plaça és una mica més gran que l'embarcació
 
 /* ---------- estat ---------- */
 const BLANK = () => ({v:1, origin:ORIGIN, bg:{src:"icgc", dx:0, dy:0, s:1, r:0, op:.75, img:null, imgW:100, imgAR:1}, objs:[]});
 let doc = load() || BLANK();
+doc.objs.forEach(o => { if(o.k === "boat"){ delete o.x; delete o.y; delete o.r; delete o.l; delete o.w; if(o.estat === undefined) o.estat = "lloc"; } });
 let view = {x:-45, y:-35, w:90};           // finestra visible en metres (x, y = cantonada superior esquerra)
 let tool = "sel", sel = new Set(), cur = {boat:"pati", place:"pati", poly:"edifici", point:"dutxa"};
 let drag = null, draft = null, measure = null, calib = null, askDel = false, rowN = 5, rowGap = 0.4, rowDir = "w";
@@ -68,7 +69,7 @@ function corners(o){   // embarcació o plaça: cantonades del rectangle girat
 }
 function inside(p, poly){ let c = false; for(let i = 0, j = poly.length - 1; i < poly.length; j = i++){ const [xi, yi] = poly[i], [xj, yj] = poly[j];
   if(((yi > p[1]) !== (yj > p[1])) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c; } return c; }
-function bbox(o){ const P = o.k === "poly" ? o.pts : o.k === "point" ? [[o.x - .7, o.y - .7], [o.x + .7, o.y + .7]] : corners(o);
+function bbox(o){ if(o.k === "boat"){ const p = o.place && byId(o.place); return p ? bbox(p) : [0, 0, 0, 0]; } const P = o.k === "poly" ? o.pts : o.k === "point" ? [[o.x - .7, o.y - .7], [o.x + .7, o.y + .7]] : corners(o);
   const xs = P.map(p => p[0]), ys = P.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }
 
 /* ---------- siluetes (coordenades locals: proa cap a +x) ---------- */
@@ -148,13 +149,15 @@ function drawObjs(){
     if(o.k === "poly"){ const T = POLYS[o.t] || POLYS.edifici;
       gp += `<g class="${cls}" data-id="${o.id}"><path d="M${o.pts.map(p => p.join(" ")).join("L")}Z" fill="${T.fill}" fill-opacity="${T.op}" stroke="${S ? "#0a84ff" : T.stroke}" stroke-width="${S ? lw*2 : lw}" ${T.dash ? `stroke-dasharray="${lw*4} ${lw*3}"` : ""}/>`
         + (o.label || T.n ? (() => { const [x0, y0, x1, y1] = bbox(o); return `<text x="${(x0+x1)/2}" y="${(y0+y1)/2}" font-size="${fs}" text-anchor="middle" dominant-baseline="middle" class="tx">${esc(o.label || (o.t === "mar" ? "" : T.n))}</text>`; })() : "") + `</g>`; }
-    else if(o.k === "place"){ const b = placeOf[o.id];
-      gl += `<g class="${cls}" data-id="${o.id}" transform="translate(${o.x} ${o.y}) rotate(${o.r})"><rect x="${-o.l/2}" y="${-o.w/2}" width="${o.l}" height="${o.w}" rx=".15" fill="${b ? "none" : "#ffffff"}" fill-opacity=".18" stroke="${S ? "#0a84ff" : "#3b4450"}" stroke-width="${S ? lw*2 : lw}" stroke-dasharray="${lw*5} ${lw*3}"/>`
-        + `<text x="${-o.l/2 + .25}" y="${0}" font-size="${fs*.8}" dominant-baseline="middle" class="tx code" transform="rotate(${-o.r} ${-o.l/2 + .25} 0)">${esc(o.label || "")}</text></g>`; }
-    else if(o.k === "boat"){
-      gb += `<g class="${cls}" data-id="${o.id}" transform="translate(${o.x} ${o.y}) rotate(${o.r})" fill="${boatFill(o)}" stroke="${S ? "#0a84ff" : "#1c2530"}" stroke-width="${S ? lw*2 : lw}" stroke-linejoin="round">${shape(o.t, o.l, o.w)}`
-        + `<rect x="${-o.l/2}" y="${-o.w/2}" width="${o.l}" height="${o.w}" fill="transparent" stroke="none"/></g>`;
-      const lab = o.label || o.vela || ""; if(lab) gt += `<text x="${o.x}" y="${o.y}" font-size="${fs*.8}" text-anchor="middle" dominant-baseline="middle" class="tx boatlab" pointer-events="none">${esc(lab)}</text>`; }
+    else if(o.k === "place"){ const b = placeOf[o.id], E = b ? (ESTATS[b.estat] || ESTATS.lloc) : null, home = b && (b.estat || "lloc") === "lloc";
+      // A la varada: es veu la silueta de l'embarcació. Navegant o en reparació: la plaça es pinta del color de l'estat. Lliure: vora discontínua.
+      const st = S ? "#0a84ff" : !b ? "#3b4450" : home ? "#1c2530" : E.s, sw = S ? lw*2 : lw;
+      gl += `<g class="${cls}" data-id="${o.id}" transform="translate(${o.x} ${o.y}) rotate(${o.r})">`
+        + `<rect x="${-o.l/2}" y="${-o.w/2}" width="${o.l}" height="${o.w}" rx=".15" fill="${!b ? "#ffffff" : home ? "#ffffff" : E.f}" fill-opacity="${!b ? .18 : home ? .01 : .55}" stroke="${st}" stroke-width="${sw}" ${!b ? `stroke-dasharray="${lw*5} ${lw*3}"` : ""}/>`
+        + (home ? `<g fill="#ffffff" stroke="#1c2530" stroke-width="${lw}" stroke-linejoin="round" pointer-events="none">${shape(b.t, BOATS[b.t]?.l || o.l - MARGIN.l, BOATS[b.t]?.w || o.w - MARGIN.w)}</g>` : "")
+        + `<text x="${-o.l/2 + .25}" y="${0}" font-size="${fs*.8}" dominant-baseline="middle" class="tx code" transform="rotate(${-o.r} ${-o.l/2 + .25} 0)" pointer-events="none">${esc(o.label || "")}</text></g>`;
+      const lab = b ? (b.label || b.vela || "") : ""; if(lab) gt += `<text x="${o.x}" y="${o.y}" font-size="${fs*.8}" text-anchor="middle" dominant-baseline="middle" class="tx boatlab" pointer-events="none">${esc(lab)}</text>`; }
+    else if(o.k === "boat"){ /* no es dibuixa a mà: surt a la seva plaça */ }
     else if(o.k === "point"){ const T = POINTS[o.t] || POINTS.dutxa, R = Math.max(.45, 9 / ppm());
       gt += `<g class="${cls}" data-id="${o.id}"><circle cx="${o.x}" cy="${o.y}" r="${R}" fill="${T.c}" stroke="${S ? "#0a84ff" : "#fff"}" stroke-width="${S ? lw*2.5 : lw*1.5}"/><text x="${o.x}" y="${o.y}" font-size="${R*1.1}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-weight="700" pointer-events="none">${T.s}</text></g>`; }
   }
@@ -194,7 +197,7 @@ let tipT = 0; function tip(t, ms){ $("tip").textContent = t || ""; clearTimeout(
 const TIPS = {
   sel:"Clica per seleccionar · Maj+clic o Maj+arrossega per triar-ne diversos · arrossega el fons per moure el plànol",
   boat:"Clica on vols l'embarcació. Si cau dins una plaça lliure, s'hi encaixa sola.",
-  place:"Clica on vols la plaça. La mida surt de l'embarcació triada.",
+  place:"Clica on vols la plaça. La mida surt del tipus d'embarcació. Després hi poses l'embarcació des del panell.",
   poly:"Clica els vèrtexs · clica el primer punt o prem Retorn per tancar · Esc per cancel·lar",
   point:"Clica on vols el punt de servei.",
   measure:"Arrossega per mesurar una distància.",
@@ -227,27 +230,28 @@ function panel(){
       ${calib ? `<p class="note">${!calib.a ? "Clica un extrem d'una cosa de mida coneguda a la foto (un patí, un edifici)." : !calib.b ? "Clica l'altre extrem." : ""}</p>${calib.b ? `${field("Mida real (m)", `<input type="number" id="calibM" step="0.01" value="5.6">`)}<button class="tb" id="calibOk">Aplica l'escala</button>` : ""}` : ""}
       <button class="tb" id="bgReset">Torna a l'ajust inicial</button>`; }
   else if(S.length === 1){ const o = S[0];
-    if(o.k === "boat"){ const P = doc.objs.filter(x => x.k === "place");
-      h = `<h2>${esc(BOATS[o.t]?.n || "Embarcació")}</h2>
-        ${field("Tipus", opts("t", BOATS, o.t))}
-        <div class="row2">${field("Nom", txt("label", o.label, "Garbinada"))}${field("Vela / matrícula", txt("vela", o.vela, "1234"))}</div>
-        ${field("Propietari/a", txt("prop", o.prop, "Nom i cognoms"))}
-        ${field("Estat", opts("estat", ESTATS, o.estat || "lloc"))}
-        ${field("Plaça", `<select data-k="place"><option value="">Sense plaça</option>${P.map(p => `<option value="${p.id}"${p.id === o.place ? " selected" : ""}>${esc(p.label || "(sense codi)")}</option>`).join("")}</select>`)}
-        <details><summary>Mida i posició</summary><div class="row3" style="margin-top:8px">${field("Eslora", num("l", o.l, .01, .5))}${field("Mànega", num("w", o.w, .01, .2))}${field("Gir °", num("r", o.r, 5))}</div></details>`; }
-    else if(o.k === "place"){ const b = doc.objs.find(x => x.k === "boat" && x.place === o.id);
-      h = `<h2>Plaça ${esc(o.label || "")}</h2>${field("Codi", txt("label", o.label, "A1"))}
-        <p class="note">${b ? `Ocupada: ${esc(b.label || BOATS[b.t]?.n)}${b.prop ? " · " + esc(b.prop) : ""}` : "Lliure"}</p>
-        <div class="row3">${field("Llarg", num("l", o.l, .05, .5))}${field("Ample", num("w", o.w, .05, .2))}${field("Gir °", num("r", o.r, 5))}</div>`; }
+    if(o.k === "place"){ const b = doc.objs.find(x => x.k === "boat" && x.place === o.id), free = doc.objs.filter(x => x.k === "boat" && !x.place);
+      h = `<h2>Plaça ${esc(o.label || "")}</h2>
+        <div class="row2">${field("Codi", txt("label", o.label, "A1"))}${field("Per a", opts("pt", BOATS, o.t))}</div>
+        <span class="lbl">Embarcació</span>
+        ${b ? `<div class="row2">${field("Nom", `<input type="text" data-bk="label" value="${esc(b.label || "")}" placeholder="Garbinada">`)}${field("Vela / matrícula", `<input type="text" data-bk="vela" value="${esc(b.vela || "")}" placeholder="1234">`)}</div>
+          ${field("Propietari/a", `<input type="text" data-bk="prop" value="${esc(b.prop || "")}" placeholder="Nom i cognoms">`)}
+          <div class="row2">${field("Estat", `<select data-bk="estat">${Object.entries(ESTATS).map(([k, T]) => `<option value="${k}"${k === (b.estat || "lloc") ? " selected" : ""}>${T.n}</option>`).join("")}</select>`)}${field("Tipus", `<select data-bk="t">${Object.entries(BOATS).map(([k, T]) => `<option value="${k}"${k === b.t ? " selected" : ""}>${esc(T.n)}</option>`).join("")}</select>`)}</div>
+          <button class="tb" id="boatOut">Treu-la de la plaça</button>`
+        : `<p class="note">Lliure.</p><button class="tb" id="boatNew">Hi poso una embarcació</button>
+          ${free.length ? field("O una de les que no tenen plaça", `<select id="boatPick"><option value="">Tria-la…</option>${free.map(x => `<option value="${x.id}">${esc((x.label || BOATS[x.t]?.n) + (x.prop ? " · " + x.prop : ""))}</option>`).join("")}</select>`) : ""}`}
+        <details><summary>Mida i gir</summary><div class="row3" style="margin-top:8px">${field("Llarg", num("l", o.l, .05, .5))}${field("Ample", num("w", o.w, .05, .2))}${field("Gir °", num("r", o.r, 5))}</div></details>`; }
     else if(o.k === "poly") h = `<h2>${esc(POLYS[o.t]?.n || "Zona")}</h2>${field("Tipus", opts("t", POLYS, o.t))}${field("Etiqueta", txt("label", o.label, POLYS[o.t]?.n))}
         <p class="note">Arrossega els quadrats per moure vèrtexs · doble clic a la vora per afegir-ne un · Alt+clic en un vèrtex per treure'l.</p>`;
     else if(o.k === "point") h = `<h2>${esc(POINTS[o.t]?.n || "Punt")}</h2>${field("Tipus", opts("t", POINTS, o.t))}${field("Etiqueta", txt("label", o.label, ""))}`;
-    if(o.k === "boat" || o.k === "place") h += rowBox();
+    if(o.k === "place") h += rowBox();
     h += delBox(1);
   }
   else if(S.length > 1) h = `<h2>${S.length} elements</h2><p class="note">Arrossega'n un per moure'ls tots · fletxes: 10 cm (Maj: 1 m) · Q/E: gira 5° cadascun.</p>${delBox(S.length)}`;
   else h = `<h2>Plànol</h2><p class="note">${TIPS.sel}</p>
-      <p class="note">Tecles: V selecciona · B embarcació · P plaça · Z zona · S punt · M mesura · F fons · Ctrl+D duplica · Supr esborra · Ctrl+Z desfés.</p>
+      <div class="chips" style="gap:10px;font-size:.85rem">${[["#ffffff", "#1c2530", "A la varada (silueta)"], ["#4ea6ff", "#1f6fc4", "Navegant"], ["#ffb547", "#b86a00", "En reparació"], ["transparent", "#3b4450", "Lliure (discontínua)"]].map(([f, c, t]) => `<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:18px;height:12px;border-radius:3px;background:${f};border:2px ${f === "transparent" ? "dashed" : "solid"} ${c}"></i>${t}</span>`).join("")}</div>
+      ${(f => f.length ? `<details><summary>Sense plaça (${f.length})</summary><p class="note">${f.map(x => esc((x.label || BOATS[x.t]?.n) + (x.prop ? " · " + x.prop : ""))).join("<br>")}</p><p class="note">Tria una plaça lliure per posar-n'hi una.</p></details>` : "")(doc.objs.filter(x => x.k === "boat" && !x.place))}
+      <p class="note">Tecles: V selecciona · P plaça · Z zona · S punt · M mesura · F fons · Ctrl+D duplica · Supr esborra · Ctrl+Z desfés.</p>
       <p class="note"><b>${doc.objs.filter(o => o.k === "boat").length}</b> embarcacions · <b>${doc.objs.filter(o => o.k === "place").length}</b> places (${doc.objs.filter(o => o.k === "place" && !doc.objs.some(b => b.place === o.id)).length} lliures)</p>
       <p class="note">Prototip: es desa en aquest navegador. Fes servir «Exporta» per guardar-ne una còpia.</p>
       <details><summary>Mides de les plantilles</summary><p class="note">${Object.values(BOATS).map(b => `${esc(b.n)}: ${fmt(b.l)} × ${fmt(b.w)} m`).join("<br>")}</p></details>`;
@@ -275,6 +279,8 @@ $("side").addEventListener("click", e => {
   if(b.id === "delAsk"){ askDel = true; panel(); bindSlide(); return; }
   if(b.id === "delNo"){ askDel = false; panel(); return; }
   if(b.id === "rowGo"){ makeRow(); return; }
+  if(b.id === "boatNew"){ const p = selObjs()[0]; if(!p) return; snapshot(); doc.objs.push({id:uid(), k:"boat", t:p.t || "pati", label:"", vela:"", prop:"", estat:"lloc", place:p.id}); save(); drawObjs(); panel(); return; }
+  if(b.id === "boatOut"){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return; snapshot(); bt.place = null; save(); drawObjs(); panel(); tip("Ara és a «Sense plaça» (panell general).", 3000); return; }
 });
 $("side").addEventListener("input", e => { const t = e.target; if(!t.dataset.bg) return; const k = t.dataset.bg, v = parseFloat(String(t.value).replace(",", ".")); if(!isFinite(v)) return;
   doc.bg[k] = k === "s" ? Math.max(.01, v/100) : k === "op" ? Math.max(0, Math.min(1, v/100)) : v; save(); drawBg(); drawUi(); });
@@ -292,10 +298,12 @@ $("side").addEventListener("change", e => {
   if(t.id === "rowDir"){ rowDir = t.value; return; }
   if(t.dataset.bg){ snapshot(); const k = t.dataset.bg, v = parseFloat(String(t.value).replace(",", ".")); if(!isFinite(v)) return;
     doc.bg[k] = k === "s" ? Math.max(.01, v/100) : k === "op" ? Math.max(0, Math.min(1, v/100)) : v; save(); drawBg(); return; }
+  if(t.id === "boatPick" && t.value){ const p = selObjs()[0], bt = byId(t.value); if(!p || !bt) return; snapshot(); bt.place = p.id; save(); drawObjs(); panel(); return; }
+  if(t.dataset.bk){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return; snapshot(); bt[t.dataset.bk] = t.value; save(); drawObjs(); if(t.tagName === "SELECT") panel(); return; }
   const k = t.dataset.k, S = selObjs(); if(!k || S.length !== 1) return; const o = S[0]; snapshot();
   let v = t.value;
   if(["l", "w", "r"].includes(k)){ v = parseFloat(String(v).replace(",", ".")); if(!isFinite(v)) return; }
-  if(k === "t" && o.k === "boat"){ o.t = v; o.l = BOATS[v].l; o.w = BOATS[v].w; }
+  if(k === "pt" && o.k === "place"){ o.t = v; o.l = BOATS[v].l + MARGIN.l; o.w = BOATS[v].w + MARGIN.w; }
   else if(k === "place"){ assign(o, v || null, true); }
   else o[k] = v;
   if(o.k === "place" && ["l", "w", "r"].includes(k)) follow(o);
@@ -395,7 +403,7 @@ function endPtr(ev){
   if(d.pinch){ bgLater(); return; }
   if(d.bgpinch){ save(); drawBg(); panel(); return; }
   if(d.box){ const [a, b] = d.box, x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
-    doc.objs.forEach(o => { const [bx0, by0, bx1, by1] = bbox(o); if(bx0 >= x0 && bx1 <= x1 && by0 >= y0 && by1 <= y1) sel.add(o.id); }); drawObjs(); panel(); return; }
+    doc.objs.forEach(o => { if(o.k === "boat") return; const [bx0, by0, bx1, by1] = bbox(o); if(bx0 >= x0 && bx1 <= x1 && by0 >= y0 && by1 <= y1) sel.add(o.id); }); drawObjs(); panel(); return; }
   if(d.move){ if(!d.moved){ undoS.pop(); btns(); return; }
     const S = selObjs();
     if(S.length === 1 && S[0].k === "boat"){ const o = S[0], pl = placeAt([o.x, o.y]);   // encaixa a la plaça si cau dins
@@ -426,7 +434,7 @@ function zoomAt(p, k){ const w = Math.max(4, Math.min(800, view.w * k)), f = w /
 let bgT = 0; function bgLater(){ clearTimeout(bgT); bgT = setTimeout(drawBg, 120); }
 let pT = 0; function panelLater(){ clearTimeout(pT); pT = setTimeout(panel, 200); }
 function fit(){ if(!doc.objs.length){ view = {x:-45, y:-35, w:90}; all(); return; }
-  const B = doc.objs.map(bbox), x0 = Math.min(...B.map(b => b[0])), y0 = Math.min(...B.map(b => b[1])), x1 = Math.max(...B.map(b => b[2])), y1 = Math.max(...B.map(b => b[3]));
+  const B = doc.objs.filter(o => o.k !== "boat").map(bbox); if(!B.length){ view = {x:-45, y:-35, w:90}; all(); return; } const x0 = Math.min(...B.map(b => b[0])), y0 = Math.min(...B.map(b => b[1])), x1 = Math.max(...B.map(b => b[2])), y1 = Math.max(...B.map(b => b[3]));
   const w = Math.max(10, (x1 - x0) * 1.15, (y1 - y0) * 1.15 / aspect()); view = {x:(x0 + x1)/2 - w/2, y:(y0 + y1)/2 - w*aspect()/2, w}; all(); }
 $("zin").onclick = () => zoomAt([view.x + view.w/2, view.y + view.w*aspect()/2], 1/1.4);
 $("zout").onclick = () => zoomAt([view.x + view.w/2, view.y + view.w*aspect()/2], 1.4);
@@ -442,7 +450,7 @@ document.addEventListener("keydown", ev => {
   if(ctrl && k.toLowerCase() === "z"){ ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
   if(ctrl && k.toLowerCase() === "y"){ ev.preventDefault(); redo(); return; }
   if(ctrl && k.toLowerCase() === "d"){ ev.preventDefault(); dupSel(); return; }
-  if(ctrl && k.toLowerCase() === "a"){ ev.preventDefault(); sel = new Set(doc.objs.map(o => o.id)); drawObjs(); panel(); return; }
+  if(ctrl && k.toLowerCase() === "a"){ ev.preventDefault(); sel = new Set(doc.objs.filter(o => o.k !== "boat").map(o => o.id)); drawObjs(); panel(); return; }
   if(k === "Escape"){ if(draft){ draft = null; drawUi(); panel(); } else if(tool !== "sel") setTool("sel"); else { sel.clear(); askDel = false; drawObjs(); panel(); } return; }
   if(k === "Enter" && draft){ finishPoly(); return; }
   if((k === "Delete" || k === "Backspace") && sel.size){ askDel = true; panel(); bindSlide(); tip("Confirma-ho lliscant al panell.", 2500); return; }
@@ -451,7 +459,7 @@ document.addEventListener("keydown", ev => {
   if(k === "ArrowLeft"){ ev.preventDefault(); nudge(-step, 0); return; } if(k === "ArrowRight"){ ev.preventDefault(); nudge(step, 0); return; }
   if(k === "ArrowUp"){ ev.preventDefault(); nudge(0, -step); return; } if(k === "ArrowDown"){ ev.preventDefault(); nudge(0, step); return; }
   if(k === "q" || k === "Q"){ rotSel(-5); return; } if(k === "e" || k === "E"){ rotSel(5); return; } if(k === "r" || k === "R"){ rotSel(90); return; }
-  const T = {v:"sel", b:"boat", p:"place", z:"poly", s:"point", m:"measure", f:"bg"}[k.toLowerCase()]; if(T && !ctrl) setTool(T);
+  const T = {v:"sel", p:"place", z:"poly", s:"point", m:"measure", f:"bg"}[k.toLowerCase()]; if(T && !ctrl) setTool(T);
 });
 
 /* ---------- barra superior ---------- */

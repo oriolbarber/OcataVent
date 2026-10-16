@@ -7,8 +7,7 @@ Pestanya Club ▸ **Base** (primera: Base · Mur · Avisos · Anuncis). Dins de 
 - La imatge de fons s'ajusta **a mà** (moure, escalar, girar) fins que les embarcacions, que tenen mida estàndard, hi encaixin. L'ortofoto ja ve a escala, però també es pot ajustar.
 - Editor complet a l'**ordinador** (web de gestió); al mòbil, retocs: moure, assignar, canviar estat.
 - Tipus d'objecte: embarcacions, places, edificis, zones (varada, pas, prohibida), el mar (línia de costa) i punts de servei (dutxa, aigua, extintor, desfibril·lador, contenidors).
-- **Places i embarcacions separades**: plaça fixa numerada (A1…) + embarcació assignada; places lliures amb vora discontínua.
-- Embarcacions = plantilles amb **mides estàndard per tipus** (proporcions correctes entre elles); moure, girar, duplicar en fila.
+- **Només es dibuixen les places** (16-10-2026): cada plaça diu per a quin tipus d'embarcació és (mida estàndard + marge) i s'hi assigna l'embarcació (fitxa). L'embarcació no es dibuixa a mà: la seva silueta surt dins la plaça quan és a la varada; navegant o en reparació, la plaça es pinta del color de l'estat; lliure, vora discontínua. Les embarcacions sense plaça surten en una llista.
 - Guardat per club, amb coordenades reals (serveix per a la V3 multiclub).
 
 ## Fitxa de l'embarcació
@@ -20,7 +19,7 @@ Pestanya Club ▸ **Base** (primera: Base · Mur · Avisos · Anuncis). Dins de 
 - **Poca informació a la vista**: el que no és essencial, dins una (i) o un desplegable.
 
 ## Estats (colors)
-- Al seu lloc (blanc) · Navegant (blau) · En reparació (taronja). Plaça lliure: vora discontínua. La meva: vora blava gruixuda.
+- A la varada (silueta blanca dins la plaça) · Navegant (plaça blava) · En reparació (plaça taronja). Plaça lliure: vora discontínua. La meva: vora blava gruixuda.
 - «Navegant» automàtic: en començar una sortida (a «Nova sortida» es tria l'embarcació si se'n té més d'una); torna a «al seu lloc» en tornar a la base.
 
 ## Comunicació
