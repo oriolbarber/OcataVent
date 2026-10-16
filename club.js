@@ -418,18 +418,17 @@ function windCard(){
   const rose = `<svg class="bs-rose" viewBox="-48 -48 96 96" aria-hidden="true"><circle r="${R}" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.5"/>${lbl}
     ${d != null ? `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="var(--${v.k})" stroke-width="4" stroke-linecap="round"/><path d="M${bx.toFixed(1)} ${by.toFixed(1)}L${l1x.toFixed(1)} ${l1y.toFixed(1)}L${l2x.toFixed(1)} ${l2y.toFixed(1)}Z" fill="var(--${v.k})"/>` : ""}</svg>`;
   const mins = live ? Math.max(0, Math.round((now() - ST.at)/MIN)) : null;
-  return `<div class="bs-wind">${rose}<div class="bs-wt"><span class="bs-kn"><b>${r0(n.wind)}</b> kn${n.gust != null ? ` <small>ratxa ${r0(n.gust)}</small>` : ""}</span>
-    <span class="bs-wd">${d != null ? esc(windName(d)) + " · " + Math.round(d) + "°" : ""}</span><span class="cl-fit k-${v.k}" style="align-self:flex-start"><b>${Math.round((v.score ?? 0) / 10) || "–"}</b>${esc(v.t)}</span>
-    <span class="note">${live ? "Estació · fa " + mins + " min" : "Previsió (sense estació)"}</span></div></div>`;
+  return {html:`<div class="bs-wind">${rose}<div class="bs-wt"><span class="bs-kn"><b>${r0(n.wind)}</b> kn${n.gust != null ? ` <small>ratxa ${r0(n.gust)}</small>` : ""}</span>
+    <span class="bs-wd">${d != null ? esc(windName(d)) + " · " + Math.round(d) + "°" : ""}</span><small class="bs-src">${live ? "Estació · fa " + mins + " min" : "Previsió"}</small></div>
+    <span class="cl-fit k-${v.k} bs-fit"><b>${Math.round((v.score ?? 0) / 10) || "–"}</b>${esc(v.t)}</span></div>`};
 }
+// Capçalera de la Base: una sola targeta a tot l'ample (vent a dalt; font i qui hi ha en una línia al peu)
 function baseTop(){
-  const L = presLive(), ai = L.filter(x => x.estat === "aigua"), ba = L.filter(x => x.estat === "base");
+  const L = presLive(), ai = L.filter(x => x.estat === "aigua"), ba = L.filter(x => x.estat === "base"), W = windCard();
   const names = A => A.slice(0, 6).map(x => `<span class="bs-pc${warned(x) ? " late" : ""}">${esc(x.id === uid() ? "Tu" : String(x.nom || "").split(" ")[0])}</span>`).join("") + (A.length > 6 ? `<span class="bs-pc">+${A.length - 6}</span>` : "");
-  return `<div class="bs-top"><article class="card bs-card">${windCard() || `<p class="note">Sense dades de vent ara.</p>`}</article>
-    <button type="button" class="card bs-card bs-pres" data-bscroll="bsQui" aria-label="Qui hi ha: ${ba.length} a la base, ${ai.length} navegant">
-      <div class="bs-prow"><span class="bs-n" style="color:var(--ideal)">${ba.length}</span><span class="lbl">A la base</span></div>${ba.length ? `<div class="bs-pcs">${names(ba)}</div>` : ""}
-      <div class="bs-prow"><span class="bs-n" style="color:var(--accent)">${ai.length}</span><span class="lbl">Navegant</span></div>${ai.length ? `<div class="bs-pcs">${names(ai)}</div>` : ""}
-      <span class="note">Mapa i llista, a baix ↓</span></button></div>`;
+  return `<article class="card bs-top">${W ? W.html : `<p class="note">Sense dades de vent ara.</p>`}
+    <div class="bs-foot"><button type="button" class="bs-pres" data-bscroll="bsQui" aria-label="Qui hi ha: ${ba.length} a la base, ${ai.length} navegant"><b style="color:var(--ideal)">${ba.length}</b> a la base · <b style="color:var(--accent)">${ai.length}</b> navegant ↓</button>
+      ${ba.length || ai.length ? `<div class="bs-pcs">${names(ba)}${ai.length ? names(ai).replace(/class="bs-pc/g, 'class="bs-pc aigua') : ""}</div>` : ""}</div></article>`;
 }
 
 /* ---------- avisos de la base: notes, fets i preguntes (col·lecció «fets») ---------- */

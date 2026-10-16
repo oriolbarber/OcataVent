@@ -75,7 +75,7 @@ function render(plan, boats, opts){
         + (lab ? `<text x="${(x0+x1)/2}" y="${(y0+y1)/2}" font-size="${fs}" text-anchor="middle" dominant-baseline="middle" class="ovp-tx">${esc(lab)}</text>` : ""); }
     else if(o.k === "place"){ const b = byPlace[o.id], E = b ? (ESTATS[b.estat] || ESTATS.lloc) : null, home = b && (b.estat || "lloc") === "lloc";
       const mine = b && opts.mine && opts.mine.has(b.id), selp = opts.sel === o.id;
-      const st = selp ? "#0a84ff" : mine ? "#0068b8" : !b ? "#3b4450" : home ? "#1c2530" : E.s, sw = selp || mine ? lw*3 : lw;
+      const st = selp ? "#0a84ff" : mine ? "#0a1322" : !b ? "#3b4450" : home ? "#1c2530" : E.s, sw = selp ? lw*2 : mine ? lw*1.6 : lw;
       gl += `<g data-place="${esc(o.id)}" transform="translate(${o.x} ${o.y}) rotate(${o.r || 0})">`
         + `<rect x="${-o.l/2}" y="${-o.w/2}" width="${o.l}" height="${o.w}" rx=".15" fill="${!b || home ? "#ffffff" : E.f}" fill-opacity="${!b ? .25 : home ? .01 : .6}" stroke="${st}" stroke-width="${sw}" ${!b ? `stroke-dasharray="${lw*5} ${lw*3}"` : ""}/>`
         + (home ? `<g fill="#ffffff" stroke="#1c2530" stroke-width="${lw}" stroke-linejoin="round" pointer-events="none">${shape(b.t, BOATS[b.t]?.l || o.l - MARGIN.l, BOATS[b.t]?.w || o.w - MARGIN.w)}</g>` : "")
