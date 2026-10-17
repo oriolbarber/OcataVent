@@ -183,16 +183,17 @@ const STATIONS = {
   badalona: {name:"Badalona", url:"https://badalona.meteoelmasnou.cat/meteotemplateLive.txt"},
   // Port de Barcelona, estació Bocana Nord (dades obertes CC BY-SA 4.0): CSV cada 10 min en m/s, hora UTC; + històric de 3 dies.
   // Sense CORS: al navegador falla i l'app mostra «sense dades · model»; a l'APK va per la petició nativa.
-  portbcn: {name:"Port BCN · Bocana Nord", type:"pbcn", unit:"ms",
+  portbcn: {name:"Port BCN", long:"Port de Barcelona · estació Bocana Nord", type:"pbcn", unit:"ms", maxAge:60,
+    info:"Mesura cada 10 min, però el port publica les dades en blocs: poden arribar amb 30–40 min de retard.",
     url:"https://opendata.portdebarcelona.cat/dataset/1afd4f4d-f329-4959-b1d3-252d973a9c3b/resource/d4263236-5d2a-486e-9ba9-9c4cb27ddc8a/download/14-bocananord_opd_10m.csv",
     hist:"https://opendata.portdebarcelona.cat/dataset/1afd4f4d-f329-4959-b1d3-252d973a9c3b/resource/b724b1e7-26e3-4c6f-80d1-65a0b507065f/download/14-bocananord_opd_10m_hist.csv"},
   // CN Vilassar de Mar (Davis Vantage Pro2, sensor a 10 m), Weathercloud: JSON amb vent en m/s, sense ratxa, cada ~10 min. Sense CORS (com el port).
-  vilassar: {name:"CN Vilassar", type:"wcloud", unit:"ms", url:"https://app.weathercloud.net/device/values/0732654059"}
+  vilassar: {name:"CN Vilassar", long:"Club Nàutic Vilassar de Mar (Weathercloud)", type:"wcloud", unit:"ms", maxAge:30, info:"Vent mitjà i direcció cada ~10 min; no dona ratxa.", url:"https://app.weathercloud.net/device/values/0732654059"}
 };
 const MS = 1.943844;
 // Port de Barcelona: CSV → registres {t, wind, gust, dir} en nusos (TIMESTAMP en UTC; «NAN» = sense dada)
 function pbcnParse(txt){
-  const L = txt.trim().split(/\r?\n/); if(L.length < 2) return [];
+  let L = txt.trim().split(/\r?\n/); const hi = L.findIndex(l => l.includes('"TIMESTAMP"') || l.startsWith("TIMESTAMP")); if(hi < 0) return []; L = L.slice(hi); if(L.length < 2) return [];
   const H = L[0].split(",").map(s => s.replace(/"/g, "").trim()), ix = n => H.indexOf(n);
   const iT = ix("TIMESTAMP"), iW = ix("VV_S_WVT"), iD = ix("DV_D1_WVT"), iG = ix("VV10m3Seg_Max") >= 0 ? ix("VV10m3Seg_Max") : ix("VV_Max");
   const num = v => { const n = parseFloat(String(v).replace(/"/g, "")); return Number.isFinite(n) ? n : null; };
@@ -382,7 +383,7 @@ async function loadStation(){
   if(!STATIONS[stKey]){ ST = null; if(DATA) renderNow(); return null; }   // club sense estació: només previsió
   const want = stKey, order = [want, ...LOC.stations.filter(k => k !== want)];
   let got = null;
-  for(const k of order){ try{ got = await stRead(k); }catch(e){ got = null; } if(got && Date.now() - got.at < 30*60*1000) break; got = null; }
+  for(const k of order){ try{ got = await stRead(k); }catch(e){ got = null; } if(got && Date.now() - got.at < stMaxAge(k)) break; got = null; }
   if(want === stKey) ST = got;
   if(DATA) renderNow();
   return ST;
@@ -398,10 +399,12 @@ async function stationRecords(key, interval, fromMs, toMs){
   const S = STATIONS[key];
   if(S.type === "wcloud") throw new Error("sense historial");
   if(S.type === "pbcn"){   // històric de 3 dies del port, retallat a l'interval
-    const r = await stFetch(S.hist+"?t="+Date.now()); if(!r.ok) throw new Error("HTTP "+r.status);
+    const [r, r2] = await Promise.all([stFetch(S.hist+"?t="+Date.now()), stFetch(S.url+"?t="+Date.now()).catch(() => null)]); if(!r.ok) throw new Error("HTTP "+r.status);
+    const extra = r2 && r2.ok ? pbcnParse(await r2.text()) : [];
     const d0 = new Date(); d0.setHours(0, 0, 0, 0);
     const a = interval === "today" ? d0.getTime() : (fromMs || 0), b = interval === "today" ? Date.now() : (toMs || Date.now());
-    return pbcnParse(await r.text()).filter(o => o.t >= a && o.t <= b);
+    const by = new Map(); [...pbcnParse(await r.text()), ...extra].forEach(o => by.set(o.t, o));
+    return [...by.values()].sort((x, y) => x.t - y.t).filter(o => o.t >= a && o.t <= b);
   }
   const base = new URL(S.url).origin;
   const q = `value=all&interval=${interval}&from=${fromMs ? encodeURIComponent(fmtLocal(fromMs)) : ""}&to=${toMs ? encodeURIComponent(fmtLocal(toMs)) : ""}&parameters=${OBS_PARAMS}`;
@@ -440,7 +443,8 @@ function hourAt(date, h){
   if(o && o.wind != null && k <= nowKey()) return Object.assign({}, f, {wind:o.wind, gust:o.gust ?? f.gust, dir:o.dir ?? f.dir, temp:o.temp ?? f.temp, obs:true, fc:f});
   return f;
 }
-const stFresh = () => !!(ST && ST.wind != null && (Date.now() - ST.at) < 30*60*1000);
+const stMaxAge = k => (STATIONS[k]?.maxAge || 30) * 60e3;   // el port publica a blocs: fins a 60 min
+const stFresh = () => !!(ST && ST.wind != null && (Date.now() - ST.at) < stMaxAge(ST.key));
 const stamp = iso => { const d = new Date(iso); return d.toLocaleDateString("ca",{day:"numeric",month:"short"})+" a les "+d.toLocaleTimeString("ca",{hour:"2-digit",minute:"2-digit"}); };
 const hourKey = (date,h) => date+"T"+pad(h)+":00";
 const nowKey = () => (DATA?.now?.t || new Date().toISOString()).slice(0,13)+":00";
@@ -897,6 +901,15 @@ function widgetPush(n, s, v, live, c){
     Promise.resolve(W.save({data: JSON.stringify(Object.assign({at: wgAt}, snap))})).catch(() => {});   // APK antic sense widget: no passa res
   }catch(e){}
 }
+// Detall de l'estació dins el botó (i) de la targeta d'ara: nom complet, distància, ritme i limitacions
+function stInfo(){
+  const box = $("iInd"); if(!box) return;
+  let p = $("iStation"); if(!p){ p = document.createElement("p"); p.id = "iStation"; box.prepend(p); }
+  const S = STATIONS[stKey];
+  if(!S){ p.innerHTML = `<b>Estació:</b> aquest club encara no en té. Es mostra la previsió.`; return; }
+  const web = S.type && !window.OV_NATIVE ? " Des del navegador no es pot llegir: només a l'app Android." : "";
+  p.innerHTML = `<b>Estació:</b> ${esc(S.long || S.name)}${LOC.stNote ? " · " + esc(LOC.stNote.toLowerCase()) + " de la base" : ""}. ${esc(S.info || "")}${web}`;
+}
 function renderNow(){
   if(!DATA) return;
   const fc = DATA.now, c = crit[act], live = stFresh();
@@ -907,8 +920,9 @@ function renderNow(){
   widgetPush(n, s, v, live, c);
   const mins = live ? Math.max(0, Math.round((Date.now()-ST.at)/60000)) : null;
   $("src").className = "src"+(live?" live":"");
-  $("src").innerHTML = !STATIONS[stKey] ? `<span class="dot"></span>Sense estació · previsió` : `<span class="dot"></span>${live ? `${ST.key !== stKey ? "↪ " : ""}${STATIONS[ST.key].name} · fa ${mins} min` : `${STATIONS[stKey].name}: sense dades · model`}${LOC.stNote ? " · " + LOC.stNote.replace(/^Estació a/, "a") : ""}${LOC.stations.length > 1 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>` : ""}`;
-  if(STATIONS[stKey]) $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+(LOC.stNote ? ", "+LOC.stNote.toLowerCase() : "")+(live && ST.key !== stKey ? ", sense vent ara; dades de "+STATIONS[ST.key].name : "")+". Canvia d'estació");
+  $("src").innerHTML = !STATIONS[stKey] ? `<span class="dot"></span>Sense estació · previsió` : `<span class="dot"></span>${live ? `${ST.key !== stKey ? "↪ " : ""}${STATIONS[ST.key].name} · fa ${mins} min` : `${STATIONS[stKey].name}: sense dades · model`}${LOC.stations.length > 1 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>` : ""}`;
+  stInfo();
+  if(STATIONS[stKey]) $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+(live && ST.key !== stKey ? ", sense vent ara; dades de "+STATIONS[ST.key].name : "")+". Canvia d'estació");
   $("gauge").innerHTML = gaugeSvg(s, v) + `<div class="grow"><div class="gflag" id="gflag"></div><span class="g-why k-${v.k}">${esc(v.sub || "")}</span></div>`; renderFlag();
   const kind = isOffshore(n.dir) ? "terral" : isOnshore(n.dir) ? "de mar" : "lateral";
   $("rose").innerHTML = `<button type="button" class="cmp-btn" id="cmpBtn" aria-pressed="${cmpOn}" aria-label="Orienta la rosa amb la brúixola del mòbil" title="Orienta amb la brúixola"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 15 12h-6z" fill="currentColor"/><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35"/></svg></button>` + roseSvg({k: lvWind(n.wind, c), dir:n.dir, wind:n.wind, fcDir:fc.dir, wdir:fc.wdir, wave:fc.wave, live, hist: roseHist(OBS.key === stKey ? OBS.recs : [], roseForecast())}); cmpApply();
