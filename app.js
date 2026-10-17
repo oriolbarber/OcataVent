@@ -758,13 +758,19 @@ async function loadFlag(){
   const med = (row.estat_meduses || "").split(";").filter(x => x && x !== "N/A").map(x => x.split(",")[0]);
   return {beach: BEACHES[row.codiplatja] || "", color: (row.estat_bandera || "").toLowerCase(), reason: row.estat_motiubandera && row.estat_motiubandera !== "N/A" ? row.estat_motiubandera : "", sea: row.estat_estatmar && row.estat_estatmar !== "N/A" ? row.estat_estatmar : "", jelly: med, at};
 }
+// Cada episodi porta totes les versions de l'avís (les antigues, «Ampliat»): només compta la vigent (o, si no n'hi ha, la darrera emesa)
+function smpCurrent(A){
+  A = A || []; const st = a => String((a.estat && a.estat.nom) || a.estat || "");
+  const v = A.filter(a => st(a) === "Vigent"); if(v.length) return v;
+  return A.length ? [A.reduce((x, y) => String(y.dataEmisio || "") > String(x.dataEmisio || "") ? y : x)] : [];
+}
 async function loadSmp(){
   const out = new Map(), now = new Date(), todayK = ymd(now), hourNow = now.getHours();
   for(const d of [now, new Date(now.getTime() + 864e5)]){
     let list;
     try{ const r = await fetch(`https://static-m.meteo.cat/ginys/pronostic/smp/episodisOberts/avisos-episodis-oberts-${ymd(d)}.json`, {cache:"no-store"}); if(r.status === 404) continue; if(!r.ok) throw 0; list = await r.json(); }
     catch(e){ if(d === now) throw e; continue; }
-    (list || []).forEach(ep => (ep.avisos || []).forEach(av => (av.evolucions || []).forEach(ev => (ev.periodes || []).forEach(pe => (pe.afectacions || []).forEach(af => {
+    (list || []).forEach(ep => smpCurrent(ep.avisos).forEach(av => (av.evolucions || []).forEach(ev => (ev.periodes || []).forEach(pe => (pe.afectacions || []).forEach(af => {
       if(!SMP_ZONES.includes(af.idComarca)) return;
       const day = (ev.dia || "").slice(0,10).replace(/-/g,""); if(day < todayK) return;
       const h1 = Number((pe.nom || "00-00").split("-")[1]) || 24;
