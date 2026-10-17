@@ -653,9 +653,8 @@ function boatSheet(placeId, boatId){
 }
 
 function renderBase(){
-  const v = vis(), rec = typeof LIVE !== "undefined" && LIVE, auto = !!window.OV_PRIV?.autoBase();
-  return `<button class="cta" type="button" data-go="trip">${rec ? svgI('<circle cx="12" cy="12" r="6" fill="currentColor"/>', 22) : svgI('<path d="M12 3v14"/><path d="M12 4l7 11h-7"/><path d="M3 19c3 2 6 2 9 0s6-2 9 0"/>', 22)}${rec ? "Sortida en curs" : "Comença una sortida"}</button>
-    <details class="card bs-priv" id="bsPriv"${ui.privOpen ? " open" : ""}><summary><span class="lbl">Qui et veu aquí</span><span class="bs-privv">${esc(NIVT(v))}</span></summary>
+  const v = vis(), auto = !!window.OV_PRIV?.autoBase();
+  return `<details class="card bs-priv" id="bsPriv"${ui.privOpen ? " open" : ""}><summary><span class="lbl">Qui et veu aquí</span><span class="bs-privv">${esc(NIVT(v))}</span></summary>
       <div class="cl-privrow"><b>${esc(NIVT(v))}</b><button type="button" class="btn" id="clPriv">Canvia-ho</button><button class="ib-i" type="button" data-info="iPres" aria-label="Com funciona la presència" aria-expanded="false">i</button></div>
       <label class="cl-sw"><span><b>Marca'm a la base automàticament</b></span><input type="checkbox" class="switch" id="pvAuto"${auto ? " checked" : ""}${v === "ningu" ? " disabled" : ""}></label>
       <div class="vp-info" id="iPres" hidden><p>Només surts mentre ets a la base (amb el botó o automàticament) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Automàticament: després de 10 minuts a menys de 50 m de la base et marca a la base; després de 2 minuts a més de 200 m, et treu. Només amb l'app oberta.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, només l'app d'Android la continua enviant. Qui et veu es tria a Configuració ▸ Confidencialitat.</p></div></details>`;
