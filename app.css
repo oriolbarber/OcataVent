@@ -388,26 +388,7 @@ button.info-row{width:100%;text-align:left;font-family:inherit;cursor:pointer;al
 .wm-now{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:.8rem;color:var(--muted);font-weight:600}
 .wm-now b{color:var(--ink)}
 .wm-key{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);margin-right:5px;vertical-align:-1px}
-.wm-scroll{overflow-x:auto;overflow-y:hidden;margin-top:10px;border:1px solid var(--line);border-radius:12px;touch-action:auto;overscroll-behavior-x:contain;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
-#wmTable{border-collapse:separate;border-spacing:0;font-size:.82rem;min-width:max-content}
-#wmTable th,#wmTable td{padding:5px 0;width:38px;min-width:38px;text-align:center;font-family:var(--f-mono);white-space:nowrap;cursor:pointer;user-select:none}
-#wmTable th.wm-lbl{position:sticky;left:0;z-index:2;background:var(--surface);width:64px;min-width:64px;text-align:left;padding-left:8px;font-family:var(--f-head);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:default;border-right:1px solid var(--line)}
-#wmTable th.wm-day{font-family:var(--f-head);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);text-align:left;padding-left:8px;border-left:2px solid var(--line);cursor:default}
-#wmTable th.wm-h{color:var(--muted);font-weight:600}
-#wmTable td.wm-col{background:var(--kt);color:var(--k);font-weight:700}
-#wmTable td.wm-col.soft{background:transparent}
-#wmTable td.soft-t{color:var(--muted)}
-#wmTable th.obs{color:var(--accent-2)}
 /* hora triada: només el perímetre de la columna */
-#wmTable .sel{box-shadow:inset 2px 0 0 var(--sel),inset -2px 0 0 var(--sel);position:relative;z-index:1}
-#wmTable tbody tr:last-child .sel{box-shadow:inset 2px 0 0 var(--sel),inset -2px 0 0 var(--sel),inset 0 -2px 0 var(--sel)}
-#wmTable th,#wmTable td{border-bottom:0}
-#wmTable thead tr:first-child th{border-bottom:1px solid var(--line)}
-#wmTable th.sel{background:var(--sel);color:#fff}
-#wmTable td svg{display:block;margin:0 auto;color:var(--ink)}
-#wmTable .vd{display:inline-block}
-:root[data-size="big"] #wmTable{font-size:1.05rem}
-:root[data-size="big"] #wmTable th,:root[data-size="big"] #wmTable td{width:48px;min-width:48px;padding:8px 0}
 :root[data-size="big"] .wm-now{font-size:1rem}
 :root[data-size="big"] .wm-flag .wm-txt{font-size:14px}
 :root[data-size="big"] .wm-flag .wm-txt b{font-size:19px}
@@ -462,8 +443,6 @@ tr[data-k].sel td:first-child{box-shadow:inset 3px 0 0 var(--sel)}
 .maps-seg{align-self:stretch}
 #mapSeg button{flex:1 1 0}
 /* el nom del dia acompanya la taula mentre llisca */
-#wmTable th.wm-day{padding-left:0}
-#wmTable .wm-dayl{position:sticky;left:73px;display:inline-block;padding:0 8px;background:var(--surface)}
 /* taula d'hores: la columna de l'hora queda fixa en lliscar */
 .tbl{position:relative}
 .tbl th:first-child,.tbl td:first-child{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:1px 0 0 var(--line)}
@@ -1168,12 +1147,13 @@ footer #iSrc{text-align:left;margin:8px 0}
 .wm-cwrap,.wm-mbox{position:relative}
 .wm-maxb{position:absolute;top:6px;right:6px;z-index:700;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb, var(--surface) 88%, transparent);color:var(--ink);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 8px #0003}
 .wm-cwrap .wm-maxb{top:-4px;right:-4px;width:34px;height:34px;box-shadow:none}
-.wm-x,.wm-leg,.wm-legb,.wm-tl{display:none}
+.wm-x,.wm-leg,.wm-legb{display:none}
+.wm-tl{position:relative;margin-top:10px}
 body.wm-open{overflow:hidden}
 .wm.full{position:fixed;inset:0;z-index:2500;margin:0;border-radius:0;border:0;display:flex;flex-direction:column;gap:4px;padding:calc(6px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));overflow:hidden;background:var(--surface)}
 .wm.full .card-h{align-items:center;flex:none;min-height:0}
 .wm.full .wm-x{display:grid;place-items:center;margin-left:10px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font-size:1.1rem;font-weight:700;cursor:pointer;flex:none}
-.wm.full .wm-maxb,.wm.full .wm-scroll,.wm.full #dayLegend{display:none}
+.wm.full .wm-maxb,.wm.full #dayLegend{display:none}
 /* gràfic */
 .wm.full-chart .wm-wrap{display:none}
 .wm.full-chart .wm-cwrap{flex:1;min-height:0}
@@ -1192,8 +1172,8 @@ body.wm-open{overflow:hidden}
 .wm-leg .ks{display:flex;gap:10px;flex-wrap:wrap}
 .wm-leg .vd{display:inline-block;width:10px;height:10px;border-radius:50%}
 /* línia del temps */
-.wm.full .wm-tl{display:block;flex:none;position:relative}
-.tl-days{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 4px}
+.wm.full .wm-tl{flex:none;margin-top:0}
+.tl-days{position:relative;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 4px}
 .tl-days::-webkit-scrollbar{display:none}
 .tl-days button{flex:none;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);border-radius:999px;padding:4px 11px;font:700 .78rem/1.2 var(--f-head);text-transform:uppercase;letter-spacing:.04em;cursor:pointer}
 .tl-days button[aria-pressed="true"]{background:var(--sel);border-color:var(--sel);color:#fff}

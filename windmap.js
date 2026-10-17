@@ -6,7 +6,7 @@ const WM_H0 = 6, WM_H1 = 22;             // hores que es mostren cada dia
 const WM_GAP = 40;                       // separació mínima (°) entre les dues etiquetes perquè no es tapin
 // Colors: el mateix codi de 3 colors de tota l'app (verd / taronja / vermell segons l'embarcació triada)
 const kv = k => k ? `var(--${k})` : "var(--muted)";
-let wmMap = null, wmPin = null, wmSel = null, wmDrag = false, wmProg = 0, wmTiles = null, wmFx = null, wmZoomC = null;
+let wmMap = null, wmPin = null, wmSel = null, wmTiles = null, wmFx = null, wmZoomC = null;
 const wmAng = {w: null, v: null};        // angle acumulat de cada etiqueta (per girar sempre pel camí curt)
 
 function wmKeys(){
@@ -55,7 +55,6 @@ function wmShow(k, scroll){
   wmSel = k;
   const [date, hh] = [k.slice(0, 10), +k.slice(11, 13)];
   const p = hourAt(date, hh) || DATA.hours[k];
-  document.querySelectorAll("#wmTable [data-k]").forEach(td => td.classList.toggle("sel", td.dataset.k === k));
   const d = new Date(date + "T12:00:00");
   // només el dia: l'hora, el veredicte i la font ja surten al requadre de sota
   const td = new Date(), tm = new Date(Date.now() + 864e5), iso = x => `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`;
@@ -76,60 +75,22 @@ function wmShow(k, scroll){
     wmFlag("w", dw, `<b>${r1(p.wind)}</b> kn<small>R${r0(p.gust)}</small>`, kv(lw), "var(--on-k)", offW);
     wmFlag("v", dv, `<b>${r1(p.wave)}</b> m<small>${r0(p.tp ?? p.per)} s</small>`, kv(lo), "var(--on-k)", offV);
   }
-  if(scroll){ const td = document.querySelector(`#wmTable th[data-k="${k}"]`); const box = $("wmScroll");
-    if(td && box){ wmProg = Date.now(); box.scrollLeft = Math.max(0, td.offsetLeft - box.clientWidth / 2 + td.offsetWidth / 2); } }
   if(wmFx) wmFx.kick();
-  if(wmFull()){ wmLegend(); tlSync(k, scroll); }
+  if(wmFull()) wmLegend();
+  tlSync(k, scroll);
   if(window.mmSel) mmSel(k);
 }
-window.wmSelect = (k, scroll) => { if(DATA && DATA.hours[k] && document.querySelector(`#wmTable th[data-k="${k}"]`)) wmShow(k, scroll); };
+window.wmSelect = (k, scroll) => { if(DATA && DATA.hours[k] && document.querySelector(`#wmTl [data-tk="${k}"]`)) wmShow(k, scroll); };
 function renderWindMap(){
   const host = $("windMap"); if(!host || !DATA) return;
   const keys = wmKeys(); if(!keys.length){ host.hidden = true; return; }
   host.hidden = false;
-  const c = crit[act];
-  // capçalera de dies
-  const days = []; keys.forEach(x => { const last = days[days.length - 1]; if(last && last.date === x.date) last.n++; else days.push({date: x.date, n: 1}); });
-  const dayRow = days.map((d, i) => { const dd = new Date(d.date + "T12:00:00"); return `<th colspan="${d.n}" class="wm-day"><span class="wm-dayl">${i === 0 ? "Avui" : DAYS_L[dd.getDay()]} ${dd.getDate()}</span></th>`; }).join("");
-  const cols = keys.map(x => ({...x, p: hourAt(x.date, x.h) || DATA.hours[x.k]}));
-  const cell = (x, inner, style, cls) => `<td data-k="${x.k}"${style ? ` style="${style}"` : ""} class="${(x.p.obs ? "obs " : "") + (cls || "")}">${inner}</td>`;
-  const row = (label, fn, cls) => `<tr${cls ? ` class="${cls}"` : ""}><th class="wm-lbl">${label}</th>${cols.map(fn).join("")}</tr>`;
-  const html = `<table id="wmTable"><thead><tr><th class="wm-lbl"></th>${dayRow}</tr>
-    <tr><th class="wm-lbl">h</th>${cols.map(x => `<th data-k="${x.k}" class="wm-h${x.p.obs ? " obs" : ""}">${x.h}</th>`).join("")}</tr></thead><tbody>
-    ${row("Dir.", x => cell(x, wmArrow(x.p.dir, 16)))}
-    ${row("Estat", x => { const v = verdict(scoreHour(x.p, c)); return cell(x, `<span class="vd" style="background:var(--${v.k})" title="${v.t}"></span>`); })}
-    ${row("Vent kn", x => cell(x, r0(x.p.wind), "", "wm-col k-" + (lvWind(x.p.wind, c) || "none")))}
-    ${row("Ratxa", x => cell(x, r0(x.p.gust), "", "wm-col soft k-" + (lvGust(x.p.gust, c) || "none")))}
-    ${row("Onada m", x => cell(x, r1(x.p.wave), "", "wm-col k-" + (lvWave(x.p.wave, c) || "none")))}
-    ${row("Màx. m", x => cell(x, x.p.hmax != null ? r1(x.p.hmax) : "–", "", "soft-t"), "x-full")}
-    ${row("Per. s", x => cell(x, r0(x.p.tp ?? x.p.per)), "x-full")}
-    ${row("°C", x => cell(x, r0(x.p.temp)), "x-full")}
-    ${row("Pluja", x => cell(x, x.p.pp != null ? x.p.pp + "%" : "–"), "x-full")}
-    </tbody></table>`;
-  $("wmScroll").innerHTML = html;
   const nk = nowKey(), def = keys.find(x => x.k === nk)?.k || keys.find(x => x.k > nk)?.k || keys[0].k;
   const want = (window.SEL_K && window.SEL_K()) || wmSel, keep = want && keys.some(x => x.k === want) ? want : def;
-  if(wmFull()) tlRender();
+  tlRender();
   wmShow(keep, true);
   setTimeout(() => { if(wmMap){ wmMap.invalidateSize(false); if(!wmFull()) wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); } }, 0);
 }
-// Tocar o lliscar el dit per la taula canvia l'hora del mapa
-function wmPick(e, center){ const t = document.elementFromPoint(e.clientX, e.clientY)?.closest?.("[data-k]"); if(t && (t.dataset.k !== wmSel || center)) wmShow(t.dataset.k, !!center); }
-// Un toc porta l'hora triada al centre de la franja (com a Windy); arrossegar amb el ratolí la va canviant
-document.addEventListener("click", e => { if(e.target.closest && e.target.closest("#wmTable")) wmPick(e, true); });
-document.addEventListener("pointerdown", e => { if(e.pointerType === "mouse" && e.target.closest("#wmTable")) wmDrag = true; });
-document.addEventListener("pointermove", e => { if(wmDrag && e.pointerType === "mouse") wmPick(e); });
-document.addEventListener("pointerup", () => { wmDrag = false; });
-// Al mòbil el dit fa lliscar la taula: l'hora seleccionada és la del centre de la franja
-let wmScrollT = null;
-document.addEventListener("scroll", e => { if(e.target && e.target.id === "wmScroll"){ clearTimeout(wmScrollT); wmScrollT = setTimeout(() => {
-  if(Date.now() - wmProg < 900) return;   // el desplaçament l'ha fet l'app (en triar una hora), no el dit
-  const box = $("wmScroll"), r = box.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + 40;
-  const t = document.elementFromPoint(x, y)?.closest?.("[data-k]"); if(t && t.dataset.k !== wmSel) wmShow(t.dataset.k, false); }, 60); } }, true);
-document.addEventListener("keydown", e => { if(!e.target.closest || !e.target.closest("#wmScroll")) return;
-  const keys = wmKeys().map(x => x.k), i = keys.indexOf(wmSel);
-  if(e.key === "ArrowRight" && i < keys.length - 1){ e.preventDefault(); wmShow(keys[i + 1], true); }
-  if(e.key === "ArrowLeft" && i > 0){ e.preventDefault(); wmShow(keys[i - 1], true); } });
 window.addEventListener("mm-theme", () => wmSel && wmShow(wmSel, false));
 
 /* ---------- pantalla completa: gràfic o mapa (amb el vent i les onades pintats, llegenda i franja d'hores de tota la previsió) ---------- */
@@ -153,7 +114,7 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
   if(b){ const on = !leg.classList.contains("open"); leg.classList.toggle("open", on); b.setAttribute("aria-expanded", String(on)); return; }
   if(leg && leg.classList.contains("open") && !e.target.closest(".wm-leg")){ leg.classList.remove("open"); document.querySelector("[data-wmleg]")?.setAttribute("aria-expanded", "false"); } });
 
-/* ---------- línia del temps (pantalla completa): xips de dia + franja d'hores amb el color del veredicte; l'agulla del mig marca l'hora ---------- */
+/* ---------- línia del temps (sota el mapa i a pantalla completa): xips de dia + franja d'hores amb el color del veredicte; l'agulla del mig marca l'hora ---------- */
 const TL_W = 22;                         // amplada de cada hora (px), igual que a l'estil .tl-h
 let tlProg = 0, tlRaf = 0;
 const dayLbl = (date, i) => { const d = new Date(date + "T12:00:00"); return i === 0 && date === todayDate() ? "Avui" : DAYS_S[d.getDay()] + " " + d.getDate(); };
@@ -172,7 +133,8 @@ function tlSync(k, center){
   tr.querySelectorAll(".tl-h.sel").forEach(x => x.classList.remove("sel"));
   const h = tr.querySelector(`[data-tk="${k}"]`); if(h) h.classList.add("sel");
   const date = k.slice(0, 10);
-  document.querySelectorAll("#wmTl [data-tld]").forEach(b => { const on = b.dataset.tld === date; b.setAttribute("aria-pressed", String(on)); if(on && center) b.scrollIntoView({block:"nearest", inline:"center"}); });
+  document.querySelectorAll("#wmTl [data-tld]").forEach(b => { const on = b.dataset.tld === date; b.setAttribute("aria-pressed", String(on));
+    if(on && center){ const row = b.parentElement; row.scrollTo({left: b.offsetLeft - row.clientWidth / 2 + b.offsetWidth / 2}); } });   // sense scrollIntoView: no ha de moure la pàgina
   if(center && h){ tlProg = Date.now(); tr.scrollTo({left: h.offsetLeft - tr.clientWidth / 2 + TL_W / 2, behavior: "auto"}); }
 }
 // en lliscar, l'hora que queda sota l'agulla passa a ser la triada (mapa o gràfic s'actualitzen al moment)
