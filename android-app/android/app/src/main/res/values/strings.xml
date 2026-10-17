@@ -4,4 +4,6 @@
     <string name="title_activity_main">Ocata Vent</string>
     <string name="package_name">cat.ocatavent.app</string>
     <string name="custom_url_scheme">cat.ocatavent.app</string>
+    <string name="widget_label">Ocata Vent: idoneïtat</string>
+    <string name="widget_desc">Si fa bo per navegar ara, per a la teva embarcació</string>
 </resources>

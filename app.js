@@ -834,6 +834,24 @@ function renderSeg(){
   const n = $("actName"); if(n) n.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;color:var(--ink)">${boatIcon(act,18)}${esc(DEFAULTS[act].name)}</span>`;
 }
 function stat(ic, label, v, unit, x){ return `<div class="stat"><div class="k"><span class="chip-ic">${icon(ic)}</span><span class="lbl">${label}</span></div><div class="v">${v}${unit?`<small>${unit}</small>`:""}</div><div class="x">${x||"&nbsp;"}</div></div>`; }
+// Widget d'Android (APK): l'app hi passa el veredicte d'ara i la previsió de les 48 h següents; Android el refresca cada 30 min
+// i, quan les dades d'ara són velles, mostra la previsió de l'hora en curs (VentWidget.java). Al navegador no fa res.
+let wgKey = "", wgAt = 0;
+function widgetPush(n, s, v, live, c){
+  const W = window.OV_NATIVE && window.Capacitor?.Plugins?.OvWidget; if(!W || !DATA) return;
+  try{
+    const d0 = new Date(nowKey().slice(0,13) + ":00:00"), hrs = [];
+    for(let i = 0; i < 48; i++){ const d = new Date(d0.getTime() + i*3600e3), p = DATA.hours[localKey(d)]; if(!p || p.wind == null) continue;
+      const r = scoreHour(p, c), vh = verdict(r);
+      hrs.push({t:d.getTime(), s:r.score, k:vh.k, v:vh.t, why:vh.sub, w:p.wind, g:p.gust, dn:windName(p.dir), h:p.wave}); }
+    const snap = {act:DEFAULTS[act].short, loc:LOC.name, st: live ? STATIONS[ST.key].name : "",
+      now:{s:s.score, k:v.k, v:v.t, why:v.sub, w:n.wind, g:n.gust, dn:windName(n.dir), h:DATA.now.wave}, hrs};
+    const key = JSON.stringify(snap);
+    if(key === wgKey && Date.now() - wgAt < 10*60e3) return;   // sense canvis: com a molt cada 10 min
+    wgKey = key; wgAt = Date.now();
+    Promise.resolve(W.save({data: JSON.stringify(Object.assign({at: wgAt}, snap))})).catch(() => {});   // APK antic sense widget: no passa res
+  }catch(e){}
+}
 function renderNow(){
   if(!DATA) return;
   const fc = DATA.now, c = crit[act], live = stFresh();
@@ -841,6 +859,7 @@ function renderNow(){
   if(n.wind==null){ $("hero").hidden = true; return; }
   $("hero").hidden = false;
   const s = scoreWindow(n, c), v = verdict(s);
+  widgetPush(n, s, v, live, c);
   const mins = live ? Math.max(0, Math.round((Date.now()-ST.at)/60000)) : null;
   $("src").className = "src"+(live?" live":"");
   $("src").innerHTML = `<span class="dot"></span>${live ? `${ST.key !== stKey ? "↪ " : ""}${STATIONS[ST.key].name} · fa ${mins} min` : `${STATIONS[stKey].name}: sense dades · model`}${LOC.stations.length > 1 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>` : ""}`;
