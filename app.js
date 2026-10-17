@@ -790,11 +790,18 @@ function renderInfo(){
   const parts = [], today = ymd(new Date()), tomorrow = ymd(new Date(Date.now() + 864e5));
   INFO.alerts.forEach(a => { const pv = PERILL(a.perill), when = a.day === today ? "avui" : a.day === tomorrow ? "demà" : a.day.slice(6)+"/"+a.day.slice(4,6);
     const hrs = a.periods.length === 4 ? "tot el dia" : a.periods.map(p => p.replace("-", "–")+" h").join(", ");
-    parts.push(`<div class="info-row k-${pv.k}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>
-      <span><b>${esc(a.tipus)} Meteocat · ${esc(a.meteor)}</b><br>${esc(a.llindar || "")} · ${when} ${esc(hrs)} · ${pv.t}${a.zones.includes("mar") ? " · zona de mar del Maresme" : " · Maresme"}</span></div>`); });
+    const key = [a.day, a.tipus, a.meteor].join("|"), fold = smpFold().includes(key);
+    parts.push(`<button type="button" class="info-row k-${pv.k}${fold ? " fold" : ""}" data-smp="${esc(key)}" aria-expanded="${!fold}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>
+      <span class="info-t"><b>${esc(a.tipus)} Meteocat · ${esc(a.meteor)}${fold ? " · " + when : ""}</b><span class="info-d"><br>${esc(a.llindar || "")} · ${when} ${esc(hrs)} · ${pv.t}${a.zones.includes("mar") ? " · zona de mar del Maresme" : " · Maresme"}</span></span>
+      <svg class="info-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fold ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"}"/></svg></button>`); });
   el.innerHTML = parts.join("");   // només hi surten avisos actius
   renderFlag(); if(window.renderPrep) renderPrep();
 }
+// Avisos de Meteocat: es pleguen en una línia tocant-los (es recorda en aquest mòbil; les claus velles es netegen soles)
+function smpFold(){ try{ return JSON.parse(localStorage.getItem("ov_smp_fold") || "[]"); }catch(e){ return []; } }
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-smp]"); if(!b) return;
+  const k = b.dataset.smp, today = ymd(new Date()); let F = smpFold().filter(x => x.slice(0, 8) >= today);
+  F = F.includes(k) ? F.filter(x => x !== k) : F.concat(k); try{ localStorage.setItem("ov_smp_fold", JSON.stringify(F)); }catch(e){} renderInfo(); });
 // Traços de la bandera, de l'editor d'icones (traç 1 = pal; la resta, farcit del color de la bandera)
 const FLAG_IC = ["M5 23L5 3","M5 3L19 4L18.5 7.5L19 13L5 12Z"];
 // Bandera de bany: icona petita sota l'indicador (gris = sense dades d'avui). Tocant-la es veu el detall.

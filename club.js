@@ -185,7 +185,7 @@ function render(){
     <div class="msg err" id="clubMsg" hidden></div>
     ${alertBanner()}
     ${({mur:renderMur, avisos:renderAvisos, anuncis:renderAnuncis, base:renderBaseTab})[tab]()}`;
-  if(tab === "base") setTimeout(() => { drawPlan(); drawMap(); }, 0);
+  if(tab === "base") setTimeout(() => { drawPlan(); }, 0);
   if(tab === "mur") setTimeout(drawRouteMaps, 0);
 }
 
@@ -410,27 +410,18 @@ async function tripBoatEnd(){
 }
 
 /* ---------- capçalera de Base: vent d'ara i qui hi ha ---------- */
-function windCard(){
-  if(typeof DATA === "undefined" || !DATA || !DATA.now || typeof scoreWindow !== "function") return "";
-  const live = typeof stFresh === "function" && stFresh(), n = live ? {wind:ST.wind, gust:ST.gust, dir:ST.dir} : DATA.now;
-  if(n.wind == null) return "";
-  const v = verdict(scoreWindow(Object.assign({}, DATA.now, n), crit[act] || crit.pati)), R = 34, P = (a, r) => [Math.sin(a*Math.PI/180)*r, -Math.cos(a*Math.PI/180)*r];
-  const d = n.dir, [ax, ay] = P(d, R - 4), [bx, by] = P(d + 180, R*.55), [l1x, l1y] = P(d + 180 + 28, R*.55 - 9), [l2x, l2y] = P(d + 180 - 28, R*.55 - 9);
-  const lbl = [["N", 0], ["E", 90], ["S", 180], ["O", 270]].map(([t, a]) => { const [x, y] = P(a, R + 9); return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" fill="var(--muted)">${t}</text>`; }).join("");
-  const rose = `<svg class="bs-rose" viewBox="-48 -48 96 96" aria-hidden="true"><circle r="${R}" fill="var(--surface-2)" stroke="var(--line)" stroke-width="1.5"/>${lbl}
-    ${d != null ? `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="var(--${v.k})" stroke-width="4" stroke-linecap="round"/><path d="M${bx.toFixed(1)} ${by.toFixed(1)}L${l1x.toFixed(1)} ${l1y.toFixed(1)}L${l2x.toFixed(1)} ${l2y.toFixed(1)}Z" fill="var(--${v.k})"/>` : ""}</svg>`;
-  const mins = live ? Math.max(0, Math.round((now() - ST.at)/MIN)) : null;
-  return {html:`<div class="bs-wind">${rose}<div class="bs-wt"><span class="bs-kn"><b>${r0(n.wind)}</b> kn${n.gust != null ? ` <small>ratxa ${r0(n.gust)}</small>` : ""}</span>
-    <span class="bs-wd">${d != null ? esc(windName(d)) + " · " + Math.round(d) + "°" : ""}</span><span class="bs-wf"><small class="bs-src">${live ? "Estació · fa " + mins + " min" : "Previsió"}</small>
-    <span class="cl-fit k-${v.k} bs-fit"><b>${Math.round((v.score ?? 0) / 10) || "–"}</b>${esc(v.t)}</span></span></div></div>`};
+// Capçalera de la Base: qui hi ha (a la base · navegant, amb els noms) i el botó «Soc a la base» / «Marxo de la base»
+function presBtn(){
+  const v = vis(), me = D.myPres && now() - (ms(D.myPres.actualitzat) || 0) < DAY ? D.myPres : null;
+  if(v === "ningu") return `<p class="note">Tens la presència desactivada (Configuració ▸ Confidencialitat).</p>`;
+  if(me && me.estat === "aigua") return "";
+  return me && me.estat === "base" ? `<button type="button" class="btn bs-pbtn" id="clLeave">Marxo de la base</button>` : `<button type="button" class="btn cl-ok bs-pbtn" id="clHere">Soc a la base</button>`;
 }
-// Capçalera de la Base: una sola targeta a tot l'ample (vent a dalt; font i qui hi ha en una línia al peu)
 function baseTop(){
-  const L = presLive(), ai = L.filter(x => x.estat === "aigua"), ba = L.filter(x => x.estat === "base"), W = windCard();
+  const L = presLive(), ai = L.filter(x => x.estat === "aigua"), ba = L.filter(x => x.estat === "base");
   const names = A => A.slice(0, 6).map(x => `<span class="bs-pc${warned(x) ? " late" : ""}">${esc(x.id === uid() ? "Tu" : String(x.nom || "").split(" ")[0])}</span>`).join("") + (A.length > 6 ? `<span class="bs-pc">+${A.length - 6}</span>` : "");
-  return `<article class="card bs-top">${W ? W.html : `<p class="note">Sense dades de vent ara.</p>`}
-    <div class="bs-foot"><button type="button" class="bs-pres" data-bscroll="bsQui" aria-label="Qui hi ha: ${ba.length} a la base, ${ai.length} navegant"><b style="color:var(--ideal)">${ba.length}</b> a la base · <b style="color:var(--accent)">${ai.length}</b> navegant ↓</button>
-      ${ba.length || ai.length ? `<div class="bs-pcs">${names(ba)}${ai.length ? names(ai).replace(/class="bs-pc/g, 'class="bs-pc aigua') : ""}</div>` : ""}</div></article>`;
+  return `<article class="card bs-top"><div class="bs-prow"><button type="button" class="bs-pres" data-bscroll="bsQui" aria-label="Qui hi ha: ${ba.length} a la base, ${ai.length} navegant"><b style="color:var(--ideal)">${ba.length}</b> a la base · <b style="color:var(--accent)">${ai.length}</b> navegant ↓</button>${presBtn()}</div>
+    ${ba.length || ai.length ? `<div class="bs-pcs">${names(ba)}${ai.length ? names(ai).replace(/class="bs-pc/g, 'class="bs-pc aigua') : ""}</div>` : ""}</article>`;
 }
 
 /* ---------- avisos de la base: notes, fets i preguntes (col·lecció «fets») ---------- */
@@ -663,7 +654,7 @@ function boatSheet(placeId, boatId){
 
 function renderBase(){
   const L = presLive(), ai = L.filter(x => x.estat === "aigua").sort((a, b) => (warned(b) ? 1 : 0) - (warned(a) ? 1 : 0)), ba = L.filter(x => x.estat === "base");
-  const me = D.myPres && now() - (ms(D.myPres.actualitzat) || 0) < DAY ? D.myPres : null, v = vis();
+  const v = vis();
   const row = x => { const al = D.alertes.filter(a => a.userId === x.id);
     return `<div class="cl-prow"><span class="cl-av ${x.estat === "base" ? "s-base" : al.length ? "s-late" : "s-aigua"}" aria-hidden="true">${esc(x.id === uid() ? "TU" : initials(x.nom))}</span>
     <div class="cl-who"><b>${esc(x.id === uid() ? "Tu" : x.nom)}${x.estat === "aigua" ? " · " + esc(boatShort(x.act)) : ""}</b>
@@ -671,31 +662,13 @@ function renderBase(){
     <span class="note">${esc(ago(ms(x.actualitzat) || now()))}</span></div>`; };
   const rec = typeof LIVE !== "undefined" && LIVE;
   return `<button class="cta" type="button" data-go="trip">${rec ? svgI('<circle cx="12" cy="12" r="6" fill="currentColor"/>', 22) : svgI('<path d="M12 3v14"/><path d="M12 4l7 11h-7"/><path d="M3 19c3 2 6 2 9 0s6-2 9 0"/>', 22)}${rec ? "Sortida en curs" : "Comença una sortida"}</button>
-    <article class="card"><div class="map short" id="clMap"></div>
-      <div class="legend"><span><span class="sw cl-sw-base"></span>A la base</span><span><span class="sw cl-sw-aigua"></span>Navegant</span><span><span class="sw cl-sw-late"></span>Amb un avís de seguretat</span></div></article>
     <section class="card"><div class="card-h"><span class="lbl">A l'aigua</span></div>${ai.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}</section>
-    <section class="card"><div class="card-h"><span class="lbl">A la base</span></div>${ba.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}
-      ${v === "ningu" ? `<p class="note" style="margin-top:8px">Tens la presència desactivada (a sota).</p>` : me && me.estat === "base" ? `<button type="button" class="btn cl-wide" id="clLeave" style="margin-top:10px">Marxo de la base</button>` : me ? "" : `<button type="button" class="btn cl-wide cl-ok" id="clHere" style="margin-top:10px">Soc a la base</button>`}</section>
+    <section class="card"><div class="card-h"><span class="lbl">A la base</span></div>${ba.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}</section>
     <section class="card"><div class="card-h"><span class="lbl">Qui et veu aquí</span><button class="ib-i" type="button" data-info="iPres" aria-label="Com funciona la presència" aria-expanded="false">i</button></div>
       <div class="cl-privrow"><b>${esc(NIVT(v))}</b><button type="button" class="btn" id="clPriv">Canvia-ho</button></div>
       <p class="note" style="margin-top:8px">Es tria a Configuració ▸ Confidencialitat, junt amb qui veu les teves publicacions i els avisos de seguretat.</p>
       <div class="vp-info" id="iPres" hidden><p>Només mentre ets a la base (amb el botó o automàticament, si ho actives) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, només l'app d'Android la continua enviant.</p></div></section>`;
 }
-function drawMap(){
-  const el = $("clMap"); if(!el || typeof baseMap !== "function") return;
-  mapObj = baseMap(el); if(!mapObj) return;
-  L.circle(HOME, {radius:150, color:cssVar("--ideal"), weight:1.5, dashArray:"4 4", fillOpacity:.06}).addTo(mapObj);
-  const pts = [];
-  for(const x of presLive()){
-    if(x.lat == null) continue;
-    const c = cssVar(x.estat === "base" ? "--ideal" : warned(x) ? "--no" : "--accent");
-    L.circleMarker([x.lat, x.lon], {radius:11, color:c, fillColor:c, fillOpacity:.9, weight:2}).addTo(mapObj)
-      .bindTooltip(x.id === uid() ? "Tu" : initials(x.nom), {permanent:true, direction:"center", className:"cl-tip"});
-    pts.push([x.lat, x.lon]);
-  }
-  if(pts.length > 1) mapObj.fitBounds(L.latLngBounds(pts.concat([HOME])).pad(0.3), {maxZoom:15});
-}
-
 /* ---------- full lliscant (formularis) ---------- */
 function closeSheet(){ const s = $("clSheet"); if(s) s.remove(); }
 function sheet(title, body, onMount){

@@ -58,7 +58,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Anuncis: categoria i «fins al» a dalt; al peu, autor i data (o, si és teu, quants interessats i qui) amb llapis i paperera.
 - Avisos vistos: es pleguen en una línia 1 h després de marcar-los (`AV_FOLD`; hora local a `ov2_avis_vist`; vistos des d'un altre mòbil, plegats). Es despleguen tocant-los i es tornen a plegar amb la fletxa.
 - Mur: lliscar una sortida → arxiva, ← esborra (`ov2_mur_arx_{uid}` / `ov2_mur_del_{uid}`, només en aquest mòbil), amb «Desfés» 6 s. Si és pròpia, ← la retira del mur per a tothom quan s'acaba el temps de desfer. Filtres ▸ Mostra: Mur / Arxivades.
-- **Base i embarcacions (Fase A feta):** decisions a `docs/base-embarcacions.md`. Pestanyes del Club: Base · Mur · Avisos · Anuncis. **Base és una sola pàgina** (`renderBaseTab`): capçalera amb el vent d'ara (`windCard`: rosa, kn, ratxa, idoneïtat; estació o previsió) i qui hi ha (`baseTop`) · plànol (`renderBoats`/`drawPlan`/`boatSheet`) · avisos de la base (`fetsCard`) · les meves embarcacions · qui hi ha amb mapa i llistes (`renderBase`). L'app no enllaça l'editor: només la web de gestió.
+- **Base i embarcacions (Fase A feta):** decisions a `docs/base-embarcacions.md`. Pestanyes del Club: Base · Mur · Avisos · Anuncis. **Base és una sola pàgina** (`renderBaseTab`): capçalera amb qui hi ha i el botó «Soc a la base» / «Marxo de la base» (`baseTop`, `presBtn`; sense previsió del temps, decisió de l'Oriol) · plànol (`renderBoats`/`drawPlan`/`boatSheet`) · avisos de la base (`fetsCard`) · les meves embarcacions · qui hi ha en llistes, sense mapa (`renderBase`). L'app no enllaça l'editor: només la web de gestió.
   - Avisos de la base: col·lecció `fets` (tipus nota | fet | pregunta; `public` = sense embarcació; fet d'una embarcació: autor, propietari i Manteniment; pregunta: autor i propietari; `respostes` ≤ 40, `vist`, `darrer`, `estat` obert|tancat). Els `public` (notes i avisos generals, `fetsPub`) surten sencers a Avisos (secció «Base nàutica», filtre `base`; compten al punt d'Avisos, `unreadN`) i a la Base com a línia amb icona (`bs-mark`); els d'embarcació, sencers a la Base i amb marca ! / ? a la plaça (`fetMarks`). Punt vermell a la pestanya Base amb els nous no públics (`fetsUnread`).
   - Plànol a l'app: fix (sense moure'l ni ampliar-lo), tocar una plaça obre la fitxa. Enquadrament `vista` = {x, y, w, h} en metres a `clubs/{club}/planol/actual`, que es dibuixa a l'editor amb l'eina «Vista app» (permís de plànol); sense `vista`, tot el plànol. La targeta pren la proporció de la vista (màx. 72vh).
   - Nucli compartit `planol-core.js` (`window.OV_PLAN`: catàleg BOATS/POLYS/POINTS/ESTATS, `shape`, `render`, ombres). Unitats: metres, origen = base nàutica, y cap al sud.
@@ -144,6 +144,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - La V3 serà oberta a qualsevol club de Catalunya i les Balears.
 - No hi haurà menors d'edat com a usuaris.
 - Text de consentiment RGPD i botó per esborrar el compte.
+- Avisos de Meteocat (Previsió): es pleguen en una línia tocant-los (`ov_smp_fold`, en aquest mòbil).
 - Avís legal: no substitueix el VHF canal 16 ni el 112.
 
 ## Pendent de la junta
