@@ -1,16 +1,28 @@
 "use strict";
 /* ============ Mar del Masnou · previsió ============ */
-// Ubicacions: cada una té el punt de previsió, el d'onatge (mar endins), les seves estacions, les platges per a la bandera i el punt del mapa.
-// Les dues platges miren al SE, així que el terral (COAST) és el mateix.
+// Llocs = clubs (V3 multiclub). Cada un té el punt de previsió, el d'onatge (mar endins), les seves estacions (pot no tenir-ne:
+// llavors només hi ha previsió), les platges per a la bandera, el punt del mapa, la base nàutica i l'orientació de la costa (terral).
+// Per afegir un club n'hi ha prou amb una entrada aquí (nom, municipi, comarca, coordenades i coast); les estacions són opcionals.
+// El Club Ocata Vent i el Club Nàutic El Masnou comparteixen meteo; cada club té la seva base.
 const LOCS = {
-  masnou:   {name:"El Masnou", lat:41.4766, lon:2.3185, mlat:41.465, mlon:2.33, home:[41.479804, 2.324024], wm:[41.4795, 2.3265],
+  masnou:   {name:"Club Ocata Vent", muni:"El Masnou", com:"Maresme", lat:41.4766, lon:2.3185, mlat:41.465, mlon:2.33, home:[41.479804, 2.324024], wm:[41.4795, 2.3265], coast:135,
              stations:["masnou","ocata"], st:"masnou", smp:[21, 96], beaches:{"081189-p1":"Platja d'Ocata", "081189-p0":"Platja del Masnou"}, flag:"081189-p1"},
-  badalona: {name:"Badalona", lat:41.4461, lon:2.2506, mlat:41.435, mlon:2.262, home:[41.4461, 2.2506], wm:[41.4461, 2.2506],
-             stations:["badalona"], st:"badalona", smp:[13, 95], beaches:{"080155-p5":"Platja dels Patins de Vela", "080155-p6":"Platja dels Pescadors"}, flag:"080155-p5"}
+  cnmasnou: {name:"Club Nàutic El Masnou", muni:"El Masnou", com:"Maresme", lat:41.4766, lon:2.3185, mlat:41.465, mlon:2.33, home:[41.4772, 2.3168], wm:[41.4775, 2.3190], coast:135,
+             stations:["masnou","ocata"], st:"masnou", smp:[21, 96], beaches:{"081189-p0":"Platja del Masnou", "081189-p1":"Platja d'Ocata"}, flag:"081189-p0"},
+  vilassar: {name:"CN Vilassar de Mar", muni:"Vilassar de Mar", com:"Maresme", lat:41.5044, lon:2.3978, mlat:41.494, mlon:2.41, home:[41.5044, 2.3978], wm:[41.5040, 2.3995], coast:145,
+             stations:["vilassar"], st:"vilassar", smp:[21, 96], beaches:{}, flag:null},
+  badalona: {name:"Badalona", muni:"Badalona", com:"Barcelonès", lat:41.4461, lon:2.2506, mlat:41.435, mlon:2.262, home:[41.4461, 2.2506], wm:[41.4461, 2.2506], coast:135,
+             stations:["badalona"], st:"badalona", smp:[13, 95], beaches:{"080155-p5":"Platja dels Patins de Vela", "080155-p6":"Platja dels Pescadors"}, flag:"080155-p5"},
+  marbella: {name:"Base Nàutica Mar Bella", muni:"Barcelona", com:"Barcelonès", lat:41.4006, lon:2.2089, mlat:41.390, mlon:2.221, home:[41.4006, 2.2089], wm:[41.4000, 2.2100], coast:135,
+             stations:["portbcn"], st:"portbcn", stNote:"Estació a uns 3,5 km", smp:[13, 95], beaches:{}, flag:null},
+  cmv:      {name:"Centre Municipal de Vela", muni:"Barcelona", com:"Barcelonès", lat:41.3866, lon:2.2003, mlat:41.376, mlon:2.212, home:[41.3866, 2.2003], wm:[41.3860, 2.2015], coast:135,
+             stations:["portbcn"], st:"portbcn", stNote:"Estació a uns 2 km", smp:[13, 95], beaches:{}, flag:null},
+  barceloneta:{name:"Club Patí Vela Barcelona", muni:"Barcelona", com:"Barcelonès", lat:41.3771, lon:2.1922, mlat:41.367, mlon:2.204, home:[41.3771, 2.1922], wm:[41.3765, 2.1935], coast:135,
+             stations:["portbcn"], st:"portbcn", smp:[13, 95], beaches:{}, flag:null}
 };
 let locKey = (() => { try{ return JSON.parse(localStorage.getItem("ov2_loc")); }catch(e){ return null; } })(); if(!LOCS[locKey]) locKey = "masnou";
 const LOC = LOCS[locKey];
-const COAST = 135; // la platja mira al SE
+const COAST = LOC.coast ?? 135; // cap on mira la platja (graus): el terral bufa des de terra
 const DEFAULTS = {
   pati:     {name:"Patí català", short:"Patí",     min:5,  iMin:8,  iMax:16, max:20, gust:24, wOk:0.6, wMax:1.2},
   windsurf: {name:"Windsurf",    short:"Windsurf", min:10, iMin:14, iMax:24, max:30, gust:34, wOk:1.2, wMax:2.2},
@@ -168,8 +180,27 @@ const STATIONS = {
   ocata:  {name:"Ocata", url:"https://ocata2.meteoelmasnou.cat/meteotemplateLive.txt"},
   masnou: {name:"El Masnou",  url:"https://www.meteoelmasnou.cat/meteotemplateLive.txt"},
   // Badalona (Dalt de la Vila, uns 600 m terra endins i en alçada): mateix sistema (Meteotemplate) i mateixa xarxa meteoelmasnou.cat
-  badalona: {name:"Badalona", url:"https://badalona.meteoelmasnou.cat/meteotemplateLive.txt"}
+  badalona: {name:"Badalona", url:"https://badalona.meteoelmasnou.cat/meteotemplateLive.txt"},
+  // Port de Barcelona, estació Bocana Nord (dades obertes CC BY-SA 4.0): CSV cada 10 min en m/s, hora UTC; + històric de 3 dies.
+  // Sense CORS: al navegador falla i l'app mostra «sense dades · model»; a l'APK va per la petició nativa.
+  portbcn: {name:"Port BCN · Bocana Nord", type:"pbcn", unit:"ms",
+    url:"https://opendata.portdebarcelona.cat/dataset/1afd4f4d-f329-4959-b1d3-252d973a9c3b/resource/d4263236-5d2a-486e-9ba9-9c4cb27ddc8a/download/14-bocananord_opd_10m.csv",
+    hist:"https://opendata.portdebarcelona.cat/dataset/1afd4f4d-f329-4959-b1d3-252d973a9c3b/resource/b724b1e7-26e3-4c6f-80d1-65a0b507065f/download/14-bocananord_opd_10m_hist.csv"},
+  // CN Vilassar de Mar (Davis Vantage Pro2, sensor a 10 m), Weathercloud: JSON amb vent en m/s, sense ratxa, cada ~10 min. Sense CORS (com el port).
+  vilassar: {name:"CN Vilassar", type:"wcloud", unit:"ms", url:"https://app.weathercloud.net/device/values/0732654059"}
 };
+const MS = 1.943844;
+// Port de Barcelona: CSV → registres {t, wind, gust, dir} en nusos (TIMESTAMP en UTC; «NAN» = sense dada)
+function pbcnParse(txt){
+  const L = txt.trim().split(/\r?\n/); if(L.length < 2) return [];
+  const H = L[0].split(",").map(s => s.replace(/"/g, "").trim()), ix = n => H.indexOf(n);
+  const iT = ix("TIMESTAMP"), iW = ix("VV_S_WVT"), iD = ix("DV_D1_WVT"), iG = ix("VV10m3Seg_Max") >= 0 ? ix("VV10m3Seg_Max") : ix("VV_Max");
+  const num = v => { const n = parseFloat(String(v).replace(/"/g, "")); return Number.isFinite(n) ? n : null; };
+  return L.slice(1).map(r => { const c = r.split(","), m = (c[iT] || "").match(/(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)/); if(!m) return null;
+    const w = num(c[iW]), g = num(c[iG]);
+    return {t: Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5]), wind: w == null ? null : w*MS, gust: g == null ? null : g*MS, dir: num(c[iD]), temp: null}; })
+    .filter(Boolean).sort((a, b) => a.t - b.t);
+}
 // Per defecte, El Masnou: l'anemòmetre de l'estació d'Ocata està arrecerat i marca un 40–80 % del vent real (comprovat oct. 2026)
 let stKey = store.get("ov2_station_v3"); if(!LOC.stations.includes(stKey)) stKey = LOC.st;
 
@@ -337,14 +368,18 @@ async function load(){
 // següent de la llista que en tingui, i la capçalera ho indica amb «↪».
 const stNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
 async function stRead(key){
-  const r = await stFetch(STATIONS[key].url+"?t="+Date.now());
+  const S = STATIONS[key], r = await stFetch(S.url+"?t="+Date.now());
   if(!r.ok) throw new Error("HTTP "+r.status);
+  if(S.type === "pbcn"){ const L = pbcnParse(await r.text()), o = L[L.length-1]; return o && o.wind != null ? Object.assign({key, hum:null, pres:null, at:o.t}, o) : null; }
+  if(S.type === "wcloud"){ const j = await r.json(), W = stNum(j.wspdavg ?? j.wspd); if(W == null) return null;
+    return {key, wind:W*MS, gust:null, dir:stNum(j.wdiravg ?? j.wdir), temp:stNum(j.temp), hum:stNum(j.hum), pres:stNum(j.bar), at:(stNum(j.epoch)||0)*1000}; }
   const j = await r.json(), W = stNum(j.W);
   if(W == null) return null;
   const G = stNum(j.G);
   return {key, wind:W*KMH, gust:G == null ? null : G*KMH, dir:stNum(j.B), temp:stNum(j.T), hum:stNum(j.H), pres:stNum(j.P), at:(stNum(j.U)||0)*1000};
 }
 async function loadStation(){
+  if(!STATIONS[stKey]){ ST = null; if(DATA) renderNow(); return null; }   // club sense estació: només previsió
   const want = stKey, order = [want, ...LOC.stations.filter(k => k !== want)];
   let got = null;
   for(const k of order){ try{ got = await stRead(k); }catch(e){ got = null; } if(got && Date.now() - got.at < 30*60*1000) break; got = null; }
@@ -360,7 +395,15 @@ const OBS_PARAMS = "avgbracketLWbracketR,maxbracketLGbracketR,avgbracketLBbracke
 const fmtLocal = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 // Registres de 5 minuts de l'estació (consulta «Taula interactiva», agrupació «Tot»), en nusos
 async function stationRecords(key, interval, fromMs, toMs){
-  const base = new URL(STATIONS[key].url).origin;
+  const S = STATIONS[key];
+  if(S.type === "wcloud") throw new Error("sense historial");
+  if(S.type === "pbcn"){   // històric de 3 dies del port, retallat a l'interval
+    const r = await stFetch(S.hist+"?t="+Date.now()); if(!r.ok) throw new Error("HTTP "+r.status);
+    const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    const a = interval === "today" ? d0.getTime() : (fromMs || 0), b = interval === "today" ? Date.now() : (toMs || Date.now());
+    return pbcnParse(await r.text()).filter(o => o.t >= a && o.t <= b);
+  }
+  const base = new URL(S.url).origin;
   const q = `value=all&interval=${interval}&from=${fromMs ? encodeURIComponent(fmtLocal(fromMs)) : ""}&to=${toMs ? encodeURIComponent(fmtLocal(toMs)) : ""}&parameters=${OBS_PARAMS}`;
   const r = await stFetch(base+"/pages/station/tableAjax.php?"+q+"&t="+Date.now()); if(!r.ok) throw new Error("HTTP "+r.status);
   const doc = new DOMParser().parseFromString(await r.text(), "text/html");
@@ -378,7 +421,7 @@ async function stationRecords(key, interval, fromMs, toMs){
 // Direcció mitjana vectorial (ponderada pel vent): 350° i 10° fan 0°, no 180°
 function vecDir(list){ let x = 0, y = 0; list.forEach(o => { if(o.dir!=null){ const w = Math.max(o.wind||0, 0.1); x += Math.sin(o.dir*Math.PI/180)*w; y += Math.cos(o.dir*Math.PI/180)*w; } }); return (x||y) ? norm(Math.atan2(x,y)*180/Math.PI) : null; }
 async function loadObs(){
-  const key = stKey;
+  const key = stKey; if(!STATIONS[key]) return;
   try{
     let recs = await stationRecords(key, "today"), recs24 = recs;
     if(recs.length < 12) try{ recs24 = await stationRecords(key, "custom", Date.now() - 24*3600e3, Date.now()); }catch(e){}
@@ -748,6 +791,7 @@ const SMP_ZONES = LOC.smp;   // Meteocat: comarca i zona de mar (Maresme 21/96 �
 let INFO = {flag:null, alerts:[], at:0, ok:{flag:false, smp:false}};
 const ymd = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
 async function loadFlag(){
+  if(!Object.keys(BEACHES).length) return null;   // club sense platja configurada: no hi ha bandera
   const where = encodeURIComponent(Object.keys(BEACHES).map(c => `codiplatja='${c}'`).join(" OR "));
   const r = await fetch(`https://analisi.transparenciacatalunya.cat/resource/4baz-cjv2.json?$where=${where}&$select=codiplatja,estat_data,estat_bandera,estat_motiubandera,estat_estatmar,estat_meduses&$order=:id DESC&$limit=4`, {cache:"no-store"});
   if(!r.ok) throw 0;
@@ -813,6 +857,7 @@ const FLAG_IC = ["M5 23L5 3","M5 3L19 4L18.5 7.5L19 13L5 12Z"];
 // Bandera de bany: icona petita sota l'indicador (gris = sense dades d'avui). Tocant-la es veu el detall.
 function renderFlag(){
   const el = $("gflag"); if(!el) return;
+  if(!LOC.flag){ el.innerHTML = ""; return; }
   const f = INFO.flag, fresh = !!(f && f.at && new Date(f.at).toDateString() === new Date().toDateString()), fl = fresh && f && FLAG[f.color];
   const col = fl ? `var(--${fl.k})` : "var(--muted)";
   const txt = fl ? `Bandera ${fl.t} · ${f.beach} · ${new Date(f.at).toTimeString().slice(0,5)}` + [f.reason, f.sea ? "mar "+f.sea : "", f.jelly.length ? "meduses: "+f.jelly.join(", ") : ""].filter(Boolean).map(x => " · "+x).join("")
@@ -862,8 +907,8 @@ function renderNow(){
   widgetPush(n, s, v, live, c);
   const mins = live ? Math.max(0, Math.round((Date.now()-ST.at)/60000)) : null;
   $("src").className = "src"+(live?" live":"");
-  $("src").innerHTML = `<span class="dot"></span>${live ? `${ST.key !== stKey ? "↪ " : ""}${STATIONS[ST.key].name} · fa ${mins} min` : `${STATIONS[stKey].name}: sense dades · model`}${LOC.stations.length > 1 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>` : ""}`;
-  $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+(live && ST.key !== stKey ? ", sense vent ara; dades de "+STATIONS[ST.key].name : "")+". Canvia d'estació");
+  $("src").innerHTML = !STATIONS[stKey] ? `<span class="dot"></span>Sense estació · previsió` : `<span class="dot"></span>${live ? `${ST.key !== stKey ? "↪ " : ""}${STATIONS[ST.key].name} · fa ${mins} min` : `${STATIONS[stKey].name}: sense dades · model`}${LOC.stNote ? " · " + LOC.stNote.replace(/^Estació a/, "a") : ""}${LOC.stations.length > 1 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 4l-4 4 4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>` : ""}`;
+  if(STATIONS[stKey]) $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+(LOC.stNote ? ", "+LOC.stNote.toLowerCase() : "")+(live && ST.key !== stKey ? ", sense vent ara; dades de "+STATIONS[ST.key].name : "")+". Canvia d'estació");
   $("gauge").innerHTML = gaugeSvg(s, v) + `<div class="grow"><div class="gflag" id="gflag"></div><span class="g-why k-${v.k}">${esc(v.sub || "")}</span></div>`; renderFlag();
   const kind = isOffshore(n.dir) ? "terral" : isOnshore(n.dir) ? "de mar" : "lateral";
   $("rose").innerHTML = `<button type="button" class="cmp-btn" id="cmpBtn" aria-pressed="${cmpOn}" aria-label="Orienta la rosa amb la brúixola del mòbil" title="Orienta amb la brúixola"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 15 12h-6z" fill="currentColor"/><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35"/></svg></button>` + roseSvg({k: lvWind(n.wind, c), dir:n.dir, wind:n.wind, fcDir:fc.dir, wdir:fc.wdir, wave:fc.wave, live, hist: roseHist(OBS.key === stKey ? OBS.recs : [], roseForecast())}); cmpApply();
@@ -924,7 +969,7 @@ function renderHours(){
   const tdI = DATA.daily.time.indexOf(todayDate()), hx = new Date(td + "T12:00:00");
   $("hoursTitle").textContent = td === todayDate() ? "Hores d'avui" : td === DATA.daily.time[tdI+1] ? "Hores de demà" : `Hores ${DAYS_L[hx.getDay()].toLowerCase()} ${hx.getDate()}`;
   const wf = DATA.wf;
-  $("iHours").innerHTML = `<p>Una fila per hora, de 7 a 21 h. Les hores passades diuen <b>mesurat</b> i són dades de l'estació ${esc(STATIONS[stKey].name)}; la resta, previsió del model ${esc(MODELS[model].label)}. Llisca la taula cap als costats per veure totes les columnes.</p>` +
+  $("iHours").innerHTML = `<p>Una fila per hora, de 7 a 21 h. Les hores passades diuen <b>mesurat</b> i són dades de l'estació ${esc(STATIONS[stKey]?.name || "")}; la resta, previsió del model ${esc(MODELS[model].label)}. Llisca la taula cap als costats per veure totes les columnes.</p>` +
     (wf && Math.abs(wf.f-1) > 0.05
       ? `<p><b>Onada corregida ×${r1(wf.f)}.</b> Hi ha mar de fons (onada de 7 s o més) i la ${esc(BUOY.name)} mesura ${wf.f > 1 ? "més" : "menys"} onada que el model: a les hores de mar de fons, la previsió d'onada es multiplica per aquest factor.</p>`
       : `<p>L'onada és la del model. Només es corregeix amb la ${esc(BUOY.name)} quan hi ha mar de fons (onada de 7 s o més).</p>`);
@@ -938,7 +983,7 @@ function renderModelBox(errs, bestE){
   const opt = (v, t) => `<option value="${v}"${modelPref === v ? " selected" : ""}>${t}</option>`;
   $("modelBox").innerHTML = `<label class="model-pick"><span class="sr">Model</span>
       <select id="modelSel">${opt("best", "El que més encerta avui" + (modelPref === "best" ? ` (${MODELS[model].label})` : ""))}${opt("opt","Optimista (el model més favorable)")}${opt("pes","Pessimista (el model més desfavorable)")}${opt("arome","AROME")}${opt("icon","ICON")}${opt("ecmwf","ECMWF")}${opt("ukmo","UKMO")}${opt("auto","Open-Meteo (barreja de models)")}</select></label>
-    ${errs.length ? `<div class="model-err-row"><span class="lbl">Error d'avui vs. estació ${esc(STATIONS[stKey].name)}</span>${[...errs].sort((x, y) => x.mae - y.mae).map(e => `<span class="${e.mae === bestE ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>` : `<p class="note">Encara no hi ha prou hores mesurades avui per comparar els models.</p>`}
+    ${errs.length ? `<div class="model-err-row"><span class="lbl">Error d'avui vs. estació ${esc(STATIONS[stKey]?.name || "")}</span>${[...errs].sort((x, y) => x.mae - y.mae).map(e => `<span class="${e.mae === bestE ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>` : `<p class="note">Encara no hi ha prou hores mesurades avui per comparar els models.</p>`}
     ${(() => { const h = encertsResum(30); if(!h.length) return `<p class="note">L'historial d'encerts dels models es va omplint cada dia.</p>`;
       const byT = Object.keys(TIPUS_VENT).map(t => [t, encertsResum(90, t)[0]]).filter(([, x]) => x && x.dies >= 3);
       return `<div class="model-err-row"><span class="lbl">Últims 30 dies · ${h[0].dies} ${h[0].dies === 1 ? "dia" : "dies"} comparats</span>${h.map((e, i) => `<span class="${i === 0 ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>`
@@ -1042,7 +1087,7 @@ function go(v){
 document.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if(b) go(b.dataset.go); });
 
 const DAYS_S = ["dg.","dl.","dt.","dc.","dj.","dv.","ds."];
-function tick(){ const d = new Date(); $("clock").textContent = (locKey !== "masnou" ? LOC.name + " · " : "") + DAYS_S[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]+" · "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function tick(){ const d = new Date(); $("clock").textContent = LOC.name + " · " + DAYS_S[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]+" · "+pad(d.getHours())+":"+pad(d.getMinutes()); }
 tick(); setInterval(tick, 20000);
 
 /* ---------- events ---------- */
@@ -1122,11 +1167,6 @@ if("serviceWorker" in navigator && location.protocol === "https:") navigator.ser
 })();
 
 /* ---------- ubicació (configuració) ---------- */
-// Canviar d'ubicació recarrega l'app: així totes les dades (previsió, onatge, estació, bandera, avisos) són de la nova
-(() => {
-  const seg = $("locSeg"); if(!seg) return;
-  seg.querySelectorAll("[data-loc]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.loc === locKey)));
-  $("peekLoc").textContent = LOC.name;
-  seg.addEventListener("click", e => { const b = e.target.closest("[data-loc]"); if(!b || b.dataset.loc === locKey) return;
-    store.set("ov2_loc", b.dataset.loc); store.set("ov2_station_v3", LOCS[b.dataset.loc].st); location.reload(); });
-})();
+// El selector (mapa + cerca) és a llocs.js. Canviar de lloc recarrega l'app: així totes les dades són del club triat.
+function setLoc(k){ if(!LOCS[k] || k === locKey) return; store.set("ov2_loc", k); store.set("ov2_station_v3", LOCS[k].st); location.reload(); }
+$("peekLoc").textContent = LOC.name;

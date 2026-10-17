@@ -22,14 +22,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=154">
+<link rel="stylesheet" href="app.css?v=155">
 </head>
 <body>
 <div class="app">
 
 <header class="top">
   <img src="icons/logo.svg?v=3" alt="Club Ocata Vent" width="36" height="36">
-  <div class="t"><b>Ocata Vent</b><span id="clock">El Masnou</span></div>
+  <button type="button" class="t" id="locBtn" aria-label="Canvia de club o lloc" aria-haspopup="dialog"><b>Ocata Vent</b><span><span id="clock">El Masnou</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
   <div class="seg act-seg" role="group" aria-label="Embarcació" id="actSeg"></div>
   <button class="ib" id="themeBtn" type="button" aria-label="Configuració" aria-expanded="false" aria-controls="viewPanel"></button>
   <button class="ib" id="refresh" type="button" aria-label="Actualitza les dades">
@@ -52,13 +52,13 @@
   <details class="vp-sec">
     <summary><h3>Ubicació</h3><span class="vp-peek" id="peekLoc"></span></summary>
     <div class="vp-body">
-      <div class="seg loc-seg" role="group" aria-label="Ubicació" id="locSeg">
-        <button type="button" data-loc="masnou"><b>El Masnou</b><small>Ocata</small></button><button type="button" data-loc="badalona"><b>Badalona</b><small>Patins de Vela</small></button></div>
+      <button type="button" class="btn loc-pick" id="locPick"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Canvia de club o lloc</button>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iLoc" aria-label="Què canvia amb la ubicació" aria-expanded="false">i</button>
       <div class="vp-info" id="iLoc" hidden>
         <p>Canvia la previsió, l'onatge, l'estació, la bandera de la platja i els avisos de Meteocat.</p>
-        <p><b>El Masnou:</b> estacions del Masnou i d'Ocata · bandera de la platja d'Ocata · avisos del Maresme.</p>
-        <p><b>Badalona:</b> estació de Badalona (Dalt de la Vila, a uns 600 m del mar i en alçada: pot marcar menys vent que a la platja) · bandera de la platja dels Patins de Vela · avisos del Barcelonès.</p>
+        <p>Al mapa, <b>verd</b> = club amb estació (vent mesurat); <b>gris</b> = només previsió.</p>
+        <p><b>El Masnou</b> (Club Ocata Vent i Club Nàutic): estacions del Masnou i d'Ocata. <b>Vilassar:</b> estació del CN Vilassar. <b>Badalona:</b> estació de Dalt de la Vila (lluny del mar, pot marcar menys vent). <b>Barcelona:</b> estació del Port (Bocana Nord).</p>
+        <p>Les estacions del Port de Barcelona i del CN Vilassar només es poden llegir des de l'app Android; al navegador surt «sense dades · model».</p>
       </div></div>
     </div>
   </details>
@@ -167,11 +167,11 @@
   </button>
 
   <footer>
-    <div class="src-line"><span><b>Dades:</b> Open-Meteo · meteoelmasnou.cat · Ports de l'Estat · Meteocat · Generalitat</span>
+    <div class="src-line"><span><b>Dades:</b> Open-Meteo · meteoelmasnou.cat · Port de Barcelona · CN Vilassar · Ports de l'Estat · Meteocat · Generalitat</span>
       <button class="ib-i" type="button" data-info="iSrc" aria-label="D'on vénen les dades" aria-expanded="false">i</button></div>
     <div class="vp-info" id="iSrc" hidden>
       <p><b>Previsió:</b> Open-Meteo (models AROME, ICON-EU, ECMWF i UKMO; onatge MFWAM).</p>
-      <p><b>Vent mesurat:</b> estacions d'Ocata, El Masnou i Badalona, de meteoelmasnou.cat.</p>
+      <p><b>Vent mesurat:</b> estacions d'Ocata, El Masnou i Badalona, de meteoelmasnou.cat · Port de Barcelona, estació Bocana Nord (dades obertes, CC BY-SA 4.0) · CN Vilassar de Mar (Weathercloud).</p>
       <p><b>Onada mesurada:</b> boia Barcelona II de Ports de l'Estat.</p>
       <p><b>Avisos:</b> Meteocat. <b>Bandera de les platges:</b> Generalitat de Catalunya.</p>
       <p><b>Mapes:</b> meteoblue, Windy, RainViewer (radar) i OpenSeaMap (carta nàutica).</p>
@@ -384,9 +384,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=113"></script>
-<script src="app.js?v=119"></script>
+<script src="app.js?v=120"></script>
 <script src="trip.js?v=123"></script>
 <script src="maps.js?v=105"></script>
+<script src="llocs.js?v=1"></script>
 <script src="fx.js?v=1"></script>
 <script src="windmap.js?v=110"></script>
 <script src="prep.js?v=103"></script>

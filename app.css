@@ -1445,3 +1445,26 @@ body.wm-open{overflow:hidden}
 .now .gauge svg{max-width:300px}
 .now .rose svg{max-width:376px;margin-right:0}
 .now .gauge .cap{display:none}
+/* ---------- selector de club o lloc (llocs.js) ---------- */
+.top button.t{background:none;border:0;padding:0;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.top button.t > span{display:flex;align-items:center;gap:4px;min-width:0}
+.top button.t > span svg{flex:none;color:var(--accent)}
+.loc-pick{width:100%;min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:1rem}
+.loc-sheet{position:fixed;inset:0;z-index:2600;background:var(--surface);display:flex;flex-direction:column;gap:10px;
+  padding:calc(10px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px))}
+.loc-sheet[hidden]{display:none}
+body.ls-open{overflow:hidden}
+.ls-h{display:flex;align-items:center;justify-content:space-between}
+.ls-h h2{margin:0;font-family:var(--f-head);font-size:1.3rem;text-transform:uppercase;letter-spacing:.03em}
+.loc-sheet input[type=search]{width:100%;min-height:48px;font-size:1.05rem;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)}
+.ls-map{height:40vh;min-height:220px;border-radius:12px;border:1px solid var(--line);overflow:hidden;flex:none}
+.ls-leg{display:flex;gap:16px;font-size:.85rem;color:var(--muted);font-weight:600}
+.ls-leg i,.ls-row > i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;flex:none}
+.ls-list{flex:1;overflow-y:auto;overscroll-behavior:contain;margin:0 -4px}
+.ls-com{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 4px 4px}
+.ls-row{width:100%;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 10px;border:0;border-top:1px solid var(--grid);background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+.ls-row > span{flex:1;min-width:0;display:flex;flex-direction:column}
+.ls-row b{font-size:1.05rem}
+.ls-row small{font-size:.85rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls-row.sel{background:var(--surface-2);border-radius:10px}
+.ls-row.sel svg{color:var(--accent);flex:none}
