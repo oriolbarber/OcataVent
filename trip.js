@@ -174,7 +174,8 @@ function setRecUI(){
   const on = !!LIVE;
   $("recDot").hidden = !on;
   $("tripIdle").hidden = on; $("tripLive").hidden = !on;
-  $("ctaLabel").textContent = on ? "Sortida en curs · " + fmtDurShort(Date.now()-LIVE.start) : "Inicia una sortida";
+  $("ctaLabel").textContent = on ? "Sortida en curs · " + fmtDurShort(Date.now()-LIVE.start) : "+ Anuncia sortida";
+  window.OV_CLUB?.cta?.();
   if(on){ $("liveAct").textContent = DEFAULTS[LIVE.act]?.name || ""; liveGapNote(); }
 }
 

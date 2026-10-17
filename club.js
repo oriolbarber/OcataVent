@@ -258,7 +258,7 @@ function intentsCard(){
   const dl = d => d === today ? "Avui" : d === tom ? "Demà" : new Date(d + "T12:00").toLocaleDateString("ca", {weekday:"short", day:"numeric"});
   return `<section class="card cl-intents" aria-label="Qui surt a navegar"><div class="card-h"><span class="lbl">Qui surt</span><span class="note">S'esborra l'endemà</span></div>
     ${L.map(intentItem).join("")}
-    <button type="button" class="btn cl-dash" id="clNewIntent">+ Anuncia que surts</button></section>`;
+    <button type="button" class="btn cl-dash" id="clNewIntent">+ Anuncia sortida</button></section>`;
 }
 function card(p){
   const mine = p.userId === uid(), rc = p.reaccions || {}, my = rc[uid()], cnt = k => Object.values(rc).filter(x => x === k).length;
@@ -740,7 +740,7 @@ async function refreshShare(){ if(shareEl && shareTrip && document.body.contains
 /* Altres formularis */
 function intentSheet(){
   const d = new Date(), h = pad(Math.min(20, d.getHours() + 1)) + ":00";
-  sheet("Anuncia que surts", `
+  sheet("Anuncia sortida", `
     <div class="cl-field"><span class="lbl">Dia</span>
       <div class="cl-row2" role="group" aria-label="Dia">${chip("data-iday", "0", true, "Avui")}${chip("data-iday", "1", false, "Demà")}</div>
       <label class="cl-field" for="shDate"><span class="note">O tria un altre dia, fins a ${INT_DIES} dies</span>
@@ -762,7 +762,7 @@ function intentSheet(){
       const day = new Date(v + "T23:59:59");
       const doc = Object.assign({userId:uid(), clubId:C.member.clubId, nom:C.member.nom, act:$("shAct").value, dia:ymd(day), hora:$("shHour").value || "12:00", apuntats:{}, caduca:TS(day.getTime()), creat:C.F.serverTimestamp()}, await visFields($("shVis").value));
       const r = await C.F.addDoc(col("intencions"), doc);
-      D.intents.push(Object.assign({id:r.id}, doc, {caduca:day.getTime()})); closeSheet(); render();
+      D.intents.push(Object.assign({id:r.id}, doc, {caduca:day.getTime()})); closeSheet(); if(visible()) render();
     });
   });
 }
@@ -1169,8 +1169,12 @@ function tabBtn(){
   if(!on && visible()) go("fc");
 }
 window.addEventListener("ov-coms", () => { publishEvents(); if(visible()) render(); });
+/* Botó del peu de la previsió: amb sortida en curs, hi torna; soci aprovat, «+ Anuncia sortida»; sense compte, no hi és */
+const isRec = () => typeof LIVE !== "undefined" && !!LIVE;
+function ctaUpdate(){ const b = $("ctaTrip"); if(b) b.hidden = !isRec() && !C; }
+document.addEventListener("click", e => { if(!e.target.closest("#ctaTrip")) return; if(isRec()) go("trip"); else if(C) intentSheet(); });
 window.addEventListener("ov-cloud", async () => {
-  await ctx(); tabBtn(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { navDot(); window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
+  await ctx(); tabBtn(); ctaUpdate(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { navDot(); window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
   else if(C && store.get(TB_K)) tripBoatEnd();   // la sortida es va acabar sense connexió: torna-la a la varada ara
   if(C) ensureBoats().then(tripBoatUI);
@@ -1181,7 +1185,7 @@ window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load()
 
 /* ---------- connexió amb trip.js i cloud.js ---------- */
 const OV_CLUB = window.OV_CLUB = {
-  sheet, closeSheet, autoTick, loadAlerts,
+  sheet, closeSheet, autoTick, loadAlerts, cta: ctaUpdate,
   ctx: () => C,
   async shareBtn(el, t){
     shareEl = el; shareTrip = t; el.innerHTML = "";
@@ -1250,5 +1254,6 @@ const OV_CLUB = window.OV_CLUB = {
     await del("presencia", me);
   }
 };
-ctx().then(() => { tabBtn(); loadAlerts(); loadEvents(); autoTick(true); });
+ctaUpdate();
+ctx().then(() => { tabBtn(); ctaUpdate(); loadAlerts(); loadEvents(); autoTick(true); });
 })();
