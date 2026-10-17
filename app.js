@@ -908,7 +908,7 @@ function stInfo(){
   const S = STATIONS[stKey];
   if(!S){ p.innerHTML = `<b>Estació:</b> aquest club encara no en té. Es mostra la previsió.`; return; }
   const web = S.type && !window.OV_NATIVE ? " Des del navegador no es pot llegir: només a l'app Android." : "";
-  p.innerHTML = `<b>Estació:</b> ${esc(S.long || S.name)}${LOC.stNote ? " · " + esc(LOC.stNote.toLowerCase()) + " de la base" : ""}. ${esc(S.info || "")}${web}`;
+  p.innerHTML = `<b>Estació:</b> ${esc(S.long || S.name)}${LOC.stNote ? ", " + esc(LOC.stNote.replace(/^Estació /i, "")) + " de la base" : ""}. ${esc(S.info || "")}${web}`;
 }
 function renderNow(){
   if(!DATA) return;
