@@ -1412,7 +1412,7 @@ body.wm-open{overflow:hidden}
 /* Base: capçalera (vent i qui hi ha), avisos de la base */
 .bs-top{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .bs-prow{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
-.bs-pbtn{flex:none;min-height:46px;padding:0 16px;font-weight:700}
+.bs-pbtn{flex:1 0 auto;max-width:100%;min-height:46px;padding:0 16px;font-weight:700}
 :root[data-size="big"] .bs-pbtn{min-height:54px;font-size:1.1rem}
 :root[data-size="big"] .bs-pres{font-size:1.15rem}
 :root[data-size="big"] .info-row svg.info-chev{width:22px;height:22px}
