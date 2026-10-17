@@ -1410,14 +1410,25 @@ body.wm-open{overflow:hidden}
 .cl-ptag{font-style:normal;font-size:.72rem;font-weight:700;color:#b86a00;background:#fff1dc;border-radius:999px;padding:1px 8px;vertical-align:2px}
 .cl-pendbox{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;border:2px dashed #e07a00;background:color-mix(in srgb,#ffb547 14%,var(--surface))}
 /* Base: capçalera (vent i qui hi ha), avisos de la base */
-.bs-top{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
-.bs-prow{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
-.bs-pbtn{flex:1 0 auto;max-width:100%;min-height:46px;padding:0 16px;font-weight:700}
+.bs-top{padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.bs-cells{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bs-cell{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:6px 4px;border-radius:12px;background:var(--surface-2)}
+.bs-n{font-weight:700;white-space:nowrap}
+.bs-n b{font-family:var(--f-mono);font-size:1.6rem;vertical-align:-2px}
+.bs-cell .bs-pcs{justify-content:center}
+.bs-pbtn{width:100%;min-height:46px;padding:0 16px;font-weight:700}
+:root[data-size="big"] .bs-n{font-size:1.15rem}:root[data-size="big"] .bs-n b{font-size:2rem}
+.bs-priv>summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none}
+.bs-priv>summary .lbl{white-space:nowrap}
+.bs-priv>summary::-webkit-details-marker{display:none}
+.bs-priv>summary::after{content:"";margin-left:8px;width:9px;height:9px;border-right:2.4px solid var(--muted);border-bottom:2.4px solid var(--muted);transform:rotate(45deg);flex:none}
+.bs-priv[open]>summary::after{transform:rotate(-135deg)}
+.bs-privv{margin-left:auto;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.bs-priv[open]>summary{margin-bottom:10px}
+.bs-priv .cl-privrow .btn{margin-left:auto}
+.bs-priv .vp-info{margin-top:10px}
 :root[data-size="big"] .bs-pbtn{min-height:54px;font-size:1.1rem}
-:root[data-size="big"] .bs-pres{font-size:1.15rem}
 :root[data-size="big"] .info-row svg.info-chev{width:22px;height:22px}
-.bs-pres{border:0;background:none;padding:4px 0;font:inherit;font-weight:700;color:var(--ink);cursor:pointer;white-space:nowrap}
-.bs-pres b{font-family:var(--f-mono);font-size:1.15rem}
 .bs-pcs{display:flex;flex-wrap:wrap;gap:4px}
 .bs-pc{font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line)}
 .bs-pc.late{border-color:var(--no);color:var(--no)}

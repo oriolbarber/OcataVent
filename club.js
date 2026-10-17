@@ -376,7 +376,7 @@ const canBoatsE = () => !!C && (C.isAdm || C.isPremium || C.perms.includes("emba
 const myBoats = () => D.boats.filter(b => b.propUid === uid());
 const placeById = id => ((D.planol && D.planol.objs) || []).find(o => o.id === id && o.k === "place");
 // Base: tot en una pàgina. Vent i qui hi ha · plànol · avisos de la base · les meves embarcacions · qui hi ha (mapa i llistes)
-function renderBaseTab(){ return renderBoats() + `<section id="bsQui" class="bs-qui"><div class="card-h"><span class="lbl">Qui hi ha</span></div>${renderBase()}</section>`; }
+function renderBaseTab(){ return renderBoats() + `<section class="bs-qui">${renderBase()}</section>`; }
 /* ---------- Fase B: l'embarcació de la sortida passa a «navegant» i, en acabar, torna a «a la varada» ---------- */
 // Tria: la que el soci ha marcat a «Nova sortida» (ov2_trip_pick), si no la del mateix tipus que l'embarcació triada a dalt, si no la primera. Les que són en reparació no.
 const TB_K = "ov2_trip_boat";
@@ -419,9 +419,9 @@ function presBtn(){
 }
 function baseTop(){
   const L = presLive(), ai = L.filter(x => x.estat === "aigua"), ba = L.filter(x => x.estat === "base");
-  const names = A => A.slice(0, 6).map(x => `<span class="bs-pc${warned(x) ? " late" : ""}">${esc(x.id === uid() ? "Tu" : String(x.nom || "").split(" ")[0])}</span>`).join("") + (A.length > 6 ? `<span class="bs-pc">+${A.length - 6}</span>` : "");
-  return `<article class="card bs-top"><div class="bs-prow"><button type="button" class="bs-pres" data-bscroll="bsQui" aria-label="Qui hi ha: ${ba.length} a la base, ${ai.length} navegant"><b style="color:var(--ideal)">${ba.length}</b> a la base · <b style="color:var(--accent)">${ai.length}</b> navegant ↓</button>${presBtn()}</div>
-    ${ba.length || ai.length ? `<div class="bs-pcs">${names(ba)}${ai.length ? names(ai).replace(/class="bs-pc/g, 'class="bs-pc aigua') : ""}</div>` : ""}</article>`;
+  const names = (A, cls) => A.length ? `<div class="bs-pcs">${A.slice(0, 6).map(x => `<span class="bs-pc${cls}${warned(x) ? " late" : ""}">${esc(x.id === uid() ? "Tu" : String(x.nom || "").split(" ")[0])}</span>`).join("")}${A.length > 6 ? `<span class="bs-pc${cls}">+${A.length - 6}</span>` : ""}</div>` : "";
+  const cell = (n, t, col, A, cls) => `<div class="bs-cell"><span class="bs-n"><b style="color:var(--${col})">${n}</b> ${t}</span>${names(A, cls)}</div>`;
+  return `<article class="card bs-top"><div class="bs-cells">${cell(ba.length, "a la base", "ideal", ba, "")}${cell(ai.length, "navegant", "accent", ai, " aigua")}</div>${presBtn()}</article>`;
 }
 
 /* ---------- avisos de la base: notes, fets i preguntes (col·lecció «fets») ---------- */
@@ -653,22 +653,14 @@ function boatSheet(placeId, boatId){
 }
 
 function renderBase(){
-  const L = presLive(), ai = L.filter(x => x.estat === "aigua").sort((a, b) => (warned(b) ? 1 : 0) - (warned(a) ? 1 : 0)), ba = L.filter(x => x.estat === "base");
-  const v = vis();
-  const row = x => { const al = D.alertes.filter(a => a.userId === x.id);
-    return `<div class="cl-prow"><span class="cl-av ${x.estat === "base" ? "s-base" : al.length ? "s-late" : "s-aigua"}" aria-hidden="true">${esc(x.id === uid() ? "TU" : initials(x.nom))}</span>
-    <div class="cl-who"><b>${esc(x.id === uid() ? "Tu" : x.nom)}${x.estat === "aigua" ? " · " + esc(boatShort(x.act)) : ""}</b>
-    <span${al.length ? ' class="cl-late"' : ""}>${al.length ? esc(al.map(a => ALERT_T[a.tipus] || a.tipus).join(" · ")) : "Des de les " + hm(x.desde)}</span></div>
-    <span class="note">${esc(ago(ms(x.actualitzat) || now()))}</span></div>`; };
-  const rec = typeof LIVE !== "undefined" && LIVE;
+  const v = vis(), rec = typeof LIVE !== "undefined" && LIVE, auto = !!window.OV_PRIV?.autoBase();
   return `<button class="cta" type="button" data-go="trip">${rec ? svgI('<circle cx="12" cy="12" r="6" fill="currentColor"/>', 22) : svgI('<path d="M12 3v14"/><path d="M12 4l7 11h-7"/><path d="M3 19c3 2 6 2 9 0s6-2 9 0"/>', 22)}${rec ? "Sortida en curs" : "Comença una sortida"}</button>
-    <section class="card"><div class="card-h"><span class="lbl">A l'aigua</span></div>${ai.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}</section>
-    <section class="card"><div class="card-h"><span class="lbl">A la base</span></div>${ba.map(row).join("") || `<p class="note">Ningú, ara mateix.</p>`}</section>
-    <section class="card"><div class="card-h"><span class="lbl">Qui et veu aquí</span><button class="ib-i" type="button" data-info="iPres" aria-label="Com funciona la presència" aria-expanded="false">i</button></div>
-      <div class="cl-privrow"><b>${esc(NIVT(v))}</b><button type="button" class="btn" id="clPriv">Canvia-ho</button></div>
-      <p class="note" style="margin-top:8px">Es tria a Configuració ▸ Confidencialitat, junt amb qui veu les teves publicacions i els avisos de seguretat.</p>
-      <div class="vp-info" id="iPres" hidden><p>Només mentre ets a la base (amb el botó o automàticament, si ho actives) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, només l'app d'Android la continua enviant.</p></div></section>`;
+    <details class="card bs-priv" id="bsPriv"${ui.privOpen ? " open" : ""}><summary><span class="lbl">Qui et veu aquí</span><span class="bs-privv">${esc(NIVT(v))}</span></summary>
+      <div class="cl-privrow"><b>${esc(NIVT(v))}</b><button type="button" class="btn" id="clPriv">Canvia-ho</button><button class="ib-i" type="button" data-info="iPres" aria-label="Com funciona la presència" aria-expanded="false">i</button></div>
+      <label class="cl-sw"><span><b>Marca'm a la base automàticament</b></span><input type="checkbox" class="switch" id="pvAuto"${auto ? " checked" : ""}${v === "ningu" ? " disabled" : ""}></label>
+      <div class="vp-info" id="iPres" hidden><p>Només surts mentre ets a la base (amb el botó o automàticament) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Automàticament: després de 10 minuts a menys de 50 m de la base et marca a la base; després de 2 minuts a més de 200 m, et treu. Només amb l'app oberta.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, només l'app d'Android la continua enviant. Qui et veu es tria a Configuració ▸ Confidencialitat.</p></div></details>`;
 }
+document.addEventListener("toggle", e => { if(e.target && e.target.id === "bsPriv") ui.privOpen = e.target.open; }, true);
 /* ---------- full lliscant (formularis) ---------- */
 function closeSheet(){ const s = $("clSheet"); if(s) s.remove(); }
 function sheet(title, body, onMount){
@@ -1028,7 +1020,6 @@ document.addEventListener("click", async e => {
   if(ds.fet){ fetSheet(ds.fet); return; }
   if(t.id === "clBoatNew"){ newBoatSheet(null); return; }
   if(ds.bvalid){ const b = D.boats.find(x => x.id === ds.bvalid); if(b){ try{ await boatSave(b, {pendent:false}, "Validada"); render(); }catch(err){ say(errText(err)); } } return; }
-  if(ds.bscroll){ const el = $(ds.bscroll); if(el) el.scrollIntoView({behavior:"smooth", block:"start"}); return; }
   if(ds.boat){ const b = D.boats.find(x => x.id === ds.boat); if(b){ ui.psel = b.place || null; drawPlan(); boatSheet(b.place, b.id); } return; }
   if(ds.bstate){ const b = D.boats.find(x => x.id === ds.id); if(!b || (b.estat || "lloc") === ds.bstate) return; try{ await boatSave(b, {estat:ds.bstate}, ESTAT_T(ds.bstate)); render(); }catch(err){ say(errText(err)); } return; }
   if(ds.fview){ filt.view = ds.fview; saveF(); return; }
