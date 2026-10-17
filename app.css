@@ -838,7 +838,8 @@ footer #iSrc{text-align:left;margin:8px 0}
 .cam-play[hidden]{display:none}
 .cam-play span{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;font-family:var(--f-head);font-weight:700;font-size:1.15rem;letter-spacing:.04em;text-transform:uppercase;animation:camPulse 1.8s ease-in-out infinite}
 @keyframes camPulse{50%{transform:scale(1.05)}}
-.cam-max .cam-play{display:none}
+/* a pantalla completa, mentre el vídeo no s'ha engegat, el toc passa al reproductor (si no, la capa del zoom el tapa); un cop engegat, zoom i pessic */
+.cam-max .cam-play:not([hidden]) ~ .cam-touch{pointer-events:none}
 .cam-play span{white-space:nowrap;font-size:1.1rem}
 
 /* xifres de les caselles: s'encongeixen si no hi caben (p. ex. sortides llargues) */
