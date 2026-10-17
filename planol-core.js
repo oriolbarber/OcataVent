@@ -27,7 +27,7 @@ const POINTS = {
   dutxa:{n:"Dutxa", c:"#2f7fe0", s:"D"}, aigua:{n:"Aigua", c:"#0a9bd6", s:"A"}, extintor:{n:"Extintor", c:"#c3162a", s:"E"},
   dea:{n:"Desfibril·lador", c:"#0a8a4a", s:"♥"}, contenidor:{n:"Contenidors", c:"#5b636c", s:"C"}
 };
-const ESTATS = {lloc:{n:"A la varada", f:"#ffffff", s:"#1c2530"}, navegant:{n:"Navegant", f:"#4ea6ff", s:"#1f6fc4"}, reparacio:{n:"En reparació", f:"#ffb547", s:"#b86a00"}};
+const ESTATS = {lloc:{n:"A la varada", c:"Varada", f:"#ffffff", s:"#1c2530"}, navegant:{n:"Navegant", f:"#4ea6ff", s:"#1f6fc4"}, reparacio:{n:"En reparació", c:"Reparació", f:"#ffb547", s:"#b86a00"}};
 const MARGIN = {l:0.40, w:0.40};   // la plaça és una mica més gran que l'embarcació
 const SHADOW = [-Math.sin(20 * D2R), -Math.cos(20 * D2R)];   // sol del migdia una mica de llevant: l'ombra va cap a 340°
 

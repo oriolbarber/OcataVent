@@ -1373,8 +1373,9 @@ body.wm-open{overflow:hidden}
 .cl-brow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
 .cl-bname{flex:1;min-width:140px;display:flex;flex-direction:column;align-items:flex-start;border:0;background:none;padding:0;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .cl-bname span{font-size:.82rem;font-weight:600;color:var(--muted)}
-.cl-bst,.cl-bstate{display:flex;gap:6px;flex-wrap:wrap}
-.cl-bst .cl-chip,.cl-bstate .cl-chip{min-height:38px;font-size:.82rem}
+.cl-bst,.cl-bstate{display:flex;gap:6px;flex-wrap:nowrap}
+.cl-bst .cl-chip,.cl-bstate .cl-chip{min-height:38px;font-size:.82rem;flex:1 1 auto;min-width:0;padding:0 4px;white-space:nowrap;letter-spacing:.01em}
+.cl-bstate span.cl-chip{flex:0 0 auto;padding:0 14px}
 .cl-bst .cl-chip[aria-pressed="true"],.cl-bstate .cl-chip[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
 .cl-binfo{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.92rem}
 .cl-binfo b{font-family:var(--f-head);letter-spacing:.06em;text-transform:uppercase;font-size:.78rem;color:var(--muted)}
