@@ -88,6 +88,7 @@ function renderFab(){
   if(!b){ if(!C) return; b = document.createElement("button"); b.type = "button"; b.id = "friendFab"; b.className = "friend-fab"; b.setAttribute("aria-label", "Afegeix amistats"); b.innerHTML = ADD_IC; document.body.appendChild(b); b.onclick = openFriends; }
   b.hidden = !show;
   const n = C ? amistats.filter(a => a.estat === "pendent" && a.a === uid()).length : 0;
+  window.OV_CFG?.badge("priv", n);
   let dot = b.querySelector(".ff-dot"); if(n){ if(!dot){ dot = document.createElement("span"); dot.className = "ff-dot"; b.appendChild(dot); } dot.textContent = n; } else if(dot) dot.remove();
   b.setAttribute("aria-label", n ? `Afegeix amistats · ${n} sol·licituds` : "Afegeix amistats");
 }

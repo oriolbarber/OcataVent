@@ -50,6 +50,8 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - En obrir una pantalla s'emet `ov-cfg` (`detail.pg`, `detail.back`): cada mòdul pinta la seva (abans es feia amb el clic de l'engranatge). `closeSheet` (club.js) emet `ov-sheet-closed`.
 - Ubicació no té pantalla: el menú obre directament el selector de clubs (`#mnLoc` → `OV_LOCS.open()`, després de treure el menú de l'historial).
 - Pantalles: `vis` · `model` (ràdios, amb l'error d'avui) · `crit` (llista per tipus) → `crit-det` (`critK` a `app.js`) · `adm` → `adm-socis`, `adm-coms`, `adm-rols`, `adm-base` · `acc` → `acc-dades`, `acc-pw` · `priv`. Les embarcacions del compte obren les fitxes de la Base (`OV_CLUB.myBoats/openBoat/newBoat`).
+- Punts vermells: `OV_CFG.badge(k, v)` — `adm` = altes pendents (admin.js), `priv` = sol·licituds d'amistat (amics.js), `acc` = sense compte o sense haver demanat l'alta (cloud.js, punt sense número). El ⋮ porta el punt si algun apartat visible en té.
+- Primera vegada (`welcome` a cloud.js, `ov2_welcome`): full «Et donem la benvinguda» amb els avantatges del compte → «Vull registrar-me» (obre ⋮ ▸ Compte a «Alta nova») o «Continua sense registre». No surt si el mòbil ja ha tingut compte ni amb un enllaç d'accés.
 - Estil: els tokens de l'app (no el prototip). Files `.cfg-grp` > `.cfg-row` (icona `.cfg-ic`, text `.cfg-rt`, fletxa `.cfg-chev`).
 
 ## Núvol (Fase 1, `cloud.js`)

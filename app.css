@@ -1542,3 +1542,5 @@ a.cfg-row:hover{background:var(--surface-2)}
 .cfg-radio:hover{background:var(--surface-2)}
 .cfg-radio input{flex:none;width:24px;height:24px;margin:0;accent-color:var(--accent)}
 #modelBox{display:flex;flex-direction:column;gap:12px}
+.cfg-badge.dot{min-width:12px;width:12px;height:12px;padding:0}
+.wl-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:1rem;line-height:1.35}

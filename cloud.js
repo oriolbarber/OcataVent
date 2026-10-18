@@ -343,7 +343,7 @@ const delBlock = () => `
 function render(){
   const body = $("accBody"); if(!body) return;
   const peek = $("peekAcc");
-  let h = "";
+  let h = "", unreg = false;   // punt vermell al menú ⋮ ▸ Compte: sense compte o sense haver demanat l'alta
   if(pendingLink){
     peek.textContent = "Entrant…";
     h = `<p class="note">Escriu el correu on has rebut l'enllaç.</p>
@@ -356,7 +356,7 @@ function render(){
     h = `<p class="note">Ara no es pot connectar. Les sortides es desen al mòbil i es pujaran quan hi hagi connexió.</p>
       <button class="btn" type="button" id="accRetry">Torna-ho a provar</button>`;
   } else if(!user){
-    peek.textContent = "Sense compte";
+    peek.textContent = "Sense compte"; unreg = true;
     const alta = accMode === "alta";
     const google = (window.OV_NATIVE ? "" : `<button class="btn acc-wide" type="button" id="accGoogle">${alta ? "Alta amb Google" : "Entra amb Google"}</button>
       <div class="acc-or">o amb correu i contrasenya</div>`)
@@ -383,6 +383,7 @@ function render(){
       <p class="vp-info" id="iUid" hidden>ID del compte: <b style="font-family:var(--f-mono);word-break:break-all">${esc(user.uid)}</b>${user.uid === OWNER_UID ? "<br>És el compte d'administració inicial." : ""}</p>`;
     peek.textContent = estatT + (member && member.estat === "aprovat" ? " · " + (member.nom || user.email || "") : "");
     if(!member){
+      unreg = true;
       h = who + `<p class="note">Has entrat, però encara no has demanat l'alta al club.</p>${consentBlock(true)}
         <button class="btn acc-wide" type="button" id="accJoin">Sol·licita l'alta</button>`;
     } else if(member.estat === "pendent"){
@@ -402,6 +403,7 @@ function render(){
     h += `<button class="btn acc-wide" type="button" id="accOut">Tanca la sessió</button>` + delBlock();
   }
   body.innerHTML = msgDiv("accMsg") + h;
+  window.OV_CFG?.badge("acc", unreg);
   const d = $("accDel"); if(d) slideConfirm(d, "Llisca per esborrar el compte", deleteAccount);
   renderSub(); fillBoats();
   if(member && !contacteAt) readContact().then(c => { const el = $("accTelPeek"); if(el) el.textContent = c && c.telefon ? "Telèfon " + c.telefon : "Telèfon no indicat"; });
@@ -518,4 +520,23 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 const isLink = !window.OV_APP_LINK && /[?&]mode=signIn\b/.test(location.search) && /[?&]oobCode=/.test(location.search);
 render();
 if(store.get("ov2_cloud") || isLink) load().catch(() => {});
+
+/* ---------- primera vegada: proposa registrar-se o continuar sense compte ---------- */
+function welcome(tries){
+  if(store.get("ov2_welcome") || store.get("ov2_cloud") || store.get("ov2_had") || isLink || user) return;
+  const busy = !window.OV_CLUB?.sheet || $("clSheet") || document.querySelector(".ride:not([hidden]), .native-handoff");
+  if(busy){ if((tries || 0) < 10) setTimeout(() => welcome((tries || 0) + 1), 1500); return; }
+  store.set("ov2_welcome", 1);
+  OV_CLUB.sheet("Et donem la benvinguda", `<p style="margin:0;font-size:1.02rem">Fes-te el compte de soci i tindràs:</p>
+    <ul class="wl-list"><li><b>Sortides al núvol:</b> no les perds i les veus des de qualsevol mòbil.</li>
+      <li><b>El Club:</b> mur, avisos, anuncis i base nàutica.</li>
+      <li><b>Seguretat a l'aigua:</b> si demanes ajuda, el club ho sap.</li></ul>
+    <p class="note">L'alta l'aprova el club. Sense registre, la previsió i la gravació de sortides funcionen igual; ho pots fer més endavant a ⋮ ▸ Compte.</p>
+    <button type="button" class="btn cl-pri cl-wide" id="wlYes">Vull registrar-me</button>
+    <button type="button" class="btn cl-wide" id="wlNo">Continua sense registre</button>`, () => {
+    $("wlYes").onclick = () => { OV_CLUB.closeSheet(); accMode = "alta"; flash = {t:"", err:false}; if(window.OV_CFG) OV_CFG.open("acc"); render(); };
+    $("wlNo").onclick = () => OV_CLUB.closeSheet();
+  });
+}
+setTimeout(welcome, 1200);
 })();

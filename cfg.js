@@ -105,8 +105,23 @@ menu.addEventListener("keydown", e => {
   e.preventDefault(); L[(i + (e.key === "ArrowDown" ? 1 : L.length - 1)) % L.length]?.focus();
 });
 
+/* ---------- punts vermells ---------- */
+// Cada mòdul diu què té pendent: adm = altes pendents (número), priv = sol·licituds d'amistat (número),
+// acc = sense registrar (true = punt). El botó ⋮ porta el punt si algun apartat visible en té.
+const badges = {}, BADGE_T = {adm:n => n + (n === 1 ? " alta pendent" : " altes pendents"), priv:n => n + (n === 1 ? " sol·licitud d'amistat" : " sol·licituds d'amistat"), acc:() => "sense registrar"};
+function badge(k, v){ badges[k] = v || 0; paintBadges(); }
+function paintBadges(){
+  const on = [];
+  menu.querySelectorAll("[data-badge]").forEach(el => { const k = el.dataset.badge, v = badges[k], p = pg(k), vis = !p || !p.hidden;
+    el.hidden = !v || !vis; el.classList.toggle("dot", v === true); el.textContent = typeof v === "number" ? v : "";
+    if(v && vis){ const t = BADGE_T[k](v); el.setAttribute("aria-label", t); on.push(t); } });
+  btn.classList.toggle("has-dot", on.length > 0);
+  btn.setAttribute("aria-label", on.length ? "Menú · " + on.join(", ") : "Menú");
+}
+new MutationObserver(paintBadges).observe(panel, {subtree:true, attributes:true, attributeFilter:["hidden"]});   // Administració o Privadesa apareixen o s'amaguen
+
 window.OV_CFG = {
-  go, back, title,
+  go, back, title, badge,
   // obrir un apartat des de fora (p. ex. «Canvia-ho» de la Base): si cal, primer el pare
   open(k, parent){ if(parent && stack[stack.length - 1] !== parent && !stack.includes(parent)) go(parent); go(k); },
   current: () => stack[stack.length - 1] || null,

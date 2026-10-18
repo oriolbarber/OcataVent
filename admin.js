@@ -56,9 +56,8 @@ async function load(force){
 }
 // Puntet vermell (engranatge de la configuració i capçalera «Administració») si hi ha altes pendents i tens el permís «altes»
 function badge(){
-  const n = has("altes") ? members.filter(m => m.estat === "pendent").length : 0, b = $("themeBtn");
-  b.classList.toggle("has-dot", n > 0); b.setAttribute("aria-label", n ? `Configuració · ${n} ${n === 1 ? "alta pendent" : "altes pendents"}` : "Configuració");
-  const m = $("mnAdmN"); if(m){ m.hidden = !n; m.textContent = n; m.setAttribute("aria-label", `${n} ${n === 1 ? "alta pendent" : "altes pendents"}`); }
+  const n = C && has("altes") ? members.filter(m => m.estat === "pendent").length : 0;
+  window.OV_CFG?.badge("adm", n);
 }
 // Escolta en directe les altes pendents del club: el puntet apareix sense haver d'obrir la configuració
 let unsub = null, watchKey = "";
