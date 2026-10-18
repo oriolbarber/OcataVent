@@ -38,7 +38,7 @@
 </header>
 <div class="cfg-scrim" id="cfgScrim" hidden></div>
 <div class="cfg-menu" id="cfgMenu" role="menu" aria-label="Configuració" hidden>
-  <button type="button" role="menuitem" class="cfg-mi" data-cfg="loc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Ubicació</button>
+  <button type="button" role="menuitem" class="cfg-mi" id="mnLoc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Ubicació</button>
   <button type="button" role="menuitem" class="cfg-mi" data-cfg="vis"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>Aspecte</button>
   <button type="button" role="menuitem" class="cfg-mi" data-cfg="model"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18z"/></svg>Model meteorològic</button>
   <button type="button" role="menuitem" class="cfg-mi" data-cfg="crit"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Llindars navegació</button>
@@ -52,18 +52,6 @@
   <div hidden><span id="peekAcc"></span><span id="peekAdm"></span><span id="peekPriv"></span><span id="peekLoc"></span><span id="peekVis"></span><span id="peekModel"></span><span id="peekCrit"></span></div>
 
   <!-- Nivell 1 -->
-  <section class="cfg-pg" data-pg="loc" data-title="Ubicació">
-    <div class="cfg-body">
-      <div class="cfg-grp"><button type="button" class="cfg-row" id="locPick"><span class="cfg-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span class="cfg-rt"><b id="locCur"></b><small id="locCurSub"></small></span><svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>
-      <p class="note">Toca-ho per triar un altre club o lloc al mapa.</p>
-      <div class="vp-more"><button class="ib-i" type="button" data-info="iLoc" aria-label="Què canvia amb la ubicació" aria-expanded="false">i</button>
-      <div class="vp-info" id="iLoc" hidden>
-        <p>Canvia la previsió, l'onatge, l'estació, la bandera de la platja i els avisos de Meteocat.</p>
-        <p>Clubs de vela de tota la costa (llista de vela.cat). Al mapa i a la llista, <b>verd</b> = club amb estació local (vent mesurat); <b>gris</b> = només previsió.</p>
-        <p>Estacions: El Masnou i Ocata, Badalona (Dalt de la Vila, lluny del mar), CN Vilassar i Port de Barcelona. Les dues últimes només es llegeixen des de l'app Android.</p>
-      </div></div>
-    </div>
-  </section>
   <section class="cfg-pg" data-pg="vis" data-title="Aspecte">
     <div class="cfg-body">
       <span class="lbl cfg-h">Tema</span>
@@ -405,8 +393,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=114"></script>
 <script src="clubs.js?v=1"></script>
-<script src="app.js?v=127"></script>
-<script src="cfg.js?v=2"></script>
+<script src="app.js?v=128"></script>
+<script src="cfg.js?v=3"></script>
 <script src="trip.js?v=123"></script>
 <script src="maps.js?v=105"></script>
 <script src="llocs.js?v=7"></script>

@@ -48,7 +48,8 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Cada apartat és una `.cfg-pg[data-pg]` dins de `#viewPanel` (fixa, a tota la pantalla). Entra de dreta a esquerra (`.on`), la de sota es desplaça (`.under`) i en tornar surt cap a la dreta. Barra: fletxa enrere a l'esquerra i títol al centre (`data-title`, la crea `cfg.js`; `OV_CFG.title(pg, t)` la canvia).
 - Navegació: qualsevol botó amb `data-cfg="pàgina"` o `data-back`. Cada pantalla afegeix `{cfg: profunditat}` a `history`: el botó enrere d'Android i la fletxa fan el mateix; si hi ha un full (`#clSheet`) obert, el primer enrere el tanca. Esc també torna. API: `OV_CFG.go / back / open(pg, pare) / current() / isOpen(pg)`.
 - En obrir una pantalla s'emet `ov-cfg` (`detail.pg`, `detail.back`): cada mòdul pinta la seva (abans es feia amb el clic de l'engranatge). `closeSheet` (club.js) emet `ov-sheet-closed`.
-- Pantalles: `loc` · `vis` · `model` (ràdios, amb l'error d'avui) · `crit` (llista per tipus) → `crit-det` (`critK` a `app.js`) · `adm` → `adm-socis`, `adm-coms`, `adm-rols`, `adm-base` · `acc` → `acc-dades`, `acc-pw` · `priv`. Les embarcacions del compte obren les fitxes de la Base (`OV_CLUB.myBoats/openBoat/newBoat`).
+- Ubicació no té pantalla: el menú obre directament el selector de clubs (`#mnLoc` → `OV_LOCS.open()`, després de treure el menú de l'historial).
+- Pantalles: `vis` · `model` (ràdios, amb l'error d'avui) · `crit` (llista per tipus) → `crit-det` (`critK` a `app.js`) · `adm` → `adm-socis`, `adm-coms`, `adm-rols`, `adm-base` · `acc` → `acc-dades`, `acc-pw` · `priv`. Les embarcacions del compte obren les fitxes de la Base (`OV_CLUB.myBoats/openBoat/newBoat`).
 - Estil: els tokens de l'app (no el prototip). Files `.cfg-grp` > `.cfg-row` (icona `.cfg-ic`, text `.cfg-rt`, fletxa `.cfg-chev`).
 
 ## Núvol (Fase 1, `cloud.js`)
@@ -156,7 +157,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - La V3 serà oberta a qualsevol club de Catalunya i les Balears.
 - No hi haurà menors d'edat com a usuaris.
 - Text de consentiment RGPD i botó per esborrar el compte.
-- Avisos de Meteocat (Previsió): es pleguen en una línia tocant-los (`ov_smp_fold`, en aquest mòbil).
+- Avisos de Meteocat (Previsió): una fila per fenomen amb tots els dies que l'afecten («demà i 20/10»; `renderInfo` agrupa, `INFO.alerts` continua per dia per a «Nova sortida»); es pleguen en una línia tocant-los (`ov_smp_fold`, en aquest mòbil).
 - Avís legal: no substitueix el VHF canal 16 ni el 112.
 
 ## Pendent de la junta

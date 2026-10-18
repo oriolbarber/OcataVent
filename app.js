@@ -831,11 +831,17 @@ const PERILL = p => p >= 5 ? {k:"no", t:"perill molt alt"} : p >= 3 ? {k:"no", t
 function renderInfo(){
   const el = $("info"); if(!el) return;
   const parts = [], today = ymd(new Date()), tomorrow = ymd(new Date(Date.now() + 864e5));
-  INFO.alerts.forEach(a => { const pv = PERILL(a.perill), when = a.day === today ? "avui" : a.day === tomorrow ? "demà" : a.day.slice(6)+"/"+a.day.slice(4,6);
-    const hrs = a.periods.length === 4 ? "tot el dia" : a.periods.map(p => p.replace("-", "–")+" h").join(", ");
-    const key = [a.day, a.tipus, a.meteor].join("|"), fold = smpFold().includes(key);
+  // Un avís per fenomen: els dies que l'afecten van junts a la mateixa fila (abans, una fila per fenomen i dia)
+  const dayT = d => d === today ? "avui" : d === tomorrow ? "demà" : d.slice(6).replace(/^0/, "") + "/" + d.slice(4, 6);
+  const groups = new Map();
+  INFO.alerts.forEach(a => { const g = groups.get(a.meteor) || {meteor:a.meteor, tipus:a.tipus, llindar:a.llindar, perill:0, zones:new Set(), days:[]};
+    g.perill = Math.max(g.perill, a.perill); if(a.tipus === "Avís") g.tipus = "Avís"; a.zones.forEach(z => g.zones.add(z)); g.days.push(a); groups.set(a.meteor, g); });
+  [...groups.values()].sort((x, y) => x.days[0].day.localeCompare(y.days[0].day) || y.perill - x.perill).forEach(g => { const pv = PERILL(g.perill);
+    const when = g.days.map(a => dayT(a.day)).join(" i ");
+    const det = g.days.map(a => dayT(a.day) + " " + (a.periods.length === 4 ? "tot el dia" : a.periods.map(p => p.replace("-", "–") + " h").join(", "))).join(" · ");
+    const key = [g.days[0].day, g.tipus, g.meteor].join("|"), fold = smpFold().includes(key);
     parts.push(`<button type="button" class="info-row k-${pv.k}${fold ? " fold" : ""}" data-smp="${esc(key)}" aria-expanded="${!fold}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>
-      <span class="info-t"><b>${esc(a.tipus)} Meteocat · ${esc(a.meteor)}${fold ? " · " + when : ""}</b><span class="info-d"><br>${esc(a.llindar || "")} · ${when} ${esc(hrs)} · ${pv.t}${a.zones.includes("mar") ? " · zona de mar " + (/^[AEIOU]/.test(LOC.com) ? "de l'" : "del ") + LOC.com : " · " + LOC.com}</span></span>
+      <span class="info-t"><b>${esc(g.tipus)} Meteocat · ${esc(g.meteor)}${fold ? " · " + when : ""}</b><span class="info-d"><br>${esc(g.llindar || "")} · ${esc(det)} · ${pv.t}${g.zones.has("mar") ? " · zona de mar " + (/^[AEIOU]/.test(LOC.com) ? "de l'" : "del ") + LOC.com : " · " + LOC.com}</span></span>
       <svg class="info-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fold ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"}"/></svg></button>`); });
   el.innerHTML = parts.join("");   // només hi surten avisos actius
   renderFlag(); if(window.renderPrep) renderPrep();
@@ -1194,6 +1200,3 @@ if("serviceWorker" in navigator && location.protocol === "https:") navigator.ser
 // El selector (mapa + cerca) és a llocs.js. Canviar de lloc recarrega l'app: així totes les dades són del club triat.
 function setLoc(k){ if(!LOCS[k] || k === locKey) return; store.set("ov2_loc", k); store.set("ov2_station_v3", LOCS[k].st); location.reload(); }
 $("peekLoc").textContent = LOC.name;
-(() => { const st = (LOC.stations || []).map(s => STATIONS[s]?.name).filter(Boolean);   // ⋮ ▸ Ubicació
-  $("locCur").textContent = LOC.name;
-  $("locCurSub").textContent = [LOC.muni, st.length ? "Estació " + st.join(" + ") : "Només previsió"].filter(Boolean).join(" · "); })();

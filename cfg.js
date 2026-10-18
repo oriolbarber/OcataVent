@@ -39,6 +39,13 @@ function closeMenu(viaHistory){
   if(!viaHistory && history.state && history.state.cfgMenu) history.back();
 }
 btn.addEventListener("click", () => { if(menuOpen()) closeMenu(); else openMenu(); });
+// Ubicació: va directament al selector de clubs (mapa), sense pantalla intermèdia.
+// Primer es treu el menú de l'historial i, quan ja s'ha tret, s'obre el selector (que hi afegeix la seva entrada).
+$("mnLoc")?.addEventListener("click", () => {
+  const open = () => window.OV_LOCS && OV_LOCS.open();
+  if(history.state && history.state.cfgMenu){ addEventListener("popstate", () => setTimeout(open, 0), {once:true}); closeMenu(); }
+  else { closeMenu(true); open(); }
+});
 scrim.addEventListener("click", () => closeMenu());
 
 /* ---------- pantalles ---------- */
