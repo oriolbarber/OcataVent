@@ -85,7 +85,7 @@ function rolesTxt(m){
 }
 const CHEV = `<svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>`;
 const SHIELD = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6z"/></svg>`;
-const goRow = (pg, t, sub, extra) => `<button type="button" class="cfg-row" data-go="${pg}"><span class="cfg-rt"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span>${extra || ""}${CHEV}</button>`;
+const goRow = (pg, t, sub, extra) => `<button type="button" class="cfg-row" data-cfg="${pg}"><span class="cfg-rt"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span>${extra || ""}${CHEV}</button>`;
 const canBase = () => has("embarcacions") || has("planol") || !!(C && (C.member.comissions || []).some(k => k === "manteniment" || k === "junta"));
 // ⋮ ▸ Administració Club: una pantalla amb els apartats i una subpantalla per a cadascun
 function render(){
@@ -185,7 +185,7 @@ async function update(id, patch, close){
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("#admBody button, #admSocisBody button, #admComsBody button, #admBaseBody button"); if(!t || !C || t.classList.contains("ib-i") || t.hasAttribute("data-go")) return;
+  const t = e.target.closest && e.target.closest("#admBody button, #admSocisBody button, #admComsBody button, #admBaseBody button"); if(!t || !C || t.classList.contains("ib-i") || t.hasAttribute("data-cfg")) return;
   if(t.dataset.admboat){ window.OV_CLUB?.openBoat(t.dataset.admboat); return; }
   if(t.dataset.adm) openMember(t.dataset.adm);
   else if(t.dataset.admset) update(t.dataset.uid, {estat:t.dataset.admset, revisatPer:C.user.uid, revisatAt:C.F.serverTimestamp()}, true);

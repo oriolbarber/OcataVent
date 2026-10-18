@@ -1029,7 +1029,7 @@ let critK = act;
 const critSum = k => { const c = crit[k]; return `Ideal ${c.iMin}–${c.iMax} kn · ratxa fins a ${c.gust} kn · onada fins a ${r1(c.wMax)} m`; };
 function renderCritList(){
   const L = $("critList"); if(!L) return;
-  L.innerHTML = Object.keys(DEFAULTS).map(k => `<button type="button" class="cfg-row" data-crit="${k}" data-go="crit-det"><span class="cfg-ic">${boatIcon(k, 24)}</span><span class="cfg-rt"><b>${esc(DEFAULTS[k].name)}${k === act ? ` <small class="note">· la que tens triada</small>` : ""}</b><small>${esc(critSum(k))}</small></span><svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`).join("");
+  L.innerHTML = Object.keys(DEFAULTS).map(k => `<button type="button" class="cfg-row" data-crit="${k}" data-cfg="crit-det"><span class="cfg-ic">${boatIcon(k, 24)}</span><span class="cfg-rt"><b>${esc(DEFAULTS[k].name)}${k === act ? ` <small class="note">· la que tens triada</small>` : ""}</b><small>${esc(critSum(k))}</small></span><svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`).join("");
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-crit]"); if(!b || !DEFAULTS[b.dataset.crit]) return; critK = b.dataset.crit; renderCrit(); });
 function renderCrit(){

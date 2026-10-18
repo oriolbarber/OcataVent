@@ -393,12 +393,12 @@ function render(){
       h = who + `<p class="note">Les sortides es desen al núvol, privades: només les veus tu.</p>`;
     }
     if(member) h += `<span class="lbl cfg-h">Dades personals</span>
-      <div class="cfg-grp"><button type="button" class="cfg-row" data-go="acc-dades"><span class="cfg-ic">${IC_USER}</span><span class="cfg-rt"><b>Nom, correu i telèfon</b><small id="accTelPeek">${esc(contacte && contacte.telefon ? "Telèfon " + contacte.telefon : "Telèfon no indicat")}</small></span>${CHEV}</button></div>`;
+      <div class="cfg-grp"><button type="button" class="cfg-row" data-cfg="acc-dades"><span class="cfg-ic">${IC_USER}</span><span class="cfg-rt"><b>Nom, correu i telèfon</b><small id="accTelPeek">${esc(contacte && contacte.telefon ? "Telèfon " + contacte.telefon : "Telèfon no indicat")}</small></span>${CHEV}</button></div>`;
     if(approved()) h += `<span class="lbl cfg-h">Les meves embarcacions</span>
       <div class="cfg-grp" id="accBoats"><p class="note" style="padding:14px">Carregant…</p></div>
       <p class="note">Les dades que hi posis (tipus, nom, vela, plaça) les valida Manteniment. L'estat (a la varada, navegant, en reparació) es canvia a Club ▸ Base.</p>`;
     const hasPw = (user.providerData || []).some(p => p.providerId === "password");
-    if(!hasPw && user.email) h += `<div class="cfg-grp"><button type="button" class="cfg-row" data-go="acc-pw"><span class="cfg-ic">${IC_KEY}</span><span class="cfg-rt"><b>Contrasenya per a l'app</b><small>Per entrar a l'app d'Android</small></span>${CHEV}</button></div>`;
+    if(!hasPw && user.email) h += `<div class="cfg-grp"><button type="button" class="cfg-row" data-cfg="acc-pw"><span class="cfg-ic">${IC_KEY}</span><span class="cfg-rt"><b>Contrasenya per a l'app</b><small>Per entrar a l'app d'Android</small></span>${CHEV}</button></div>`;
     h += `<button class="btn acc-wide" type="button" id="accOut">Tanca la sessió</button>` + delBlock();
   }
   body.innerHTML = msgDiv("accMsg") + h;
@@ -456,7 +456,7 @@ async function refresh(){   // en obrir la configuració: comprova si ja t'han a
 
 document.addEventListener("input", e => { if(e.target.id === "accDTel") e.target.dataset.touched = "1"; });
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("#accBody button, #accDadesBody button, #accPwBody button"); if(!t || t.classList.contains("ib-i") || t.hasAttribute("data-go")) return;
+  const t = e.target.closest && e.target.closest("#accBody button, #accDadesBody button, #accPwBody button"); if(!t || t.classList.contains("ib-i") || t.hasAttribute("data-cfg")) return;
   if(t.dataset.accboat){ window.OV_CLUB?.openBoat(t.dataset.accboat); return; }
   if(t.id === "accBoatNew"){ window.OV_CLUB?.newBoat(); return; }
   if(t.disabled) return; t.disabled = true; setTimeout(() => { t.disabled = false; }, 1500);

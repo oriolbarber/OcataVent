@@ -3,7 +3,7 @@
    El botó ⋮ de la capçalera obre un menú (estil WhatsApp) amb els apartats.
    Cada apartat és una pantalla (.cfg-pg) que entra de dreta a esquerra; la fletxa enrere (o el botó enrere
    d'Android) la fa sortir cap a la dreta. Les subpantalles s'apilen igual.
-   Navegació: data-go="pàgina" en qualsevol botó; data-back per tornar. Quan s'obre una pantalla s'emet
+   Navegació: data-cfg="pàgina" en qualsevol botó; data-back per tornar. Quan s'obre una pantalla s'emet
    l'esdeveniment «ov-cfg» (detail.pg) perquè cada mòdul la pinti.
    Historial: cada pantalla afegeix {cfg: profunditat} a history; popstate torna a aquella profunditat. */
 (() => {
@@ -13,6 +13,7 @@ const BACK = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke
 const DUR = 300;
 const pg = k => panel.querySelector(`.cfg-pg[data-pg="${k}"]`);
 const stack = [];
+let savedY = 0;
 
 // barra superior de cada pantalla: fletxa enrere · títol al centre
 panel.querySelectorAll(".cfg-pg").forEach(p => {
@@ -43,7 +44,7 @@ scrim.addEventListener("click", () => closeMenu());
 /* ---------- pantalles ---------- */
 function show(k){
   const p = pg(k); if(!p || p.hidden) return false;
-  if(!stack.length){ panel.hidden = false; document.body.classList.add("cfg-open"); }
+  if(!stack.length){ panel.hidden = false; savedY = scrollY; }   // la pàgina de sota no es toca: en tancar, es torna a on eres
   const prev = stack.length ? pg(stack[stack.length - 1]) : null;
   stack.push(k);
   const body = p.querySelector(".cfg-body"); if(body) body.scrollTop = 0;
@@ -68,7 +69,7 @@ function pop(){
   const p = pg(k); p.classList.remove("on", "under");
   const top = stack.length ? pg(stack[stack.length - 1]) : null;
   if(top){ top.classList.remove("under"); top.classList.add("on"); window.dispatchEvent(new CustomEvent("ov-cfg", {detail:{pg:stack[stack.length - 1], back:true}})); }
-  else setTimeout(() => { if(!stack.length){ panel.hidden = true; document.body.classList.remove("cfg-open"); btn.focus({preventScroll:true}); } }, DUR);
+  else setTimeout(() => { if(!stack.length){ panel.hidden = true; if(Math.abs(scrollY - savedY) > 2) scrollTo(0, savedY); btn.focus({preventScroll:true}); } }, DUR);
 }
 // la fletxa: fa servir l'historial (així el botó enrere d'Android i la fletxa fan el mateix)
 function back(){ if(history.state && history.state.cfg === stack.length) history.back(); else pop(); }
@@ -81,10 +82,10 @@ addEventListener("popstate", e => {
 });
 
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("[data-go],[data-back]"); if(!t) return;
+  const t = e.target.closest && e.target.closest("[data-cfg],[data-back]"); if(!t) return;
   if(!t.closest("#viewPanel") && !t.closest("#cfgMenu")) return;
   e.preventDefault();
-  if(t.hasAttribute("data-back")) back(); else go(t.dataset.go);
+  if(t.hasAttribute("data-back")) back(); else go(t.dataset.cfg);
 });
 document.addEventListener("keydown", e => {
   if(e.key !== "Escape" || $("clSheet")) return;

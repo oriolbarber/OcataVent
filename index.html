@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=161">
+<link rel="stylesheet" href="app.css?v=162">
 </head>
 <body>
 <div class="app">
@@ -38,15 +38,15 @@
 </header>
 <div class="cfg-scrim" id="cfgScrim" hidden></div>
 <div class="cfg-menu" id="cfgMenu" role="menu" aria-label="Configuració" hidden>
-  <button type="button" role="menuitem" class="cfg-mi" data-go="loc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Ubicació</button>
-  <button type="button" role="menuitem" class="cfg-mi" data-go="vis"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>Aspecte</button>
-  <button type="button" role="menuitem" class="cfg-mi" data-go="model"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18z"/></svg>Model meteorològic</button>
-  <button type="button" role="menuitem" class="cfg-mi" data-go="crit"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Llindars navegació</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="loc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Ubicació</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="vis"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>Aspecte</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="model"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18z"/></svg>Model meteorològic</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="crit"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Llindars navegació</button>
   <div class="cfg-msep" data-for="adm" role="separator"></div>
-  <button type="button" role="menuitem" class="cfg-mi" data-go="adm" data-for="adm"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6z"/></svg>Administració Club<span class="cfg-badge" id="mnAdmN" hidden></span></button>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="adm" data-for="adm"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6z"/></svg>Administració Club<span class="cfg-badge" id="mnAdmN" hidden></span></button>
   <div class="cfg-msep" role="separator"></div>
-  <button type="button" role="menuitem" class="cfg-mi" data-go="acc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Compte</button>
-  <button type="button" role="menuitem" class="cfg-mi" data-go="priv" data-for="priv"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privadesa</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="acc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Compte</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="priv" data-for="priv"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privadesa</button>
 </div>
 <div class="cfg" id="viewPanel" hidden>
   <div hidden><span id="peekAcc"></span><span id="peekAdm"></span><span id="peekPriv"></span><span id="peekLoc"></span><span id="peekVis"></span><span id="peekModel"></span><span id="peekCrit"></span></div>
@@ -405,19 +405,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=114"></script>
 <script src="clubs.js?v=1"></script>
-<script src="app.js?v=126"></script>
-<script src="cfg.js?v=1"></script>
+<script src="app.js?v=127"></script>
+<script src="cfg.js?v=2"></script>
 <script src="trip.js?v=123"></script>
 <script src="maps.js?v=105"></script>
 <script src="llocs.js?v=7"></script>
 <script src="fx.js?v=1"></script>
 <script src="windmap.js?v=110"></script>
 <script src="prep.js?v=103"></script>
-<script src="cloud.js?v=121"></script>
+<script src="cloud.js?v=122"></script>
 <script src="amics.js?v=114"></script>
 <script src="planol-core.js?v=5"></script>
 <script src="club.js?v=140"></script>
-<script src="admin.js?v=112"></script>
+<script src="admin.js?v=113"></script>
 <script src="avisos.js?v=208"></script>
 <script src="sos.js?v=2"></script>
 </body>
