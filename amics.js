@@ -1,6 +1,6 @@
 "use strict";
 /* ============ Ocata Vent 2 · Confidencialitat i amics ============
-   Configuració ▸ Confidencialitat: qui veu cada cosa (tothom, el club, amics o ningú).
+   ⋮ ▸ Privadesa: qui veu cada cosa (tothom, el club, amics o ningú).
    Avisos de seguretat: a més, «+ gent a la base nàutica» (els socis que en aquell moment hi són).
    Amics mutus: botó d'afegir amic a la part inferior dreta del Club.
    Les preferències es desen a members/{uid}.privacitat; els amics, a amistats/{uidMenor}_{uidMajor}.
@@ -21,6 +21,7 @@ const ITEMS = [
   {k:"anuncis", t:"Anuncis", d:"club", ningu:false, nota:"Valor per defecte quan publiques un anunci."}
 ];
 const ADD_IC = '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="10" cy="7.5" r="4"/><path d="M2.5 20c0-4.1 3.4-7 7.5-7 1.6 0 3.1.4 4.3 1.2a6 6 0 0 0-1.3 5.8z"/><circle cx="18" cy="17" r="5" fill="currentColor"/><path d="M18 14.5v5M15.5 17h5" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>';
+const PEOPLE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.8"/><path d="M16.5 14.6c2.6.2 4.4 2 5 5.4"/></svg>';
 const XI = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
 let C = null, amistats = [], perfils = [], cerca = "", loading = null, loadedAt = 0;
@@ -67,12 +68,15 @@ function render(){
   const sec = $("privSec"), body = $("privBody"); if(!sec || !body) return;
   sec.hidden = !C; if(!C) return;
   $("peekPriv").textContent = "Mur: " + NIV[pref("mur")].toLowerCase() + " · on ets: " + NIV[pref("presencia")].toLowerCase();
+  const nAcc = amistats.filter(a => a.estat === "acceptada").length, nReb = amistats.filter(a => a.estat === "pendent" && a.a === uid()).length;
   body.innerHTML = `<div class="msg err" id="privMsg" hidden></div>
-    <p class="note" style="margin:0">Tria qui veu cada cosa. Els avisos de les comissions (Junta inclosa) els veu sempre tot el club. Les amistats s'afegeixen des del botó <b>Afegeix amistats</b> del Club.</p>
-    ${ITEMS.map(it => { const v = pref(it.k); return `<label class="priv-row" for="pv_${it.k}"><span class="priv-t"><b>${esc(it.t)}</b><small class="note">${esc(it.nota)}</small></span>
+    <div class="cfg-grp"><button type="button" class="cfg-row" id="privFriends"><span class="cfg-ic">${PEOPLE}</span><span class="cfg-rt"><b>Amistats</b><small>${loadedAt ? (nAcc === 1 ? "1 amistat" : nAcc + " amistats") + (nReb ? " · " + nReb + (nReb === 1 ? " sol·licitud" : " sol·licituds") : "") : "Afegeix-ne i accepta sol·licituds"}</small></span>${nReb ? `<span class="cfg-badge">${nReb}</span>` : ""}<svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>
+    <span class="lbl cfg-h">Qui veu cada cosa</span>
+    <p class="note">Els avisos de les comissions (Junta inclosa) els veu sempre tot el club.</p>
+    <div class="cfg-grp">${ITEMS.map(it => { const v = pref(it.k); return `<label class="priv-row" for="pv_${it.k}"><span class="priv-t"><b>${esc(it.t)}</b><small class="note">${esc(it.nota)}</small></span>
       <select class="field" id="pv_${it.k}" data-priv="${it.k}">${Object.keys(NIV).filter(k => it.ningu || k !== "ningu").map(k => `<option value="${k}"${k === v ? " selected" : ""}>${NIV[k]}</option>`).join("")}</select></label>
       ${it.k === "presencia" ? `<label class="cl-sw priv-base"><span><b>Marca'm a la base automàticament</b><small class="note">Després de 10 minuts a menys de 50 m de la base, et marca a la base; després de 2 minuts a més de 200 m, et treu. Només funciona amb l'app oberta i gasta poca bateria: llegeix el GPS més sovint com més a prop ets.</small></span><input type="checkbox" class="switch" id="pvAuto"${autoBase() ? " checked" : ""}${pref("presencia") === "ningu" ? " disabled" : ""}></label>` : ""}
-      ${it.k === "avisos" ? `<label class="cl-sw priv-base"><span><b>+ Gent a la base nàutica</b><small class="note">Qui sigui a la base en aquell moment també veu els teus avisos, encara que no sigui del grup triat.</small></span><input type="checkbox" class="switch" id="pvBase"${avisosBase() ? " checked" : ""}></label>` : ""}`; }).join("")}
+      ${it.k === "avisos" ? `<label class="cl-sw priv-base"><span><b>+ Gent a la base nàutica</b><small class="note">Qui sigui a la base en aquell moment també veu els teus avisos, encara que no sigui del grup triat.</small></span><input type="checkbox" class="switch" id="pvBase"${avisosBase() ? " checked" : ""}></label>` : ""}`; }).join("")}</div>
     <div class="vp-more"><button class="ib-i" type="button" data-info="iPriv" aria-label="Què vol dir cada opció" aria-expanded="false">i</button>
       <div class="vp-info" id="iPriv" hidden>${Object.keys(NIV).map(k => `<p><b>${NIV[k]}:</b> ${esc(NIV_LLARG[k])}</p>`).join("")}<p><b>Gent a la base:</b> qui ha marcat «Soc a la base» o hi ha tornat amb el GPS. Els avisos de seguretat només s'envien si qui navega prem «Avisa el club» (l'app li ho proposa) i els pot anul·lar. Els poden marcar com a resolts la Junta, qui té el permís «Seguretat» i qui és a la base.</p><p>Quan acceptes o treus una amistat, l'app actualitza qui veu el que ja havies compartit amb «Amistats».</p></div></div>`;
 }
@@ -101,7 +105,7 @@ function friendsBody(){
     <span class="lbl">Amistats · ${acc.length}</span>
     ${acc.map(a => row(nomDe(a), `<button class="btn sm" type="button" data-fask="${esc(a.id)}">Treu</button>`) + `<div data-fbox="${esc(a.id)}"></div>`).join("") || `<p class="note">Encara no tens cap amistat a l'app.</p>`}
     ${enviades.length ? `<span class="lbl">Enviades, pendents</span>` + enviades.map(a => row(nomDe(a), `<button class="btn sm" type="button" data-fno="${esc(a.id)}">Cancel·la</button>`)).join("") : ""}
-    <p class="note">L'altra persona ha d'acceptar la sol·licitud. Qui veu cada cosa es tria a Configuració ▸ Confidencialitat.</p>`;
+    <p class="note">L'altra persona ha d'acceptar la sol·licitud. Qui veu cada cosa es tria a ⋮ ▸ Privadesa.</p>`;
 }
 function openFriends(){
   if(!C || !window.OV_CLUB?.sheet) return;
@@ -143,7 +147,9 @@ document.addEventListener("click", e => {
   else if(d.fno) remove(d.fno);
   else if(d.fask){ const box = document.querySelector(`[data-fbox="${CSS.escape(d.fask)}"]`); if(box) slideConfirm(box, "Llisca per treure l'amic", () => remove(d.fask)); }
 });
-$("themeBtn").addEventListener("click", () => { if(!$("viewPanel").hidden && C){ render(); load(); } });
+window.addEventListener("ov-cfg", e => { if(e.detail && e.detail.pg === "priv" && C){ render(); load(); } });
+document.addEventListener("click", e => { if(e.target.closest && e.target.closest("#privFriends")) openFriends(); });
+window.addEventListener("ov-sheet-closed", () => { if(C && window.OV_CFG?.isOpen("priv")) render(); });
 window.addEventListener("ov-cloud", async () => { await ctx(); render(); if(C) load(true); });
 setInterval(() => { if(C && document.visibilityState === "visible" && !$("view-club").hidden) load(); }, 120000);   // sol·licituds noves
 
@@ -151,7 +157,7 @@ window.OV_PRIV = {
   NIV, ITEMS, pref, lectors, amicsUids, avisosBase, autoBase, openFriends,
   async ready(){ if(C && !loadedAt) await load(true); },
   options(k){ const it = ITEMS.find(x => x.k === k); return Object.keys(NIV).filter(v => it.ningu || v !== "ningu"); },
-  open(){ const p = $("viewPanel"); if(!p) return; p.hidden = false; $("themeBtn").setAttribute("aria-expanded", "true"); const s = $("privSec"); if(s){ s.open = true; render(); setTimeout(() => s.scrollIntoView({behavior:"smooth", block:"start"}), 50); } },
+  open(){ render(); if(window.OV_CFG) OV_CFG.open("priv"); },
   async purge(){   // en esborrar el compte
     await ctx(); if(!C) return;
     for(const a of await getAll("amistats", C.F.where("uids", "array-contains", uid()))) await C.F.deleteDoc(ref("amistats", a.id)).catch(() => {});

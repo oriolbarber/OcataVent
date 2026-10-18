@@ -88,7 +88,7 @@ async function send(k){
 function askHelp(){   // botó «Ajuda» de la pantalla de navegació
   if(!LIVE) return;
   if(sent.ajuda){ window.OV_SOS?.open(); return; }
-  active.ajuda = {val:0, title:"Demanes ajuda al club?", text:"S'enviarà un avís amb la teva posició a qui tens triat a Confidencialitat. Quan algú hi vagi, t'arribarà un missatge i el veuràs al mapa. Si és greu: VHF canal 16 o 112."};
+  active.ajuda = {val:0, title:"Demanes ajuda al club?", text:"S'enviarà un avís amb la teva posició a qui tens triat a ⋮ ▸ Privadesa. Quan algú hi vagi, t'arribarà un missatge i el veuràs al mapa. Si és greu: VHF canal 16 o 112."};
   delete snooze.ajuda; render();
 }
 function cancel(k){ if(lastLive) window.OV_CLUB?.clearAlert(k, lastLive); delete sent[k]; helpersTxt = ""; if(k === "ajuda") delete active.ajuda; snooze[k] = Date.now() + SNOOZE; render(); }

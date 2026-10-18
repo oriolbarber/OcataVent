@@ -17,7 +17,7 @@ L'app d'Android ja existeix (Capacitor 8, paquet `cat.ocatavent.app`, target SDK
 | 5 | ~~Ubicació en segon pla al manifest fusionat~~ | **Comprovat:** el connector `background-geolocation` 1.2.26 no hi afegeix `ACCESS_BACKGROUND_LOCATION` | Fet |
 | 6 | Canviar el nom del `manifest.webmanifest`: «Ocata Vent 2 (proves)» → «Ocata Vent» | És el nom que surt a l'iPhone i a Chrome quan s'instal·la com a web | Mitjana |
 | 7 | Afegir dues pàgines al repositori (GitHub Pages): `privacitat.html` i `esborrar-compte.html` (esborranys a `docs/legal/`) | El Play Store exigeix un URL públic per a la política de privacitat i un altre per demanar l'esborrat del compte sense l'app | Imprescindible |
-| 8 | Afegir a Configuració ▸ Compte un enllaç a la política de privacitat (dins l'app, sense obrir navegador extern) | El Play Store demana que la política sigui accessible també des de l'app | Alta |
+| 8 | Afegir a ⋮ ▸ Compte un enllaç a la política de privacitat (dins l'app, sense obrir navegador extern) | El Play Store demana que la política sigui accessible també des de l'app | Alta |
 | 9 | Afegir un botó **«Denuncia»** a les publicacions, anuncis i perfils, que avisi qui té el permís de moderar | El Play el demana a les apps amb contingut generat per usuaris | Alta |
 
 ## 2. Decisions pendents (de la junta i de l'Oriol)

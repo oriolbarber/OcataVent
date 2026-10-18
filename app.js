@@ -989,10 +989,12 @@ function renderHoursDay(){
 }
 function renderModelBox(errs, bestE){
   $("peekModel").textContent = modelPref === "best" ? "El que més encerta · " + MODELS[model].label : MODELS[modelPref].label;
-  const opt = (v, t) => `<option value="${v}"${modelPref === v ? " selected" : ""}>${t}</option>`;
-  $("modelBox").innerHTML = `<label class="model-pick"><span class="sr">Model</span>
-      <select id="modelSel">${opt("best", "El que més encerta avui" + (modelPref === "best" ? ` (${MODELS[model].label})` : ""))}${opt("opt","Optimista (el model més favorable)")}${opt("pes","Pessimista (el model més desfavorable)")}${opt("arome","AROME")}${opt("icon","ICON")}${opt("ecmwf","ECMWF")}${opt("ukmo","UKMO")}${opt("auto","Open-Meteo (barreja de models)")}</select></label>
-    ${errs.length ? `<div class="model-err-row"><span class="lbl">Error d'avui vs. estació ${esc(STATIONS[stKey]?.name || "")}</span>${[...errs].sort((x, y) => x.mae - y.mae).map(e => `<span class="${e.mae === bestE ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>` : `<p class="note">Encara no hi ha prou hores mesurades avui per comparar els models.</p>`}
+  // ⋮ ▸ Model meteorològic: una fila per opció (botó de ràdio), amb l'error d'avui de cada model
+  const errOf = k => { const e = errs.find(x => x.k === k); return e ? `error d'avui ${r1(e.mae)} kn${e.mae === bestE ? " (el millor)" : ""}` : ""; };
+  const OPTS = [["best", "El que més encerta avui", MODELS[model] ? "Ara: " + MODELS[model].label : ""], ["opt", "Optimista", "El model més favorable a cada hora"], ["pes", "Pessimista", "El més desfavorable a cada hora"],
+    ["arome", "AROME", "Météo-France · ≈1,3 km · 2–4 dies"], ["icon", "ICON", "Servei alemany DWD · ≈7 km · 5 dies"], ["ecmwf", "ECMWF", "Centre europeu · 9 km"], ["ukmo", "UKMO", "Met Office · 10 km"], ["auto", "Open-Meteo", "Barreja dels models que funcionen millor"]];
+  $("modelBox").innerHTML = `<div class="cfg-grp" role="radiogroup" aria-label="Model meteorològic">${OPTS.map(([v, t, d]) => `<label class="cfg-row cfg-radio"><input type="radio" name="modelPick" value="${v}"${modelPref === v ? " checked" : ""}><span class="cfg-rt"><b>${esc(t)}</b><small>${esc([d, MODELS[v] ? errOf(v) : ""].filter(Boolean).join(" · "))}</small></span></label>`).join("")}</div>
+    ${errs.length ? "" : `<p class="note">Encara no hi ha prou hores mesurades avui per comparar els models amb l'estació ${esc(STATIONS[stKey]?.name || "")}.</p>`}
     ${(() => { const h = encertsResum(30); if(!h.length) return `<p class="note">L'historial d'encerts dels models es va omplint cada dia.</p>`;
       const byT = Object.keys(TIPUS_VENT).map(t => [t, encertsResum(90, t)[0]]).filter(([, x]) => x && x.dies >= 3);
       return `<div class="model-err-row"><span class="lbl">Últims 30 dies · ${h[0].dies} ${h[0].dies === 1 ? "dia" : "dies"} comparats</span>${h.map((e, i) => `<span class="${i === 0 ? "best" : ""}${e.k === model ? " cur" : ""}">${esc(MODELS[e.k].label)} <b>${r1(e.mae)} kn</b></span>`).join("")}</div>`
@@ -1022,10 +1024,19 @@ function renderWeek(){
   applySel();
   $("peekWeek").textContent = good ? good+" franges bones o ideals" : "Cap franja bona";
 }
+// Llindars navegació: llista dels tipus d'embarcació (Configuració) i detall del tipus triat (critK)
+let critK = act;
+const critSum = k => { const c = crit[k]; return `Ideal ${c.iMin}–${c.iMax} kn · ratxa fins a ${c.gust} kn · onada fins a ${r1(c.wMax)} m`; };
+function renderCritList(){
+  const L = $("critList"); if(!L) return;
+  L.innerHTML = Object.keys(DEFAULTS).map(k => `<button type="button" class="cfg-row" data-crit="${k}" data-go="crit-det"><span class="cfg-ic">${boatIcon(k, 24)}</span><span class="cfg-rt"><b>${esc(DEFAULTS[k].name)}${k === act ? ` <small class="note">· la que tens triada</small>` : ""}</b><small>${esc(critSum(k))}</small></span><svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`).join("");
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-crit]"); if(!b || !DEFAULTS[b.dataset.crit]) return; critK = b.dataset.crit; renderCrit(); });
 function renderCrit(){
-  const c = crit[act];
-  $("critBoat").textContent = DEFAULTS[act].name;
-  $("peekCrit").textContent = `${DEFAULTS[act].short} · ideal ${c.iMin}–${c.iMax} kn · onada fins a ${r1(c.wMax)} m`;
+  if(!DEFAULTS[critK]) critK = act;
+  const c = crit[critK];
+  if(window.OV_CFG) OV_CFG.title("crit-det", DEFAULTS[critK].name);
+  $("peekCrit").textContent = `${DEFAULTS[act].short} · ideal ${crit[act].iMin}–${crit[act].iMax} kn · onada fins a ${r1(crit[act].wMax)} m`;
   const F = [["min","Vent mínim (kn)",1],["iMin","Ideal des de (kn)",1],["iMax","Ideal fins a (kn)",1],["max","Vent màxim (kn)",1],["gust","Ratxa màxima (kn)",1],["wOk","Onada còmoda (m)",0.1],["wMax","Onada màxima (m)",0.1]];
   $("crit").innerHTML = F.map(([k,l,st]) => `<label for="c_${k}">${l}<input id="c_${k}" type="number" inputmode="decimal" step="${st}" min="0" value="${c[k]}" data-k="${k}"></label>`).join("");
 }
@@ -1043,12 +1054,12 @@ const THEME_IC = {
   dark:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>`,
   light:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`
 };
-const GEAR_IC = `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
+const DOTS_IC = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2.1"/><circle cx="12" cy="12" r="2.1"/><circle cx="12" cy="19" r="2.1"/></svg>`;
 const THEME_LBL = {auto:"automàtic (segons el mòbil)", dark:"fosc", light:"clar"};
 let theme = store.get("ov2_theme"); if(!THEMES.includes(theme)) theme = "auto";
 function applyTheme(){
   if(theme === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
-  $("themeBtn").innerHTML = GEAR_IC;
+  $("themeBtn").innerHTML = DOTS_IC;
   const dark = theme === "dark" || (theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
   $("themeColor").setAttribute("content", dark ? "#060c19" : "#e9eef5");
   window.dispatchEvent(new Event("mm-theme"));
@@ -1062,12 +1073,16 @@ function renderViewPanel(){
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".ib-i[data-info]"); if(!b) return; const el = $(b.dataset.info); el.hidden = !el.hidden; b.setAttribute("aria-expanded", String(!el.hidden));
   const sm = b.closest("summary"); if(sm){ e.preventDefault(); if(!el.hidden) sm.parentElement.open = true; } });   // dins d'un desplegable: la (i) no el plega
-$("themeBtn").addEventListener("click", () => { const p = $("viewPanel"); p.hidden = !p.hidden; if(!p.hidden && DATA){ const errs = modelErrors(); renderModelBox(errs, errs.length ? Math.min(...errs.map(e => e.mae)) : null); } $("themeBtn").setAttribute("aria-expanded", String(!p.hidden)); renderViewPanel(); });
+// Configuració (cfg.js): cada pantalla es pinta quan s'obre
+window.addEventListener("ov-cfg", e => { const k = e.detail && e.detail.pg;
+  if(k === "model"){ if(DATA){ const errs = modelErrors(); renderModelBox(errs, errs.length ? Math.min(...errs.map(x => x.mae)) : null); } else try{ renderModelBox([], null); }catch(err){} }
+  if(k === "vis") renderViewPanel();
+  if(k === "crit") renderCritList();
+  if(k === "crit-det") renderCrit(); });
 $("themeSeg").addEventListener("click", e => { const b = e.target.closest("button[data-theme]"); if(!b) return; theme = b.dataset.theme; store.set("ov2_theme", theme); applyTheme(); renderViewPanel(); });
 $("sizeSeg").addEventListener("click", e => { const b = e.target.closest("button[data-size]"); if(!b) return; textSize = b.dataset.size; store.set("ov2_size", textSize); applySize(); renderViewPanel(); });
-document.addEventListener("change", e => { if(e.target.id !== "modelSel") return; modelPref = e.target.value; store.set("ov2_model_pref", modelPref);
+document.addEventListener("change", e => { if(e.target.name !== "modelPick") return; modelPref = e.target.value; store.set("ov2_model_pref", modelPref);
   if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); if(window.renderWindMap) renderWindMap(); if(window.renderPrep) renderPrep(); } });
-$("closeView").addEventListener("click", () => { $("viewPanel").hidden = true; $("themeBtn").setAttribute("aria-expanded","false"); });
 applySize();
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
 applyTheme();
@@ -1140,9 +1155,9 @@ let rsT = null, rsW = innerWidth;
 addEventListener("resize", () => { if(innerWidth === rsW) return; rsW = innerWidth; clearTimeout(rsT); rsT = setTimeout(() => { if(DATA){ renderNow(); renderWeek(); } }, 200); });
 $("refresh").addEventListener("click", () => { load(); loadStation(); loadObs(); loadInfo(); loadBuoy(); });
 $("src").addEventListener("click", () => { const L = LOC.stations; if(L.length < 2) return; stKey = L[(L.indexOf(stKey) + 1) % L.length]; store.set("ov2_station_v3", stKey); ST = null; renderNow(); loadStation(); loadObs(); });
-$("crit").addEventListener("change", e => { const k = e.target.dataset.k; if(!k) return; const v = parseFloat(e.target.value); if(isNaN(v)) return;
-  crit[act][k] = v; store.set("ov2_crit", crit); renderCrit(); if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); } });
-$("resetCrit").addEventListener("click", () => { crit[act] = JSON.parse(JSON.stringify(DEFAULTS[act])); store.set("ov2_crit", crit); render(); });
+$("crit").addEventListener("change", e => { const k = e.target.dataset.k; if(!k) return; const v = parseFloat(String(e.target.value).replace(",", ".")); if(isNaN(v) || v < 0){ renderCrit(); return; }
+  crit[critK][k] = v; store.set("ov2_crit", crit); renderCrit(); renderCritList(); if(DATA && critK === act){ applyModel(); renderNow(); renderHours(); renderWeek(); } });
+$("resetCrit").addEventListener("click", () => { crit[critK] = JSON.parse(JSON.stringify(DEFAULTS[critK])); store.set("ov2_crit", crit); renderCritList(); render(); });
 
 renderSeg(); renderCrit();
 load(); loadStation(); loadObs(); loadInfo(); loadBuoy(); loadEncerts();
@@ -1179,3 +1194,6 @@ if("serviceWorker" in navigator && location.protocol === "https:") navigator.ser
 // El selector (mapa + cerca) és a llocs.js. Canviar de lloc recarrega l'app: així totes les dades són del club triat.
 function setLoc(k){ if(!LOCS[k] || k === locKey) return; store.set("ov2_loc", k); store.set("ov2_station_v3", LOCS[k].st); location.reload(); }
 $("peekLoc").textContent = LOC.name;
+(() => { const st = (LOC.stations || []).map(s => STATIONS[s]?.name).filter(Boolean);   // ⋮ ▸ Ubicació
+  $("locCur").textContent = LOC.name;
+  $("locCurSub").textContent = [LOC.muni, st.length ? "Estació " + st.join(" + ") : "Només previsió"].filter(Boolean).join(" · "); })();

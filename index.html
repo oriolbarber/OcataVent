@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=160">
+<link rel="stylesheet" href="app.css?v=161">
 </head>
 <body>
 <div class="app">
@@ -31,28 +31,31 @@
   <img src="icons/logo.svg?v=3" alt="Club Ocata Vent" width="36" height="36">
   <button type="button" class="t" id="locBtn" aria-label="Canvia de club o lloc" aria-haspopup="dialog"><b>Ocata Vent</b><span><span id="clock">El Masnou</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>
   <div class="seg act-seg" role="group" aria-label="Embarcació" id="actSeg"></div>
-  <button class="ib" id="themeBtn" type="button" aria-label="Configuració" aria-expanded="false" aria-controls="viewPanel"></button>
+  <button class="ib" id="themeBtn" type="button" aria-label="Configuració" aria-haspopup="menu" aria-expanded="false" aria-controls="cfgMenu"></button>
   <button class="ib" id="refresh" type="button" aria-label="Actualitza les dades">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
   </button>
 </header>
-<div class="card view-panel" id="viewPanel" hidden>
-  <details class="vp-sec" id="accSec">
-    <summary><h3>Compte</h3><span class="vp-peek" id="peekAcc">Sense compte</span></summary>
-    <div class="vp-body" id="accBody"></div>
-  </details>
-  <details class="vp-sec" id="admSec" hidden>
-    <summary><h3>Administració</h3><span class="vp-peek" id="peekAdm"></span></summary>
-    <div class="vp-body" id="admBody"></div>
-  </details>
-  <details class="vp-sec" id="privSec" hidden>
-    <summary><h3>Confidencialitat</h3><span class="vp-peek" id="peekPriv"></span></summary>
-    <div class="vp-body" id="privBody"></div>
-  </details>
-  <details class="vp-sec">
-    <summary><h3>Ubicació</h3><span class="vp-peek" id="peekLoc"></span></summary>
-    <div class="vp-body">
-      <button type="button" class="btn loc-pick" id="locPick"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Canvia de club o lloc</button>
+<div class="cfg-scrim" id="cfgScrim" hidden></div>
+<div class="cfg-menu" id="cfgMenu" role="menu" aria-label="Configuració" hidden>
+  <button type="button" role="menuitem" class="cfg-mi" data-go="loc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Ubicació</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-go="vis"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>Aspecte</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-go="model"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18z"/></svg>Model meteorològic</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-go="crit"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Llindars navegació</button>
+  <div class="cfg-msep" data-for="adm" role="separator"></div>
+  <button type="button" role="menuitem" class="cfg-mi" data-go="adm" data-for="adm"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6z"/></svg>Administració Club<span class="cfg-badge" id="mnAdmN" hidden></span></button>
+  <div class="cfg-msep" role="separator"></div>
+  <button type="button" role="menuitem" class="cfg-mi" data-go="acc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Compte</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-go="priv" data-for="priv"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privadesa</button>
+</div>
+<div class="cfg" id="viewPanel" hidden>
+  <div hidden><span id="peekAcc"></span><span id="peekAdm"></span><span id="peekPriv"></span><span id="peekLoc"></span><span id="peekVis"></span><span id="peekModel"></span><span id="peekCrit"></span></div>
+
+  <!-- Nivell 1 -->
+  <section class="cfg-pg" data-pg="loc" data-title="Ubicació">
+    <div class="cfg-body">
+      <div class="cfg-grp"><button type="button" class="cfg-row" id="locPick"><span class="cfg-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span class="cfg-rt"><b id="locCur"></b><small id="locCurSub"></small></span><svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>
+      <p class="note">Toca-ho per triar un altre club o lloc al mapa.</p>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iLoc" aria-label="Què canvia amb la ubicació" aria-expanded="false">i</button>
       <div class="vp-info" id="iLoc" hidden>
         <p>Canvia la previsió, l'onatge, l'estació, la bandera de la platja i els avisos de Meteocat.</p>
@@ -60,23 +63,21 @@
         <p>Estacions: El Masnou i Ocata, Badalona (Dalt de la Vila, lluny del mar), CN Vilassar i Port de Barcelona. Les dues últimes només es llegeixen des de l'app Android.</p>
       </div></div>
     </div>
-  </details>
-  <details class="vp-sec">
-    <summary><h3>Visualització</h3><span class="vp-peek" id="peekVis"></span></summary>
-    <div class="vp-body">
-      <div class="vp-row"><span class="lbl">Tema</span>
-        <div class="seg" role="group" aria-label="Tema" id="themeSeg">
-          <button type="button" data-theme="auto">Automàtic</button><button type="button" data-theme="dark">Fosc</button><button type="button" data-theme="light">Clar</button></div></div>
-      <div class="vp-row"><span class="lbl">Mida del text</span>
-        <div class="seg" role="group" aria-label="Mida del text" id="sizeSeg">
-          <button type="button" data-size="normal"><span style="font-size:.85em">A</span>&nbsp;Petita</button><button type="button" data-size="big"><span style="font-size:1.25em">A</span>&nbsp;Gran</button></div></div>
+  </section>
+  <section class="cfg-pg" data-pg="vis" data-title="Aspecte">
+    <div class="cfg-body">
+      <span class="lbl cfg-h">Tema</span>
+      <div class="seg cfg-seg" role="group" aria-label="Tema" id="themeSeg">
+        <button type="button" data-theme="auto">Automàtic</button><button type="button" data-theme="dark">Fosc</button><button type="button" data-theme="light">Clar</button></div>
+      <span class="lbl cfg-h">Mida de la lletra</span>
+      <div class="seg cfg-seg" role="group" aria-label="Mida de la lletra" id="sizeSeg">
+        <button type="button" data-size="normal"><span style="font-size:.85em">A</span>&nbsp;Petita</button><button type="button" data-size="big"><span style="font-size:1.25em">A</span>&nbsp;Gran</button></div>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iVis" aria-label="Més informació sobre la visualització" aria-expanded="false">i</button>
         <p class="vp-info" id="iVis" hidden>«Automàtic» segueix el tema clar o fosc del mòbil. «Gran» amplia lletres i números i posa els indicadors un sota l'altre.</p></div>
     </div>
-  </details>
-  <details class="vp-sec">
-    <summary><h3>Model de previsió</h3><span class="vp-peek" id="peekModel"></span></summary>
-    <div class="vp-body">
+  </section>
+  <section class="cfg-pg" data-pg="model" data-title="Model meteorològic">
+    <div class="cfg-body">
       <div id="modelBox"></div>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iModel" aria-label="Més informació sobre els models" aria-expanded="false">i</button>
       <div class="vp-info" id="iModel" hidden>
@@ -87,13 +88,11 @@
         <p>L'<b>error d'avui</b> és la diferència mitjana, en nusos, entre el vent previst i el mesurat: com més baix, millor.</p>
       </div></div>
     </div>
-  </details>
-  <details class="vp-sec">
-    <summary><h3>Criteris</h3><span class="vp-peek" id="peekCrit"></span></summary>
-    <div class="vp-body">
-      <p class="note" style="margin:0">Llindars per al <b id="critBoat"></b>. Es desen en aquest mòbil.</p>
-      <div class="crit" id="crit"></div>
-      <div><button class="btn" type="button" id="resetCrit">Restaura valors</button></div>
+  </section>
+  <section class="cfg-pg" data-pg="crit" data-title="Llindars navegació">
+    <div class="cfg-body">
+      <p class="note">Si una condició surt del llindar, el veredicte baixa. Es desen en aquest mòbil.</p>
+      <div class="cfg-grp" id="critList"></div>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iCrit" aria-label="Més informació sobre els criteris" aria-expanded="false">i</button>
       <div class="vp-info" id="iCrit" hidden>
         <p><b>Colors</b>: verd dins la franja ideal; taronja entre el mínim i l'ideal o entre l'ideal i el màxim; vermell fora dels límits.</p>
@@ -103,8 +102,30 @@
         <p>L'indicador de la portada fa la mitjana de l'última hora mesurada i les 2 hores següents de previsió. «Aigua freda» (menys de 17 °C) només avisa per dur neoprè.</p>
       </div></div>
     </div>
-  </details>
-  <button class="btn" type="button" id="closeView">Fet</button>
+  </section>
+  <section class="cfg-pg" data-pg="adm" data-title="Administració Club" id="admSec" hidden>
+    <div class="cfg-body" id="admBody"></div>
+  </section>
+  <section class="cfg-pg" data-pg="acc" data-title="Compte" id="accSec">
+    <div class="cfg-body" id="accBody"></div>
+  </section>
+  <section class="cfg-pg" data-pg="priv" data-title="Privadesa" id="privSec" hidden>
+    <div class="cfg-body" id="privBody"></div>
+  </section>
+
+  <!-- Nivell 2 -->
+  <section class="cfg-pg" data-pg="crit-det" data-title="Llindars">
+    <div class="cfg-body">
+      <div class="crit" id="crit"></div>
+      <div><button class="btn" type="button" id="resetCrit">Restaura valors</button></div>
+    </div>
+  </section>
+  <section class="cfg-pg" data-pg="adm-socis" data-title="Socis i altes"><div class="cfg-body" id="admSocisBody"></div></section>
+  <section class="cfg-pg" data-pg="adm-coms" data-title="Comissions"><div class="cfg-body" id="admComsBody"></div></section>
+  <section class="cfg-pg" data-pg="adm-rols" data-title="Rols i permisos"><div class="cfg-body" id="admRolsBody"></div></section>
+  <section class="cfg-pg" data-pg="adm-base" data-title="Base i embarcacions"><div class="cfg-body" id="admBaseBody"></div></section>
+  <section class="cfg-pg" data-pg="acc-dades" data-title="Dades personals"><div class="cfg-body" id="accDadesBody"></div></section>
+  <section class="cfg-pg" data-pg="acc-pw" data-title="Contrasenya"><div class="cfg-body" id="accPwBody"></div></section>
 </div>
 
 <main>
@@ -384,19 +405,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=114"></script>
 <script src="clubs.js?v=1"></script>
-<script src="app.js?v=125"></script>
+<script src="app.js?v=126"></script>
+<script src="cfg.js?v=1"></script>
 <script src="trip.js?v=123"></script>
 <script src="maps.js?v=105"></script>
 <script src="llocs.js?v=7"></script>
 <script src="fx.js?v=1"></script>
 <script src="windmap.js?v=110"></script>
 <script src="prep.js?v=103"></script>
-<script src="cloud.js?v=120"></script>
-<script src="amics.js?v=113"></script>
+<script src="cloud.js?v=121"></script>
+<script src="amics.js?v=114"></script>
 <script src="planol-core.js?v=5"></script>
-<script src="club.js?v=139"></script>
-<script src="admin.js?v=111"></script>
-<script src="avisos.js?v=207"></script>
+<script src="club.js?v=140"></script>
+<script src="admin.js?v=112"></script>
+<script src="avisos.js?v=208"></script>
 <script src="sos.js?v=2"></script>
 </body>
 </html>

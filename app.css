@@ -1482,3 +1482,64 @@ body.ls-open{overflow:hidden}
 .ls-homebtn{width:34px;height:34px;display:grid;place-items:center;background:#fff;color:#0b1f33;border:2px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;padding:0}
 .ls-homemk{display:grid;place-items:center;background:#0b1f33;color:#fff;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px #0006}
 .ls-homemk svg{width:18px;height:18px}
+
+/* ===== Configuració: menú ⋮ i pantalles que entren de dreta a esquerra (cfg.js) ===== */
+.cfg-scrim{position:fixed;inset:0;z-index:2090;background:#0a132226}
+.cfg-menu{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:max(8px,calc((100vw - 1120px)/2));z-index:2100;min-width:262px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 24px);overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 40px #0a132247;padding:6px 0;transform-origin:top right;animation:cfgPop .17s ease-out}
+@keyframes cfgPop{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
+.cfg-mi{display:flex;align-items:center;gap:16px;width:100%;min-height:54px;padding:0 18px;border:0;background:none;text-align:left;font:600 1.02rem var(--f-body);color:var(--ink);cursor:pointer}
+.cfg-mi svg{color:var(--accent);flex:none}
+.cfg-mi:hover,.cfg-mi:focus-visible{background:var(--surface-2)}
+.cfg-mi:focus-visible{outline-offset:-3px}
+.cfg-msep{height:1px;background:var(--line);margin:6px 0}
+.cfg-badge{margin-left:auto;min-width:24px;height:24px;padding:0 7px;border-radius:12px;background:var(--no);color:#fff;font:700 .78rem var(--f-mono);display:inline-grid;place-items:center}
+body.cfg-open{overflow:hidden}
+.cfg{position:fixed;inset:0;z-index:2000;pointer-events:none;overflow:hidden}
+.cfg-pg{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translateX(100%);visibility:hidden;pointer-events:auto;
+  transition:transform .3s cubic-bezier(.2,.8,.2,1),visibility 0s linear .3s;will-change:transform}
+.cfg-pg.on,.cfg-pg.under{visibility:visible;transition:transform .3s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.cfg-pg.on{transform:none;box-shadow:-10px 0 28px #0a132226}
+.cfg-pg.under{transform:translateX(-30%)}
+@media (prefers-reduced-motion: reduce){.cfg-pg,.cfg-pg.on,.cfg-pg.under{transition:none}.cfg-menu{animation:none}}
+.cfg-bar{flex:none;display:grid;grid-template-columns:56px minmax(0,1fr) 56px;align-items:center;min-height:58px;padding-top:env(safe-area-inset-top,0px);background:var(--surface);border-bottom:1px solid var(--line)}
+.cfg-bar h2{text-align:center;font-size:1.3rem;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cfg-back{width:48px;height:48px;margin-left:6px;border:0;border-radius:24px;background:none;color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.cfg-back:hover{background:var(--surface-2)}
+.cfg-body{flex:1;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;
+  padding:14px max(12px,calc((100% - 640px)/2)) calc(28px + env(safe-area-inset-bottom,0px))}
+.cfg-h{margin:6px 4px -4px}
+.cfg-grp{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;flex:none}
+.cfg-row{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:10px 14px;border:0;background:none;text-align:left;color:var(--ink);cursor:pointer;font:inherit}
+.cfg-row+.cfg-row,.cfg-grp>*+*{border-top:1px solid var(--line)}
+button.cfg-row:hover{background:var(--surface-2)}
+.cfg-rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cfg-rt b{font-size:1.02rem;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.cfg-rt small{font-size:.84rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.cfg-ic{flex:none;width:42px;height:42px;border-radius:50%;background:var(--surface-2);color:var(--accent);display:grid;place-items:center;font:700 .9rem var(--f-head);letter-spacing:.04em}
+.cfg-chev{flex:none;color:var(--muted)}
+.cfg-row .cfg-badge{margin-left:0}
+.cfg-row.add{color:var(--accent);font-weight:700}
+.cfg-seg{display:flex;width:100%}
+.cfg-seg button{flex:1 1 0;min-height:48px}
+.cfg-prof{display:flex;align-items:center;gap:14px;padding:14px}
+.cfg-av{flex:none;width:60px;height:60px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:700 1.35rem var(--f-head);letter-spacing:.04em}
+.cfg-prof .acc-who b{font-size:1.15rem}
+.cfg-body .crit{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.cfg-body .crit input{min-height:50px}
+.cfg-ro{opacity:.75}
+:root[data-size="big"] .cfg-rt b{font-size:1.15rem}
+:root[data-size="big"] .cfg-rt small{font-size:.98rem}
+:root[data-size="big"] .cfg-mi{font-size:1.15rem;min-height:58px}
+.cfg-grp .priv-row{padding:12px 14px;border-top:0}
+.cfg-grp>.priv-base{border-top:0;padding:0 14px 12px}
+.cfg-grp .priv-row+.priv-row{border-top:1px solid var(--line)}
+.cfg-grp .adm-row{padding:6px 14px;border-bottom:0}
+a.cfg-row{text-decoration:none}
+a.cfg-row:hover{background:var(--surface-2)}
+.cfg-body a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--ink);text-align:center}
+.cfg-body a.btn.cl-pri{color:var(--on-accent)}
+.priv-base small{font-weight:400}
+.cfg-radio{cursor:pointer}
+.cfg-radio:hover{background:var(--surface-2)}
+.cfg-radio input{flex:none;width:24px;height:24px;margin:0;accent-color:var(--accent)}
+#modelBox{display:flex;flex-direction:column;gap:12px}

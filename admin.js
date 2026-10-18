@@ -1,6 +1,6 @@
 "use strict";
 /* ============ Ocata Vent 2 · Administració: socis, rols i permisos ============
-   Configuració ▸ Administració. La veu qui té algun permís de gestió (o és administrador):
+   ⋮ ▸ Administració Club. La veu qui té algun permís de gestió (o és administrador):
    · altes     — aprovar, rebutjar o treure l'accés a socis
    · rols      — comissions (Junta, Manteniment, Econòmica)
    · permisos  — donar i treure aquests permisos a altres socis
@@ -25,7 +25,9 @@ let C = null, members = [], cerca = "", loadedAt = 0;
 const has = p => !!(C && C.perms.includes(p));
 const gestor = () => has("altes") || has("rols") || has("permisos");
 const ref = id => C.F.doc(C.db, "members", id);
-const say = t => { const m = $("admMsg"); if(m){ m.textContent = t || ""; m.hidden = !t; } };
+let lastMsg = "";
+const say = t => { lastMsg = t || ""; document.querySelectorAll("[data-admmsg]").forEach(m => { m.textContent = lastMsg; m.hidden = !lastMsg; }); };
+const msgDiv = () => `<div class="msg err" data-admmsg${lastMsg ? "" : " hidden"}>${esc(lastMsg)}</div>`;
 const ERRS = {"permission-denied":"El núvol ho ha refusat (permís). Comprova que tens aquest permís i que les regles estan publicades.", "unavailable":"Sense connexió amb el núvol."};
 const errText = e => ERRS[e && e.code] || "No s'ha pogut fer" + (e && e.code ? " (" + e.code + ")." : ".");
 
@@ -56,9 +58,7 @@ async function load(force){
 function badge(){
   const n = has("altes") ? members.filter(m => m.estat === "pendent").length : 0, b = $("themeBtn");
   b.classList.toggle("has-dot", n > 0); b.setAttribute("aria-label", n ? `Configuració · ${n} ${n === 1 ? "alta pendent" : "altes pendents"}` : "Configuració");
-  const h = document.querySelector("#admSec > summary h3"); if(!h) return;
-  let d = h.parentNode.querySelector(".cl-dot");
-  if(n){ if(!d){ d = document.createElement("span"); d.className = "cl-dot"; h.after(d); } d.textContent = n; d.setAttribute("aria-label", `${n} ${n === 1 ? "alta pendent" : "altes pendents"}`); } else if(d) d.remove();
+  const m = $("mnAdmN"); if(m){ m.hidden = !n; m.textContent = n; m.setAttribute("aria-label", `${n} ${n === 1 ? "alta pendent" : "altes pendents"}`); }
 }
 // Escolta en directe les altes pendents del club: el puntet apareix sense haver d'obrir la configuració
 let unsub = null, watchKey = "";
@@ -73,7 +73,7 @@ function watch(){
     pend.forEach(m => { const i = members.findIndex(x => x.userId === m.userId); if(i < 0) members.push(m); else members[i] = m; });
     members.sort((a, b) => String(a.nom).localeCompare(String(b.nom), "ca"));
     badge();
-    if(!$("admBody")?.contains(document.activeElement)) render();   // no trenquis la cerca mentre s'escriu
+    if(!$("admSocisBody")?.contains(document.activeElement)) render();   // no trenquis la cerca mentre s'escriu
   }, () => { watchKey = ""; unsub = null; });
 }
 
@@ -83,31 +83,76 @@ function rolesTxt(m){
   const p = (m.permisos || []).map(k => PERMS[k]?.t).filter(Boolean);
   return [ESTAT[m.estat] || m.estat].concat(r).concat(p.length ? ["Permisos: " + p.join(", ")] : []).join(" · ");
 }
+const CHEV = `<svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>`;
+const SHIELD = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6z"/></svg>`;
+const goRow = (pg, t, sub, extra) => `<button type="button" class="cfg-row" data-go="${pg}"><span class="cfg-rt"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span>${extra || ""}${CHEV}</button>`;
+const canBase = () => has("embarcacions") || has("planol") || !!(C && (C.member.comissions || []).some(k => k === "manteniment" || k === "junta"));
+// ⋮ ▸ Administració Club: una pantalla amb els apartats i una subpantalla per a cadascun
 function render(){
   const sec = $("admSec"), body = $("admBody"); if(!sec || !body) return;
-  sec.hidden = !(C && (gestor() || has("moderar") || has("avisos"))); if(sec.hidden) return;
+  sec.hidden = !(C && (gestor() || has("moderar") || has("avisos") || has("embarcacions"))); if(sec.hidden) return;
+  const pend = members.filter(m => m.estat === "pendent"), apr = members.filter(m => m.estat === "aprovat").length;
+  const rol = C.isAdm ? "Administració" : C.isPremium ? "Premium · gestiones el club" : "Permisos: " + C.perms.map(k => PERMS[k]?.t).filter(Boolean).join(", ");
+  $("peekAdm").textContent = C.isAdm ? "Administració" + (pend.length ? " · " + pend.length + " pendents" : "") : rol;
+  const notes = gestor() ? [] : [has("moderar") ? `Tens el permís de moderar: al Club, a les publicacions, «Qui surt» i anuncis d'altres persones hi veuràs el botó «Retira».` : "", has("avisos") ? `Tens el permís de fer avisos: al Club ▸ Avisos hi veuràs «+ Nou avís» per a les teves comissions.` : ""].filter(Boolean);
+  body.innerHTML = msgDiv() + `<div class="cfg-grp"><div class="cfg-prof"><span class="cfg-ic">${SHIELD}</span><div class="acc-who" style="flex:1"><b>${esc(CLUBNOM || C.member.clubId)}</b><span>${esc(rol)}</span></div></div></div>
+    ${gestor() || canBase() ? `<div class="cfg-grp">
+      ${gestor() ? goRow("adm-socis", "Socis i altes", `${apr} amb alta` + (has("altes") ? ` · ${pend.length} ${pend.length === 1 ? "pendent" : "pendents"}` : ""), has("altes") && pend.length ? `<span class="cfg-badge">${pend.length}</span>` : "") : ""}
+      ${has("rols") ? goRow("adm-coms", "Comissions", Object.values(COMS).join(", ")) : ""}
+      ${goRow("adm-rols", "Rols i permisos", "Què permet cada permís")}
+      ${canBase() ? goRow("adm-base", "Base i embarcacions", "Propostes per validar i plànol") : ""}
+    </div>` : ""}
+    ${notes.map(t => `<p class="note">${t}</p>`).join("")}
+    ${C.isAdm || C.isPremium ? `<div class="cfg-grp"><a class="cfg-row" href="gestio.html"><span class="cfg-rt"><b>Web de gestió del club</b><small>Socis, rols, comissions i plànol, millor des de l'ordinador</small></span>${CHEV}</a>${C.isAdm ? `<a class="cfg-row" href="admin.html"><span class="cfg-rt"><b>Administració global</b><small>Tots els clubs i usuaris</small></span>${CHEV}</a>` : ""}</div>` : ""}`;
+  renderSocis(); renderComs(); renderRols();
+  if(window.OV_CFG?.isOpen("adm-base")) renderBase();
+}
+function renderSocis(){
+  const el = $("admSocisBody"); if(!el || !C) return;
+  if(!gestor()){ el.innerHTML = `<p class="note">No tens permís per veure els socis.</p>`; return; }
   const pend = members.filter(m => m.estat === "pendent");
-  $("peekAdm").textContent = C.isAdm ? "Administració" + (pend.length ? " · " + pend.length + " pendents" : "") : "Permisos: " + C.perms.map(k => PERMS[k]?.t).join(", ");
-  if(!gestor()){ body.innerHTML = [has("moderar") ? `Tens el permís de moderar: al Club, a les publicacions, «Qui surt» i anuncis d'altres persones hi veuràs el botó «Retira».` : "", has("avisos") ? `Tens el permís de fer avisos: al Club ▸ Avisos hi veuràs «+ Nou avís» per a les teves comissions.` : ""].filter(Boolean).map(t => `<p class="note" style="margin:0">${t}</p>`).join(""); return; }
   const q = cerca.trim().toLowerCase(), L = members.filter(m => m.estat !== "pendent" && (!q || String(m.nom).toLowerCase().includes(q) || String(m.email).toLowerCase().includes(q)));
   const row = (m, extra) => `<div class="acc-row adm-row"><button type="button" class="adm-open" data-adm="${esc(m.userId)}"><b>${esc(m.nom)}${m.userId === C.user.uid ? " (tu)" : ""}</b><span>${esc(m.email)}</span><small>${esc(rolesTxt(m))}</small></button>${extra || ""}</div>`;
-  body.innerHTML = `<div class="msg err" id="admMsg" hidden></div>
-    ${has("altes") ? `<span class="lbl">Altes pendents · ${pend.length}</span>
-      ${pend.map(m => row(m, `<div class="acc-btns"><button class="btn sm cl-pri" type="button" data-admset="aprovat" data-uid="${esc(m.userId)}">Aprova</button><button class="btn sm danger" type="button" data-admset="rebutjat" data-uid="${esc(m.userId)}">Rebutja</button></div>`)).join("") || `<p class="note">No n'hi ha cap.</p>`}` : ""}
-    <span class="lbl">Persones sòcies · ${members.filter(m => m.estat === "aprovat").length} amb alta</span>
-    <input class="field" id="admCerca" type="search" placeholder="Cerca per nom o correu" autocomplete="off" value="${esc(cerca)}" style="font-family:var(--f-body)">
-    <div class="adm-list">${L.map(m => row(m)).join("") || `<p class="note">Ningú.</p>`}</div>
-    ${has("rols") ? `<span class="lbl">Comissions · ${Object.keys(COMS).length}</span>
-      <div class="adm-coms">${Object.entries(COMS).map(([k, t]) => `<div class="adm-com"><input class="field" type="text" maxlength="40" value="${esc(t)}" data-comname="${esc(k)}" aria-label="Nom de la comissió" style="font-family:var(--f-body)">
+  el.innerHTML = msgDiv() + `
+    ${has("altes") ? `<span class="lbl cfg-h">Altes pendents · ${pend.length}</span>
+      ${pend.length ? `<div class="cfg-grp">${pend.map(m => row(m, `<div class="acc-btns"><button class="btn sm cl-pri" type="button" data-admset="aprovat" data-uid="${esc(m.userId)}">Aprova</button><button class="btn sm danger" type="button" data-admset="rebutjat" data-uid="${esc(m.userId)}">Rebutja</button></div>`)).join("")}</div>` : `<p class="note">No n'hi ha cap.</p>`}` : ""}
+    <span class="lbl cfg-h">Persones sòcies · ${members.filter(m => m.estat === "aprovat").length} amb alta</span>
+    <input class="field" id="admCerca" type="search" placeholder="Cerca per nom o correu" autocomplete="off" value="${esc(cerca)}" style="font-family:var(--f-body)" aria-label="Cerca per nom o correu">
+    ${L.length ? `<div class="cfg-grp adm-list">${L.map(m => row(m)).join("")}</div>` : `<p class="note">Ningú.</p>`}
+    <p class="note">Toca una persona per veure'n l'estat, les comissions i els permisos.</p>
+    <button class="btn sm" type="button" id="admReload">Actualitza la llista</button>`;
+}
+function renderComs(){
+  const el = $("admComsBody"); if(!el || !C) return;
+  if(!has("rols")){ el.innerHTML = `<p class="note">No tens permís per canviar les comissions.</p>`; return; }
+  if(el.contains(document.activeElement) && document.activeElement.matches("input")) return;   // mentre s'escriu un nom
+  el.innerHTML = msgDiv() + `<div class="cfg-grp" style="padding:12px 14px"><div class="adm-coms">${Object.entries(COMS).map(([k, t]) => `<div class="adm-com"><input class="field" type="text" maxlength="40" value="${esc(t)}" data-comname="${esc(k)}" aria-label="Nom de la comissió" style="font-family:var(--f-body)">
         ${k === "junta" ? `<span class="note">No es pot eliminar</span>` : `<button class="btn sm" type="button" data-comdel="${esc(k)}">Elimina</button>`}</div>
         <div data-combox="${esc(k)}"></div>`).join("")}
-        <div class="adm-com"><input class="field" type="text" maxlength="40" id="admNewCom" placeholder="Nova comissió" style="font-family:var(--f-body)"><button class="btn sm cl-pri" type="button" id="admAddCom">Afegeix</button></div></div>
-      <p class="note">El nom nou es desa en sortir del camp. Si elimines una comissió, desapareix de la llista; els seus avisos es queden fins que caduquen.</p>` : ""}
-    <div class="vp-more"><button class="ib-i" type="button" data-info="iAdm" aria-label="Què permet cada permís" aria-expanded="false">i</button>
-      <div class="vp-info" id="iAdm" hidden>${Object.values(PERMS).map(p => `<p><b>${p.t}:</b> ${esc(p.d)}</p>`).join("")}<p>Toca una persona per canviar-ne l'estat, les comissions i els permisos. Ningú no pot canviar el seu propi estat ni els seus permisos. L'administració inicial els té tots.</p></div></div>
-    <button class="btn sm" type="button" id="admReload">Actualitza la llista</button>
-    ${C.isAdm || C.isPremium ? `<a class="btn cl-pri cl-wide" href="gestio.html">Obre la web de gestió del club</a>${C.isAdm ? `<a class="btn cl-wide" href="admin.html">Administració global (tots els clubs)</a>` : ""}` : ""}`;
+      <div class="adm-com"><input class="field" type="text" maxlength="40" id="admNewCom" placeholder="Nova comissió" style="font-family:var(--f-body)" aria-label="Nom de la comissió nova"><button class="btn sm cl-pri" type="button" id="admAddCom">Afegeix</button></div></div></div>
+    <p class="note">El nom nou es desa en sortir del camp. Si elimines una comissió, desapareix de la llista; els seus avisos es queden fins que caduquen.</p>`;
 }
+function renderRols(){
+  const el = $("admRolsBody"); if(!el || !C) return;
+  el.innerHTML = `<div class="cfg-grp">${Object.entries(PERMS).map(([k, p]) => `<div class="cfg-row" style="cursor:default"><span class="cfg-rt"><b>${esc(p.t)}${has(k) ? ` <small class="note">· el tens</small>` : ""}</b><small>${esc(p.d)}</small></span></div>`).join("")}</div>
+    <p class="note">Ningú no pot canviar el seu propi estat ni els seus permisos. L'administració inicial els té tots; premium, tots dins del seu club.</p>
+    ${C.isAdm || C.isPremium ? `<p class="note">Els rols (paquets de permisos amb nom) i qui els té es gestionen a la web de gestió.</p><a class="btn cl-pri cl-wide" href="gestio.html">Obre la web de gestió</a>` : `<p class="note">Els rols i els permisos es gestionen a la web de gestió del club.</p>`}`;
+}
+async function renderBase(){
+  const el = $("admBaseBody"); if(!el || !C) return;
+  if(!el.childElementCount) el.innerHTML = `<p class="note">Carregant…</p>`;
+  let A = null; try{ A = await window.OV_CLUB?.boatsAdmin(); }catch(e){ A = null; }
+  if(!A){ el.innerHTML = `<p class="note">No s'han pogut carregar les embarcacions.</p>`; return; }
+  el.innerHTML = `<div class="cfg-grp"><div class="cfg-row" style="cursor:default"><span class="cfg-rt"><b>${A.total} ${A.total === 1 ? "embarcació" : "embarcacions"} · ${A.places} ${A.places === 1 ? "plaça" : "places"}</b><small>${A.lloc} a la varada · ${A.navegant} navegant · ${A.reparacio} en reparació</small></span></div></div>
+    ${A.can ? `<span class="lbl cfg-h">Pendents de validar · ${A.pend.length}</span>
+      ${A.pend.length ? `<div class="cfg-grp">${A.pend.map(b => `<button type="button" class="cfg-row" data-admboat="${esc(b.id)}"><span class="cfg-rt"><b>${esc(b.title)}</b><small>${esc(b.sub)}</small></span>${CHEV}</button>`).join("")}</div><p class="note">Toca-la per revisar-la i validar-la.</p>` : `<p class="note">No n'hi ha cap.</p>`}` : `<p class="note">Per validar embarcacions cal el permís «Embarcacions» o ser de Manteniment.</p>`}
+    <p class="note">El plànol (places, edificis i zones) es dibuixa a la web de gestió ▸ Plànol. L'estat de cada embarcació es veu a Club ▸ Base.</p>
+    ${C.isAdm || C.isPremium ? `<a class="btn cl-wide" href="gestio.html">Obre la web de gestió</a>` : ""}`;
+}
+window.addEventListener("ov-cfg", e => { const k = e.detail && e.detail.pg;
+  if(k === "adm-base") renderBase();
+  if(k && k.startsWith("adm") && C){ render(); load(); } });
+window.addEventListener("ov-sheet-closed", () => { if(window.OV_CFG?.isOpen("adm-base")) renderBase(); });
 
 /* ---------- fitxa d'un soci ---------- */
 function openMember(id){
@@ -140,7 +185,8 @@ async function update(id, patch, close){
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("#admBody button"); if(!t || !C || t.classList.contains("ib-i")) return;
+  const t = e.target.closest && e.target.closest("#admBody button, #admSocisBody button, #admComsBody button, #admBaseBody button"); if(!t || !C || t.classList.contains("ib-i") || t.hasAttribute("data-go")) return;
+  if(t.dataset.admboat){ window.OV_CLUB?.openBoat(t.dataset.admboat); return; }
   if(t.dataset.adm) openMember(t.dataset.adm);
   else if(t.dataset.admset) update(t.dataset.uid, {estat:t.dataset.admset, revisatPer:C.user.uid, revisatAt:C.F.serverTimestamp()}, true);
   else if(t.id === "admReload") load(true);
@@ -152,7 +198,6 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => { const k = e.target.dataset && e.target.dataset.comname; if(!k || !C) return; const v = e.target.value.trim().slice(0, 40);
   if(v && v !== COMS[k]) saveComs(Object.assign({}, COMS, {[k]: v})); else e.target.value = COMS[k]; });
 document.addEventListener("input", e => { if(e.target.id !== "admCerca") return; cerca = e.target.value; const pos = e.target.selectionStart; render(); const i = $("admCerca"); if(i){ i.focus(); try{ i.setSelectionRange(pos, pos); }catch(err){} } });
-$("themeBtn").addEventListener("click", () => { if(!$("viewPanel").hidden && C){ render(); load(); } });
 window.addEventListener("ov-cloud", async () => { await ctx(); render(); badge(); watch(); load(true); loadComs(); });
 ctx().then(() => { render(); watch(); load(true); loadComs(); });
 })();

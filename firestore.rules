@@ -153,8 +153,23 @@ service cloud.firestore {
         && request.resource.data.get('premium', false) is bool
         && (request.resource.data.clubId == 'ocatavent' || exists(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)));
 
+      // El mateix soci corregeix el seu nom (⋮ ▸ Compte ▸ Dades personals)
+      allow update: if signedIn() && uid == me()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom'])
+        && nomOk(request.resource.data.nom, 80);
+
       // Esborrar: el mateix soci (esborrar el compte) o un administrador
       allow delete: if signedIn() && (uid == me() || isAdmin());
+
+      // Telèfon opcional (privat/contacte): l'escriu el soci; el llegeixen ell, la Junta i el permís «Seguretat» del seu club
+      match /privat/{doc} {
+        allow read: if signedIn() && (uid == me() || (isJunta() && sameClub(get(/databases/$(database)/documents/members/$(uid)).data.clubId)));
+        allow create, update: if signedIn() && uid == me() && doc == 'contacte'
+          && request.resource.data.keys().hasOnly(['telefon', 'at'])
+          && request.resource.data.telefon is string && request.resource.data.telefon.size() >= 6 && request.resource.data.telefon.size() <= 20
+          && request.resource.data.at == request.time;
+        allow delete: if signedIn() && (uid == me() || isAdmin());
+      }
     }
 
     // ---------- sortides (Fase 1: sempre privades) ----------

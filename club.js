@@ -69,7 +69,7 @@ const ymd = d => d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDa
 const dayStr = t => new Date(t).toLocaleDateString("ca", {weekday:"short", day:"numeric", month:"short"});
 const ago = t => { const m = Math.max(0, Math.round((now() - t)/MIN)); return m < 1 ? "ara" : m < 60 ? "fa " + m + " min" : "fa " + Math.round(m/60) + " h"; };
 const boatShort = k => DEFAULTS[k]?.short || DEFAULTS[k]?.name || k || "";
-const vis = () => window.OV_PRIV ? OV_PRIV.pref("presencia") : "club";   // Configuració ▸ Confidencialitat (amics.js)
+const vis = () => window.OV_PRIV ? OV_PRIV.pref("presencia") : "club";   // ⋮ ▸ Privadesa (amics.js)
 const NIVT = v => (window.OV_PRIV?.NIV || {})[v] || v;
 // Publicar avisos: administració i premium, a qualsevol comissió; la resta, a les seves i amb el permís «avisos»
 const canPost = () => !C ? [] : (C.isAdm || C.isPremium) ? Object.keys(COMSm()) : C.perms.includes("avisos") ? (C.member.comissions || []).filter(k => COMSm()[k]) : [];
@@ -163,7 +163,7 @@ function renderWait(){
   const el = $("clubView"); if(!el) return;
   const st = accSt();
   const t = st === "pendent" ? ["Pendent d'aprovació", "Has demanat l'alta. Quan l'administració del club l'aprovi, aquí hi veuràs el mur, els avisos, els anuncis i qui és a la base."]
-    : st === "sense-alta" ? ["Falta l'alta al club", "Has entrat, però encara no has demanat l'alta. Ves a Configuració ▸ Compte i prem «Sol·licita l'alta»."]
+    : st === "sense-alta" ? ["Falta l'alta al club", "Has entrat, però encara no has demanat l'alta. Ves a ⋮ ▸ Compte i prem «Sol·licita l'alta»."]
     : ["Alta no aprovada", "L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta."];
   el.innerHTML = `<article class="card cl-wait"><h2>${t[0]}</h2><p>${t[1]}</p>
     <button type="button" class="btn acc-wide" id="clWaitRe">Torna-ho a comprovar</button></article>`;
@@ -413,7 +413,7 @@ async function tripBoatEnd(){
 // Capçalera de la Base: qui hi ha (a la base · navegant, amb els noms) i el botó «Soc a la base» / «Marxo de la base»
 function presBtn(){
   const v = vis(), me = D.myPres && now() - (ms(D.myPres.actualitzat) || 0) < DAY ? D.myPres : null;
-  if(v === "ningu") return `<p class="note">Tens la presència desactivada (Configuració ▸ Confidencialitat).</p>`;
+  if(v === "ningu") return `<p class="note">Tens la presència desactivada (⋮ ▸ Privadesa).</p>`;
   if(me && me.estat === "aigua") return "";
   return me && me.estat === "base" ? `<button type="button" class="btn bs-pbtn" id="clLeave">Marxo de la base</button>` : `<button type="button" class="btn cl-ok bs-pbtn" id="clHere">Soc a la base</button>`;
 }
@@ -657,11 +657,11 @@ function renderBase(){
   return `<details class="card bs-priv" id="bsPriv"${ui.privOpen ? " open" : ""}><summary><span class="lbl">Qui et veu aquí</span><span class="bs-privv">${esc(NIVT(v))}</span></summary>
       <div class="cl-privrow"><b>${esc(NIVT(v))}</b><button type="button" class="btn" id="clPriv">Canvia-ho</button><button class="ib-i" type="button" data-info="iPres" aria-label="Com funciona la presència" aria-expanded="false">i</button></div>
       <label class="cl-sw"><span><b>Marca'm a la base automàticament</b></span><input type="checkbox" class="switch" id="pvAuto"${auto ? " checked" : ""}${v === "ningu" ? " disabled" : ""}></label>
-      <div class="vp-info" id="iPres" hidden><p>Només surts mentre ets a la base (amb el botó o automàticament) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Automàticament: després de 10 minuts a menys de 50 m de la base et marca a la base; després de 2 minuts a més de 200 m, et treu. Només amb l'app oberta.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, només l'app d'Android la continua enviant. Qui et veu es tria a Configuració ▸ Confidencialitat.</p></div></details>`;
+      <div class="vp-info" id="iPres" hidden><p>Només surts mentre ets a la base (amb el botó o automàticament) o navegant (en començar una sortida). S'esborra en acabar la sortida, en marxar o al cap de 24 h.</p><p>Automàticament: després de 10 minuts a menys de 50 m de la base et marca a la base; després de 2 minuts a més de 200 m, et treu. Només amb l'app oberta.</p><p>Navegant, la posició s'actualitza cada 2 minuts. Amb la pantalla apagada, només l'app d'Android la continua enviant. Qui et veu es tria a ⋮ ▸ Privadesa.</p></div></details>`;
 }
 document.addEventListener("toggle", e => { if(e.target && e.target.id === "bsPriv") ui.privOpen = e.target.open; }, true);
 /* ---------- full lliscant (formularis) ---------- */
-function closeSheet(){ const s = $("clSheet"); if(s) s.remove(); }
+function closeSheet(){ const s = $("clSheet"); if(s){ s.remove(); window.dispatchEvent(new CustomEvent("ov-sheet-closed")); } }
 function sheet(title, body, onMount){
   closeSheet();
   const d = document.createElement("div"); d.className = "cl-sheet"; d.id = "clSheet";
@@ -1147,12 +1147,18 @@ function alertText(a){
   if(a.tipus === "vent-fort") return `${b} · és a l'aigua amb ratxes de ${v} kn`;
   return `${b} · és a l'aigua i s'esperen onades de ${String(v).replace(".", ",")} m`;
 }
+// Telèfon de qui avisa (members/{uid}/privat/contacte): només el poden llegir la Junta i el permís «Seguretat»
+const TEL = {};
+const telOf = id => TEL[id] || (TEL[id] = C.F.getDoc(ref("members", id, "privat", "contacte")).then(d => d.exists() ? String(d.data().telefon || "") : "").catch(() => ""));
+function fillTels(){ if(!C || !C.isResp) return;
+  document.querySelectorAll("a[data-tel]").forEach(a => telOf(a.dataset.tel).then(t => { if(!t) return; a.href = "tel:" + t.replace(/[^+0-9]/g, ""); a.setAttribute("aria-label", "Truca al " + t); a.hidden = false; })); }
 function alertBanner(){
   const L = D.alertes.filter(a => a.userId !== uid()).sort((a, b) => ms(b.creat) - ms(a.creat));
+  if(L.length && C.isResp) setTimeout(fillTels, 0);
   return L.map(a => `<div class="cl-alert" role="alert">${WARN}<div class="cl-who">
       <b>${esc(a.nom)}: ${esc((ALERT_T[a.tipus] || "").toLowerCase())}</b>
       <span>${esc(alertText(a))} · posició ${esc(ago(ms(a.posAt) || now()))}</span></div>
-      <div class="cl-abtns">${(a.ajudants || {})[uid()] ? `<button type="button" class="btn sm cl-pri" data-sosopen="${esc(a.id)}">Mapa</button>` : Object.keys(a.ajudants || {}).length >= 3 ? "" : `<button type="button" class="btn sm cl-pri" data-help="${esc(a.id)}">Vaig a ajudar</button>`}${Object.keys(a.ajudants || {}).length ? `<span class="note cl-helpers">${Object.keys(a.ajudants).length >= 3 ? "Ja hi van 3: " : "Hi va: "}${esc(Object.values(a.ajudants).map(h => h.nom).join(", "))}</span>` : ""}<button type="button" class="btn sm" data-ctab="base">Base</button>${C.isResp || atBase ? `<button type="button" class="btn sm" data-resolve="${esc(a.id)}">Resolta</button>` : ""}</div></div>`).join("");
+      <div class="cl-abtns">${(a.ajudants || {})[uid()] ? `<button type="button" class="btn sm cl-pri" data-sosopen="${esc(a.id)}">Mapa</button>` : Object.keys(a.ajudants || {}).length >= 3 ? "" : `<button type="button" class="btn sm cl-pri" data-help="${esc(a.id)}">Vaig a ajudar</button>`}${Object.keys(a.ajudants || {}).length ? `<span class="note cl-helpers">${Object.keys(a.ajudants).length >= 3 ? "Ja hi van 3: " : "Hi va: "}${esc(Object.values(a.ajudants).map(h => h.nom).join(", "))}</span>` : ""}<button type="button" class="btn sm" data-ctab="base">Base</button>${C.isResp ? `<a class="btn sm cl-tel" data-tel="${esc(a.userId)}" hidden>Truca</a>` : ""}${C.isResp || atBase ? `<button type="button" class="btn sm" data-resolve="${esc(a.id)}">Resolta</button>` : ""}</div></div>`).join("");
 }
 async function resolveAlert(id){
   try{ await TO(C.F.updateDoc(ref("alertes", id), {resolta:true, resoltaPer:uid(), resoltaAt:C.F.serverTimestamp()})); D.alertes = D.alertes.filter(a => a.id !== id); alertDot(); render(); }
@@ -1183,8 +1189,29 @@ window.addEventListener("mm-view", e => { if(e.detail === "trip" && C) ensureBoa
 window.addEventListener("mm-view", e => { if(e.detail === "club"){ if(C){ load(); loadAlerts(); } else if(accSt()) renderWait(); else go("fc"); } else { if(mapObj){ mapObj.remove(); mapObj = null; } clearRouteMaps(); } });
 
 /* ---------- connexió amb trip.js i cloud.js ---------- */
+// Dades de les embarcacions per a la Configuració (Compte i Administració): carrega el que falti
+async function boatsReady(){
+  if(!C) await ctx(); if(!C) return false;
+  const need = ["boats", "planol"].filter(k => !D.at[k] || now() - D.at[k] > 30000);
+  if(need.length) await TO(Promise.all(need.map(fetchK)));
+  return !!PL();
+}
+function boatRow(b){
+  const B = PL().BOATS, pl = placeById(b.place), tn = B[b.t]?.n || "Embarcació";
+  return {id:b.id, title:b.label || tn, sub:[b.label ? tn : "", b.vela ? "Vela " + b.vela : "", pl ? "Plaça " + (pl.label || "") : "Sense plaça", b.pendent ? "pendent de validar" : ESTAT_T(b.estat || "lloc").toLowerCase(), b.propUid !== uid() && b.prop ? b.prop : ""].filter(Boolean).join(" · ")};
+}
 const OV_CLUB = window.OV_CLUB = {
   sheet, closeSheet, autoTick, loadAlerts, cta: ctaUpdate,
+  async myBoats(){ if(!(await boatsReady())) return []; return myBoats().map(boatRow); },
+  async openBoat(id){ if(await boatsReady().catch(() => false)) boatSheet(null, id); },
+  async newBoat(){ if(await boatsReady().catch(() => false)) newBoatSheet(null); },
+  // Administració ▸ Base i embarcacions: propostes pendents i recompte (només qui gestiona embarcacions)
+  async boatsAdmin(){
+    if(!(await boatsReady())) return null;
+    const n = k => D.boats.filter(b => !b.pendent && (b.estat || "lloc") === k).length;
+    return {can:canBoatsE(), total:D.boats.length, lloc:n("lloc"), navegant:n("navegant"), reparacio:n("reparacio"),
+      pend:D.boats.filter(b => b.pendent).map(boatRow), places:((D.planol && D.planol.objs) || []).filter(o => o.k === "place").length};
+  },
   ctx: () => C,
   async shareBtn(el, t){
     shareEl = el; shareTrip = t; el.innerHTML = "";

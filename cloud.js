@@ -16,7 +16,7 @@ const FB_CONFIG = {
 };
 const OWNER_UID = "aHjoROUH3aQsHh6ksS3Tt1p5soF2";   // administrador inicial (també fixat a firestore.rules)
 const CLUB_ID = "ocatavent";
-const CONSENT_V = "2026-10-14";                      // canvia-la si canvia el text de consentiment
+const CONSENT_V = "2026-10-18";                      // canvia-la si canvia el text de consentiment
 const CHUNK = 400000;                                // caràcters per tros (Firestore: màx. 1 MiB per document)
 const MAX_TRAMS = 20;
 
@@ -26,7 +26,7 @@ let pendingLink = null, syncing = false, syncAgain = false, syncErr = "", lastSy
 let flash = {t:"", err:false};
 
 const approved = () => !!(user && member && member.estat === "aprovat");
-const say = (t, err) => { flash = {t, err:!!err}; const m = $("accMsg"); if(m){ m.textContent = t; m.hidden = !t; m.classList.toggle("err", !!err); if(t) m.scrollIntoView({block:"nearest", behavior:"smooth"}); } };
+const say = (t, err) => { flash = {t, err:!!err}; document.querySelectorAll("[data-accmsg]").forEach(m => { m.textContent = t; m.hidden = !t; m.classList.toggle("err", !!err); if(t && m.closest(".cfg-pg.on")) m.scrollIntoView({block:"nearest", behavior:"smooth"}); }); };
 // Firestore no avisa si no arriba al servidor: espera indefinidament. Amb això, al cap de 15 s hi ha un missatge.
 const T = (p, ms = 15000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({code:"timeout"}), ms))]);
 const ERR = {
@@ -97,6 +97,33 @@ async function readMember(){
   const snap = await T(f.getDoc(f.doc(db, "members", user.uid)));
   member = snap.exists() ? snap.data() : null;
 }
+// Telèfon (opcional): members/{uid}/privat/contacte. Només el veuen el soci, la Junta i qui té el permís «Seguretat».
+let contacte = null, contacteAt = 0;
+async function readContact(force){
+  if(!user || !member) return null;
+  if(!force && contacteAt && Date.now() - contacteAt < 60000) return contacte;
+  try{ const f = await fs(), d = await T(f.getDoc(f.doc(db, "members", user.uid, "privat", "contacte")), 8000); contacte = d.exists() ? d.data() : null; contacteAt = Date.now(); }catch(e){}
+  return contacte;
+}
+const telOk = t => /^[+0-9 ()\-.]{6,20}$/.test(t) && (t.match(/[0-9]/g) || []).length >= 6;
+async function saveDades(){
+  const nom = ($("accDNom")?.value || "").trim().replace(/\s+/g, " ").slice(0, 80), tel = ($("accDTel")?.value || "").trim().replace(/\s+/g, " ");
+  if(!nom){ say("Escriu el nom i els cognoms.", true); return; }
+  if(tel && !telOk(tel)){ say("El telèfon no sembla correcte: només xifres, espais i el signe +.", true); return; }
+  say("Desant…");
+  try{
+    const f = await fs();
+    if(nom !== member.nom){ await T(f.updateDoc(f.doc(db, "members", user.uid), {nom})); member.nom = nom; }
+    const cur = contacte && contacte.telefon || "";
+    if(tel !== cur){
+      if(tel) await T(f.setDoc(f.doc(db, "members", user.uid, "privat", "contacte"), {telefon:tel, at:f.serverTimestamp()}));
+      else await T(f.deleteDoc(f.doc(db, "members", user.uid, "privat", "contacte")));
+      contacte = tel ? {telefon:tel} : null; contacteAt = Date.now();
+    }
+    say("Dades desades."); render(); emit();
+    if(window.OV_CFG && OV_CFG.current() === "acc-dades") OV_CFG.back();
+  }catch(e){ say(errText(e), true); }
+}
 async function createMember(nom){
   const f = await fs(), mail = user.email || "";
   const n = String(nom || user.displayName || mail.split("@")[0] || "Persona sòcia").trim().slice(0, 80);
@@ -158,7 +185,7 @@ async function setPassword(){
   if(pw.length < 6){ say("La contrasenya ha de tenir almenys 6 caràcters.", true); return; }
   say("Desant…");
   try{ await A.linkWithCredential(user, A.EmailAuthProvider.credential(user.email, pw)); await user.reload();
-    say(`Fet. A l'app entra amb ${user.email} i aquesta contrasenya.`); render(); }
+    say(`Fet. A l'app entra amb ${user.email} i aquesta contrasenya.`); render(); if(window.OV_CFG && OV_CFG.current() === "acc-pw") OV_CFG.back(); }
   catch(e){ say(e && e.code === "auth/provider-already-linked" ? "Aquest compte ja té contrasenya." : errText(e), true); }
 }
 async function sendLink(){
@@ -276,6 +303,7 @@ async function deleteAccount(){
     for(const d of qs.docs) await delRemote(d.data().tripId);
     try{ await window.OV_CLUB?.purge(); }catch(e){}   // publicacions, reaccions, avisos, anuncis i presència del club
     try{ await window.OV_PRIV?.purge(); }catch(e){}   // amistats i perfil
+    await f.deleteDoc(f.doc(db, "members", uid, "privat", "contacte")).catch(() => {});
     await f.deleteDoc(f.doc(db, "members", uid));
     await A.deleteUser(user);
     for(const t of ((await DB.all()) || [])) if(t.owner === uid){ delete t.owner; delete t.synced; await DB.put(t); }
@@ -293,8 +321,8 @@ async function relink(){
 /* ---------- interfície: secció «Compte» de la configuració ---------- */
 const CONSENT_HTML = `
   <p><b>Responsable:</b> Club Ocata Vent (El Masnou).</p>
-  <p><b>Què es desa:</b> el teu nom, el correu i la data d'aquesta acceptació, perquè l'administració del club pugui aprovar l'alta; i les sortides que hi pugis (ruta GPS, hores, velocitats i vent).</p>
-  <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. El que publiques (mur, «Qui surt», anuncis), on ets i els avisos de seguretat ho veu qui triïs a Configuració ▸ Confidencialitat: tothom, el club, les teves amistats o ningú. La gent del club veu el teu nom per poder-te afegir com a amistat. L'administració veu el nom i el correu de cada persona sòcia.</p>
+  <p><b>Què es desa:</b> el teu nom, el correu i la data d'aquesta acceptació, perquè l'administració del club pugui aprovar l'alta; el telèfon, només si el poses (el veuen la Junta i qui té el permís «Seguretat»); i les sortides que hi pugis (ruta GPS, hores, velocitats i vent).</p>
+  <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. El que publiques (mur, «Qui surt», anuncis), on ets i els avisos de seguretat ho veu qui triïs a ⋮ ▸ Privadesa: tothom, el club, les teves amistats o ningú. La gent del club veu el teu nom per poder-te afegir com a amistat. L'administració veu el nom i el correu de cada persona sòcia.</p>
   <p><b>On ets:</b> només mentre ets a la base o navegant, i ho veu qui hagis triat (per defecte, el club). Navegant, inclou la posició. S'esborra en acabar, en marxar o al cap de 24 h.</p>
   <p><b>On:</b> Google Firebase (Authentication per al compte i Cloud Firestore per a les dades), en servidors de la Unió Europea.</p>
   <p><b>Per a què:</b> només perquè l'app funcioni. No es ven ni es cedeix, i el correu no s'envia a cap altre servei.</p>
@@ -347,40 +375,76 @@ function render(){
       <div class="acc-alt"><button class="lnk" type="button" id="accReset">He oblidat la contrasenya</button>
         <button class="lnk" type="button" id="accLink">Envia'm un enllaç d'accés</button></div>`}`;
   } else {
-    const who = `<div class="vp-row"><div class="acc-who"><b>${esc(member?.nom || user.displayName || "")}</b><span>${esc(user.email || "")}${isAdm ? " · administració" : ""}</span></div>
-        <button class="ib-i" type="button" data-info="iUid" aria-label="Identificador del compte" aria-expanded="false">i</button></div>
+    const nom = member?.nom || user.displayName || "", ini = nom.split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+    const estatT = !member ? "Falta l'alta" : member.estat === "pendent" ? "Pendent d'aprovació" : member.estat === "rebutjat" ? "No aprovat" : isAdm ? "Administració" : member.premium ? "Premium" : "Alta aprovada";
+    const who = `<div class="cfg-grp"><div class="cfg-prof"><span class="cfg-av" aria-hidden="true">${esc(ini)}</span>
+        <div class="acc-who" style="flex:1"><b>${esc(nom)}</b><span>${esc(user.email || "")}</span><span>${esc(estatT)}</span></div>
+        <button class="ib-i" type="button" data-info="iUid" aria-label="Identificador del compte" aria-expanded="false">i</button></div></div>
       <p class="vp-info" id="iUid" hidden>ID del compte: <b style="font-family:var(--f-mono);word-break:break-all">${esc(user.uid)}</b>${user.uid === OWNER_UID ? "<br>És el compte d'administració inicial." : ""}</p>`;
+    peek.textContent = estatT + (member && member.estat === "aprovat" ? " · " + (member.nom || user.email || "") : "");
     if(!member){
-      peek.textContent = "Falta l'alta";
       h = who + `<p class="note">Has entrat, però encara no has demanat l'alta al club.</p>${consentBlock(true)}
         <button class="btn acc-wide" type="button" id="accJoin">Sol·licita l'alta</button>`;
     } else if(member.estat === "pendent"){
-      peek.textContent = "Pendent d'aprovació";
       h = who + `<div class="warnbox">Sol·licitud enviada: l'administració del club l'ha d'aprovar. Mentrestant, les sortides es desen només en aquest mòbil.</div>`;
     } else if(member.estat === "rebutjat"){
-      peek.textContent = "No aprovat";
       h = who + `<div class="warnbox">L'alta no s'ha aprovat. Si creus que és un error, parla amb la junta.</div>`;
     } else {
-      peek.textContent = (isAdm ? "Administració" : "Alta aprovada") + " · " + (member.nom || user.email || "");
-      h = who + `<p class="note">Alta aprovada. Les sortides es desen al núvol, privades: només les veus tu.</p>`;
+      h = who + `<p class="note">Les sortides es desen al núvol, privades: només les veus tu.</p>`;
     }
+    if(member) h += `<span class="lbl cfg-h">Dades personals</span>
+      <div class="cfg-grp"><button type="button" class="cfg-row" data-go="acc-dades"><span class="cfg-ic">${IC_USER}</span><span class="cfg-rt"><b>Nom, correu i telèfon</b><small id="accTelPeek">${esc(contacte && contacte.telefon ? "Telèfon " + contacte.telefon : "Telèfon no indicat")}</small></span>${CHEV}</button></div>`;
+    if(approved()) h += `<span class="lbl cfg-h">Les meves embarcacions</span>
+      <div class="cfg-grp" id="accBoats"><p class="note" style="padding:14px">Carregant…</p></div>
+      <p class="note">Les dades que hi posis (tipus, nom, vela, plaça) les valida Manteniment. L'estat (a la varada, navegant, en reparació) es canvia a Club ▸ Base.</p>`;
     const hasPw = (user.providerData || []).some(p => p.providerId === "password");
-    if(!hasPw && user.email) h += `<div class="acc-pw"><div class="vp-row"><span class="lbl">Contrasenya per a l'app</span>
-        <button class="ib-i" type="button" data-info="iPw" aria-label="Per a què serveix" aria-expanded="false">i</button></div>
-      <p class="vp-info" id="iPw" hidden>A l'app d'Android no es pot entrar amb Google. Posa una contrasenya aquí i, a l'app, entra amb ${esc(user.email)} i aquesta contrasenya: és el mateix compte.</p>
-      <input class="field" id="accNewPw" type="password" autocomplete="new-password" minlength="6" placeholder="Contrasenya nova (mínim 6)">
-      <button class="btn acc-wide" type="button" id="accSetPw">Desa la contrasenya</button></div>`;
-    h += `<button class="btn" type="button" id="accOut">Tanca la sessió</button>` + delBlock();
+    if(!hasPw && user.email) h += `<div class="cfg-grp"><button type="button" class="cfg-row" data-go="acc-pw"><span class="cfg-ic">${IC_KEY}</span><span class="cfg-rt"><b>Contrasenya per a l'app</b><small>Per entrar a l'app d'Android</small></span>${CHEV}</button></div>`;
+    h += `<button class="btn acc-wide" type="button" id="accOut">Tanca la sessió</button>` + delBlock();
   }
-  body.innerHTML = `<div class="msg${flash.err ? " err" : ""}" id="accMsg"${flash.t ? "" : " hidden"}>${esc(flash.t)}</div>` + h;
+  body.innerHTML = msgDiv("accMsg") + h;
   const d = $("accDel"); if(d) slideConfirm(d, "Llisca per esborrar el compte", deleteAccount);
+  renderSub(); fillBoats();
+  if(member && !contacteAt) readContact().then(c => { const el = $("accTelPeek"); if(el) el.textContent = c && c.telefon ? "Telèfon " + c.telefon : "Telèfon no indicat"; });
 }
-function openPanel(){
-  const p = $("viewPanel"); if(!p) return;
-  p.hidden = false; $("themeBtn").setAttribute("aria-expanded", "true");
-  const s = $("accSec"); if(s) s.open = true;
-  render();
+const msgDiv = id => `<div class="msg${flash.err ? " err" : ""}" id="${id}" data-accmsg${flash.t ? "" : " hidden"}>${esc(flash.t)}</div>`;
+const CHEV = `<svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>`;
+const IC_USER = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`;
+const IC_KEY = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg>`;
+const IC_BOAT = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3v13H4zM13 7l6 9h-6zM3 19h18l-2 2H5z"/></svg>`;
+// Subpantalles del compte: dades personals i contrasenya
+function renderSub(){
+  const D = $("accDadesBody"), P = $("accPwBody");
+  if(D){
+    if(!user || !member) D.innerHTML = `<p class="note">Cal entrar amb el compte.</p>`;
+    else if(!D.querySelector("#accDNom") || !window.OV_CFG?.isOpen("acc-dades")){   // mentre s'edita, no es repinta
+      D.innerHTML = msgDiv("accMsgD") + `
+      <label class="acc-f"><span class="lbl">Nom i cognoms</span><input class="field" id="accDNom" type="text" autocomplete="name" maxlength="80" value="${esc(member.nom || "")}"></label>
+      <label class="acc-f"><span class="lbl">Correu</span><input class="field cfg-ro" id="accDMail" type="email" value="${esc(user.email || "")}" readonly aria-describedby="accDMailN"></label>
+      <p class="note" id="accDMailN">És el correu amb què entres: no es pot canviar des d'aquí.</p>
+      <label class="acc-f"><span class="lbl">Telèfon (opcional)</span><input class="field" id="accDTel" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="600 00 00 00" value="${esc(contacte && contacte.telefon || "")}" aria-describedby="accDTelN"></label>
+      <p class="note" id="accDTelN">Només el veuen la Junta i qui té el permís «Seguretat», per trucar-te si avises el club des de l'aigua.</p>
+      <button class="btn cl-pri acc-wide" type="button" id="accDSave">Desa</button>`;
+    }
+  }
+  if(P && !($("accNewPw")?.value && window.OV_CFG?.isOpen("acc-pw"))){   // no esborris el que s'està escrivint
+    const hasPw = user && (user.providerData || []).some(p => p.providerId === "password");
+    P.innerHTML = !user || !user.email ? `<p class="note">Cal entrar amb el compte.</p>` : hasPw ? msgDiv("accMsgP") + `<p class="note">Aquest compte ja té contrasenya.</p>` : msgDiv("accMsgP") + `
+      <p class="note">A l'app d'Android no es pot entrar amb Google. Posa una contrasenya aquí i, a l'app, entra amb <b>${esc(user.email)}</b> i aquesta contrasenya: és el mateix compte.</p>
+      <label class="acc-f"><span class="lbl">Contrasenya nova</span><input class="field" id="accNewPw" type="password" autocomplete="new-password" minlength="6" placeholder="Mínim 6 caràcters"></label>
+      <button class="btn cl-pri acc-wide" type="button" id="accSetPw">Desa la contrasenya</button>`;
+  }
 }
+// Les meves embarcacions (les mateixes de Club ▸ Base): tocar-ne una obre la seva fitxa
+async function fillBoats(){
+  const el = $("accBoats"); if(!el || !window.OV_CLUB?.myBoats) return;
+  let L; try{ L = await OV_CLUB.myBoats(); }catch(e){ L = null; }
+  const box = $("accBoats"); if(!box) return;
+  if(!L){ box.innerHTML = `<p class="note" style="padding:14px">No s'han pogut carregar. Torna-ho a provar més tard.</p>`; return; }
+  box.innerHTML = L.map(b => `<button type="button" class="cfg-row" data-accboat="${esc(b.id)}"><span class="cfg-ic">${IC_BOAT}</span><span class="cfg-rt"><b>${esc(b.title)}</b><small>${esc(b.sub)}</small></span>${CHEV}</button>`).join("")
+    + `<button type="button" class="cfg-row add" id="accBoatNew"><span class="cfg-ic">+</span><span class="cfg-rt"><b>${L.length ? "Afegeix-ne una altra" : "Afegeix la meva embarcació"}</b></span></button>`;
+}
+window.addEventListener("ov-sheet-closed", () => { if(window.OV_CFG?.isOpen("acc")) fillBoats(); });
+function openPanel(){ if(window.OV_CFG) OV_CFG.open("acc"); render(); }
 async function refresh(){   // en obrir la configuració: comprova si ja t'han aprovat i les altes noves
   if(!user || Date.now() - lastRefresh < 20000) return;
   lastRefresh = Date.now();
@@ -390,8 +454,11 @@ async function refresh(){   // en obrir la configuració: comprova si ja t'han a
   if(member?.estat !== was && approved()) sync();
 }
 
+document.addEventListener("input", e => { if(e.target.id === "accDTel") e.target.dataset.touched = "1"; });
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("#accBody button"); if(!t || t.classList.contains("ib-i")) return;
+  const t = e.target.closest && e.target.closest("#accBody button, #accDadesBody button, #accPwBody button"); if(!t || t.classList.contains("ib-i") || t.hasAttribute("data-go")) return;
+  if(t.dataset.accboat){ window.OV_CLUB?.openBoat(t.dataset.accboat); return; }
+  if(t.id === "accBoatNew"){ window.OV_CLUB?.newBoat(); return; }
   if(t.disabled) return; t.disabled = true; setTimeout(() => { t.disabled = false; }, 1500);
   if(t.id === "accModeEntra" || t.id === "accModeAlta"){ accMode = t.id === "accModeAlta" ? "alta" : "entra"; flash = {t:"", err:false}; render(); t.disabled = false; return; }
   if(t.id === "accGoogle") google();
@@ -405,8 +472,13 @@ document.addEventListener("click", e => {
   else if(t.id === "accOut") logout();
   else if(t.id === "accJoin") requestJoin();
   else if(t.id === "accRelink") relink();
+  else if(t.id === "accDSave") saveDades();
 });
-$("themeBtn").addEventListener("click", () => { if(!$("viewPanel").hidden){ render(); refresh(); } });
+window.addEventListener("ov-cfg", e => { const k = e.detail && e.detail.pg;
+  if(k === "acc"){ render(); refresh(); }
+  if(k === "acc-dades"){ flash = {t:"", err:false}; const D = $("accDadesBody"); if(D) D.innerHTML = ""; renderSub();
+    readContact(true).then(c => { const i = $("accDTel"); if(i && !i.dataset.touched) i.value = c && c.telefon || ""; }); }
+  if(k === "acc-pw"){ flash = {t:"", err:false}; renderSub(); } });
 
 /* ---------- targeta del núvol a l'historial ---------- */
 async function renderCard(){
