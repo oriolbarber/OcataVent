@@ -44,8 +44,8 @@
       const b = L.DomUtil.create("button", "ls-homebtn"); b.type = "button"; b.innerHTML = HOUSE; b.setAttribute("aria-label", "El meu club");
       L.DomEvent.disableClickPropagation(b); L.DomEvent.on(b, "click", () => pick(homeK)); return b; }});
     map.addControl(new Home());
-    homeMk = L.marker(LOCS[homeK].home, {icon:L.divIcon({className:"ls-homemk", html:HOUSE, iconSize:[30, 30], iconAnchor:[15, 34]}), zIndexOffset:1000})
-      .bindTooltip("El meu club · " + LOCS[homeK].name, {direction:"top", offset:[0, -30]}).on("click", () => pick(homeK)).addTo(map);
+    homeMk = L.marker(LOCS[homeK].home, {icon:L.divIcon({className:"ls-homemk", html:HOUSE, iconSize:[30, 30], iconAnchor:[15, 38]}), zIndexOffset:1000})
+      .bindTooltip("El meu club · " + LOCS[homeK].name, {direction:"top", offset:[0, -36]}).on("click", () => pick(homeK)).addTo(map);
   }
   const match = k => { if(onlySt && !hasSt(k)) return false; if(!q) return true; const o = LOCS[k]; return norm(`${o.name} ${o.muni} ${o.com}`).includes(q); };
   function paint(fit){

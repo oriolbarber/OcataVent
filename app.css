@@ -1480,5 +1480,5 @@ body.ls-open{overflow:hidden}
 .ls-hm svg{width:18px;height:18px}
 .ls-sethome{flex:none;width:44px;height:44px;margin-right:6px;border-radius:12px;border:1px dashed var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer}
 .ls-homebtn{width:34px;height:34px;display:grid;place-items:center;background:#fff;color:#0b1f33;border:2px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;padding:0}
-.ls-homemk{display:grid;place-items:center;background:#0b1f33;color:#fff;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px #0006}
-.ls-homemk svg{transform:rotate(45deg);width:18px;height:18px}
+.ls-homemk{display:grid;place-items:center;background:#0b1f33;color:#fff;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px #0006}
+.ls-homemk svg{width:18px;height:18px}
