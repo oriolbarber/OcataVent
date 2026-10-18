@@ -1,0 +1,262 @@
+# Platges amb bandera (dades obertes de la Generalitat, conjunt 4baz-cjv2), amb dades del 2025 o 2026.
+# codi|nom|lat|lon — la fa servir scripts/clubs.mjs per triar la platja més propera de cada club.
+080060-p0|Platja del Cavaió|41.58046|2.56681
+080060-p2|Platja de la Picòrdia|41.57797|2.55323
+080155-p0|Platja de la Barca Maria|41.4569|2.26322
+080155-p1|Platja del Coco|41.43847|2.24474
+080155-p10|Platja de la Marina|41.43172|2.24058
+080155-p2|Platja del Cristall|41.45492|2.26046
+080155-p3|Platja de l'Estació|41.44417|2.24898
+080155-p5|Platja dels Patins de Vela|41.44605|2.25065
+080155-p6|Platja dels Pescadors|41.44839|2.25279
+080155-p7|Platja del Pont del Petroli|41.44037|2.24614
+080155-p8|Platja del Pont d'en Botifarreta|41.45269|2.25764
+080155-p9|Platja de la Móra|41.42815|2.23807
+080193-p0|Platja de la Barceloneta|41.37987|2.19383
+080193-p1|Platja del Fòrum|41.40977|2.22684
+080193-p2|Platja de Llevant|41.40481|2.21844
+080193-p3|Platja de la Mar Bella|41.39828|2.21188
+080193-p4|Platja de la Nova Icària|41.39005|2.20234
+080193-p5|Platja de la Nova Mar Bella|41.40186|2.21523
+080193-p6|Platja de Sant Sebastià|41.37204|2.18951
+080193-p7|Platja del Somorrostro|41.38306|2.19559
+080193-p8|Platja del Bogatell|41.3943|2.2066
+080193-p9|Platja de Sant Miquel|41.37615|2.19112
+080291-p0|Platja Cabrera|41.51102|2.41163
+080291-p1|Platja de Santa Margarida|41.51168|2.41123
+080291-p2|Platja del Molí|41.50882|2.40746
+080291-p3|Platja dels Vinyals|41.5066|2.40333
+080327-p0|Platja del Kalima|41.56899|2.52955
+080327-p1|Platja dels Tres Micos|41.56728|2.52514
+080351-p0|Platja de Garbí|41.6102|2.65467
+080351-p1|Platja Gran|41.61244|2.66312
+080351-p2|Platja de les Roques|41.607|2.64499
+080403-p0|Platja de Canet|41.58806|2.58746
+080403-p1|Platja del Cavaió|41.5838|2.57602
+080569-p0|Platja de la Pineda|41.26395|1.99258
+080569-p1|Platja de Lluminetes|41.264|1.97549
+080569-p2|Platja del Baixador|41.26414|1.96451
+080749-p0|Platja Llarga|41.20117|1.68083
+080749-p1|Platja de la Mota de Sant Pere|41.19743|1.6643
+080749-p2|Platja de les Salines|41.19617|1.65903
+080749-p3|Platja de les Gavines|41.1951|1.64656
+080898-p0|Platja de Gavà - Premià|41.26966|2.04277
+080898-p1|Platja de l'Estany|41.27028|2.04614
+080898-p2|Platja de Gavà Roses|41.26549|2.01806
+080898-p3|Platja de Gavà Vandellòs|41.26403|1.99873
+081108-p0|Platja de l'Astillero|41.63678|2.73128
+081108-p1|Platja de la Conca|41.64605|2.76222
+081108-p2|Platja de Malgrat Centre|41.64231|2.74846
+081108-p3|Platja de la Punta de la Tordera|41.64915|2.77533
+081189-p0|Platja del Masnou|41.47582|2.30748
+081189-p1|Platja d'Ocata|41.47966|2.32319
+081213-p0|Platja del Callao|41.53911|2.45543
+081213-p1|Platja de Ponent|41.52876|2.44069
+081213-p2|Platja de Sant Simó|41.54201|2.45977
+081213-p3|Platja del Varador|41.53531|2.45047
+081265-p0|Platja de les Roques|41.46498|2.27898
+081265-p1|Platja de les Barques|41.4684|2.28706
+081265-p5|Platja de Cala Taps|41.4619|2.2707
+081635-p0|Platja dels Pescadors|41.62119|2.69253
+081635-p1|Platja dels Pins|41.62347|2.70035
+081635-p2|Platja del Poblenou|41.6167|2.67728
+081635-p3|Platja de la Riera|41.61922|2.68486
+081691-p0|Platja del Remolar-El Prat|41.27876|2.08242
+081691-p1|Platja de la Roberta|41.28683|2.10589
+081691-p2|Platja Naturista|41.28786|2.10774
+081691-p3|Platja de Can Camins|41.28515|2.10186
+081727-p0|Platja de Bellamar|41.48941|2.36307
+081727-p2|Platja de Llevant|41.49301|2.37473
+081727-p3|Platja del Pla de l'Os|41.48762|2.35544
+081944-p0|Platja del Litoral|41.42161|2.23398
+081944-p1|Platja del Fòrum|41.41621|2.23134
+081976-p0|Platja de les Barques|41.55624|2.5011
+081976-p1|Platja de l'Estació|41.55549|2.49924
+082191-p0|Platja de l'Almadrava|41.50441|2.39905
+082191-p1|Platja de l'Astillero|41.50126|2.39192
+082191-p2|Platja de Ponent|41.49805|2.3852
+082359-p0|Platja de Can Villar|41.59791|2.6158
+082359-p1|Platja la Platjola i les Escaletes|41.60158|2.62724
+082359-p2|Platja el Morer|41.60309|2.63014
+082359-p3|Platja de Sant Pol i els Pescadors|41.60094|2.6245
+082359-p5|Platja de les Roques Blanques|41.5915|2.59713
+082613-p0|Platja de Llevant|41.63433|2.726
+082613-p1|Platja de les Dunes|41.62761|2.70929
+082649-p0|Platja de Sant Vicenç|41.56402|2.51769
+082704-p0|Platja de les Botigues|41.26177|1.93321
+082704-p1|Platja del Garraf|41.25445|1.90503
+082704-p10|Platja de la Fragata|41.23418|1.80971
+082704-p11|Platja de la Bassa Rodona|41.2331|1.80372
+082704-p12|Platja de les Anquines|41.22462|1.78773
+082704-p13|Cala Morisca|41.24267|1.86871
+082704-p14|Platja Cala Ginesta|41.25802|1.91969
+082704-p2|Platja d'Aiguadolç|41.23622|1.8278
+082704-p3|Platja dels Balmins|41.2358|1.8205
+082704-p4|Platja de Sant Sebastià|41.2362|1.81469
+082704-p5|Platja de la Ribera|41.23436|1.80828
+082704-p6|Platja de l'Estanyol|41.23182|1.7996
+082704-p7|Platja de la Barra|41.2281|1.79224
+082704-p8|Platja de Terramar|41.22646|1.78985
+082704-p9|Platja de la Riera Xica|41.23043|1.79649
+083073-p0|Platja d'Adarró|41.21098|1.71721
+083073-p1|Platja de la Farola|41.2155|1.73885
+083073-p2|Platja del Prat de Vilanova|41.20362|1.68539
+083073-p3|Platja de Ribes Roges|41.21194|1.7249
+083073-p4|Platja de Sant Gervasi|41.21|1.71184
+083073-p6|Platja de la República|41.21103|1.715
+083073-p7|Platja de l'Aiguadolç|41.20894|1.71015
+083649-p0|Platja de la Murtra|41.27032|2.04881
+083649-p1|Platja de la Pineda|41.27272|2.05613
+170139-p0|Platja del Racó|41.97976|3.20839
+170139-p2|Platja de Sa Riera|41.97305|3.21095
+170139-p5|Platja d'Aiguablava|41.93398|3.21628
+170139-p6|Platja de Sa Tuna|41.96054|3.22993
+170237-p0|Platja de Sant Francesc|41.67879|2.80736
+170237-p1|Platja del Centre|41.67364|2.79322
+170237-p2|Platja de S'Abanell|41.66873|2.78776
+170340-p0|Platja Cala Cristus|41.8313|3.08731
+170340-p1|Platja d'Es Monestri|41.84863|3.11591
+170340-p2|Platja de Sant Antoni|41.84646|3.10547
+170340-p3|Platja de Torre Valentina|41.83955|3.09546
+170340-p4|Cala de Ses Torretes|41.82976|3.08577
+170470-p0|Platja d'Empuriabrava|42.24236|3.13088
+170470-p1|Platja de la Rubina|42.25176|3.13958
+170486-p0|Cala Rovira|41.82202|3.07439
+170486-p1|Platja Gran|41.8168|3.06972
+170486-p2|Cala Sa Conca|41.79804|3.06111
+170622-p1|Platja de Riells|42.11496|3.13971
+170622-p2|Platja del Port d'en Perris|42.12641|3.13534
+170622-p3|Platja del Poble|42.12654|3.13334
+170622-p4|Platja del Rec del Molí|42.12755|3.12461
+170622-p5|Platja del Portitxol|42.13172|3.12221
+170622-p6|Platja de les Muscleres|42.13568|3.12312
+170622-p7|Platja del Moll Grec|42.1362|3.12147
+170622-p8|Platja del Riuet|42.14078|3.11858
+170926-p0|Platja del Port|42.37139|3.16033
+170926-p1|Platja de Grifeu|42.38112|3.15584
+170926-p4|Platja de les Tonyines|42.3633|3.16316
+170950-p0|Platja de Canyelles|41.70415|2.8828
+170950-p1|Platja de Fenals|41.69446|2.8346
+170950-p2|Platja de Lloret|41.69957|2.85257
+170950-p3|Cala Sa Boadella|41.69058|2.82423
+170950-p4|Platja de Santa Cristina|41.68787|2.81799
+171175-p0|Platja del Canadell|41.88849|3.18735
+171175-p1|Platja de Llafranc|41.89352|3.19426
+171175-p10|Platja Port Pelegrí|41.88726|3.18287
+171175-p2|Platja del Port Bo|41.88827|3.1851
+171175-p4|Platja de Tamariu|41.91769|3.20778
+171175-p6|Platja Cala d'Aigua Dolça|41.91788|3.20946
+171175-p7|Platja de Iris|41.91705|3.20732
+171175-p8|Platja de la Malespina|41.88825|3.1858
+171175-p9|Platja de Calau|41.88819|3.18429
+171181-p0|Cala Estreta|41.86589|3.17352
+171181-p1|Platja de Castell|41.86248|3.15634
+171181-p2|Cala la Fosca|41.85639|3.14257
+171181-p3|Platja del Morro del Vedell|41.84794|3.13731
+171181-p4|Platja Gran de Palamós|41.84804|3.1205
+171181-p9|Platja Sa Tamardia|41.8545|3.14329
+171241-p0|Platja Gran|41.98315|3.20625
+171241-p1|Platja del Grau|42.00049|3.19835
+171404-p1|Platja del Port de la Selva|42.33606|3.20222
+171523-p1|Platja de l'Almadrava|42.24075|3.20736
+171523-p2|Platja de Canyelles Petites|42.24709|3.19653
+171523-p3|Platja dels Palangrers|42.25055|3.18179
+171523-p4|Platja de la Punta|42.25943|3.17832
+171523-p5|Platja del Salatar|42.26444|3.17076
+171523-p6|Platja de Santa Margarida|42.26125|3.15398
+171523-p7|Platja el Rastrell|42.26498|3.1657
+171523-p8|Platja Nova|42.26378|3.17356
+171609-p0|Platja de Sant Feliu|41.78007|3.0312
+171609-p1|Platja de Sant Pol|41.79076|3.0531
+171788-p0|Platja de Cal Cristià|42.17701|3.11112
+171788-p1|Platja de Can Martinet|42.19364|3.11071
+171788-p2|Platja de Can Nera|42.18744|3.11065
+171788-p3|Platja de Can Sopa|42.18212|3.1107
+171788-p4|Platja del Cortal de la Devesa|42.15566|3.11407
+171788-p5|Platja del Cortal de la Vila|42.17045|3.11174
+171788-p6|Platja del Riuet|42.14751|3.11569
+171788-p7|Platja de la Gola|42.19874|3.11092
+171997-p0|Platja de Mas Pinell|42.00983|3.19616
+171997-p1|Platja de l'Estartit|42.05064|3.20003
+171997-p2|Cala Montgó|42.10775|3.16937
+172023-p0|Platja Gran|41.71905|2.9338
+172023-p1|Platja de la Mar Menuda|41.72201|2.93838
+172023-p2|Cala d'Es Codolar|41.71588|2.9325
+172023-p6|Cala Giverola|41.73724|2.95415
+430043-p1|Platja Maricel|40.56933|0.54112
+430043-p2|Platja de les Cases - Marjal|40.55033|0.53013
+430043-p3|Platja Martinenca / Ciment|40.57283|0.54729
+430120-p0|Platja d'Altafulla|41.13436|1.38212
+430136-p0|Platja del Calafató|40.92212|0.8413
+430136-p1|Platja de Sant Jordi d'Alfama|40.91208|0.83228
+430136-p2|Cala Forn|40.90826|0.82642
+430136-p3|Platja de Pixavaques|40.88684|0.80693
+430136-p4|Platja de l'Alguer|40.88445|0.80556
+430379-p0|Platja de Calafell|41.18694|1.57745
+430379-p1|Platja de l'Estany - Mas Mel|41.18815|1.58863
+430379-p2|Platja de Segur|41.18956|1.61165
+430385-p0|Platja de l'Ardiaca|41.05763|1.03454
+430385-p1|Platja del Cavet|41.06423|1.07996
+430385-p10|Platja del Regueral-Llevant|41.06616|1.07228
+430385-p2|Platja de l'Horta de Santa Maria|41.06442|1.05104
+430385-p3|Platja de la Llosa|41.06241|1.0451
+430385-p4|Platja del Regueral-Ponent|41.06588|1.06715
+430385-p5|Platja de la Riera|41.06376|1.0564
+430385-p6|Platja de Vilafortuny|41.06985|1.10218
+430385-p7|Platja del Cap de Sant Pere|41.07387|1.11797
+430385-p9|Platja de l'Esquirol|41.06662|1.0914
+430516-p0|Platja de Cunit Ponent|41.19184|1.62561
+430516-p1|Platja de Cunit Llevant|41.1945|1.64065
+430923-p0|Platja de la Pixerota|41.04942|1.0124
+430923-p12|Platja Estany gelat|41.01911|0.95529
+430923-p13|Platja dels Lladres|41.04013|0.98596
+430923-p14|Platja Penyals|41.03364|0.97593
+430923-p2|Platja Llarga|41.1289|1.30407
+430923-p3|Cala dels Vienesos|41.01405|0.94976
+430923-p9|Platja Cristall|41.00298|0.93828
+431042-p0|Platja Morro de Gos|40.82777|0.7417
+431310-p0|Platja Costa Daurada|41.17033|1.48896
+431310-p1|Platja Llarga|41.16561|1.46616
+431310-p2|Platja de la Pellisseta|41.16921|1.48269
+431310-p3|Platja Punta d'en Guineu|41.16849|1.47972
+431362-p2|Platja del Parc de Garbí|40.61363|0.59272
+431362-p3|Platja de les Delícies|40.60634|0.58382
+431482-p0|Platja de Tamarit|41.13024|1.3626
+431482-p1|Platja de la Móra|41.12794|1.34697
+431482-p10|Platja de Calabecs o Roca Plana|41.12867|1.33566
+431482-p11|Cala Jovera|41.12965|1.36064
+431482-p12|Platja dels Cossis|41.11385|1.26927
+431482-p2|Platja Llarga 1|41.12722|1.29479
+431482-p3|Platja Llarga 2|41.12862|1.30388
+431482-p4|Platja de la Savinosa|41.12271|1.28489
+431482-p5|Platja de l'Arrabassada|41.11895|1.27628
+431482-p6|Platja del Miracle|41.11426|1.2617
+431482-p7|Platja Llarga 3|41.12995|1.31562
+431482-p8|Platja Cala Fonda o Waikiki|41.12908|1.32852
+431482-p9|Platja dels Capellans|41.12512|1.29114
+431536-p0|Platja dels Muntanyans|41.14626|1.41966
+431536-p1|Platja del Barri Marítim|41.14348|1.41325
+431536-p2|Platja de la Paella|41.13991|1.40623
+431536-p3|Platja del Canyadell|41.13251|1.39043
+431628-p0|Platja de l'Almadrava|40.93917|0.85797
+431628-p1|Platja de l'Arenal|40.9876|0.91582
+431628-p2|Platja de la Punta del Riu|40.99052|0.93053
+431628-p3|Platja del Torn|40.97001|0.89344
+431634-p0|Platja de Sant Salvador - Sanatori|41.18397|1.55497
+431634-p2|Platja de Coma-ruga|41.18007|1.52922
+431634-p4|Platja del Francàs|41.17535|1.50267
+431634-p5|Platja de les Madrigueres|41.18497|1.55897
+431711-p0|Platja de la Pineda|41.08133|1.1869
+431711-p1|Platja del Racó|41.07083|1.18019
+43839-p1|Platja de Creixell|41.15659|1.44281
+439018-p3|Platja de Riumar|40.73069|0.842
+439057-p2|Platja Llarga|41.06531|1.15513
+439057-p3|Platja dels Capellans|41.06826|1.14819
+439057-p4|Platja de Llevant|41.07272|1.14111
+439057-p5|Cala Font|41.05926|1.16179
+439057-p6|Platja de Ponent|41.07487|1.12549
+439057-p7|Cala Vinya|41.05854|1.16198
+439057-p8|Cala Crancs|41.05647|1.1679
+439060-p0|Platja de l'Arenal|40.80035|0.69955
+439060-p3|Platja de les Avellanes|40.81249|0.71447
+439060-p8|Platja de Cap Roig|40.82147|0.73233

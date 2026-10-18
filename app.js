@@ -1,24 +1,12 @@
 "use strict";
 /* ============ Mar del Masnou · previsió ============ */
-// Llocs = clubs (V3 multiclub). Cada un té el punt de previsió, el d'onatge (mar endins), les seves estacions (pot no tenir-ne:
-// llavors només hi ha previsió), les platges per a la bandera, el punt del mapa, la base nàutica i l'orientació de la costa (terral).
-// Per afegir un club n'hi ha prou amb una entrada aquí (nom, municipi, comarca, coordenades i coast); les estacions són opcionals.
+// Llocs = clubs. La llista és a clubs.js (window.OV_CLUBS), generada per scripts/clubs.mjs a partir de data/clubs.csv (vela.cat):
+// per a cada club, punt de previsió, punt d'onatge (mar endins), estacions (pot no tenir-ne: només previsió), platges amb bandera,
+// base nàutica, orientació de la costa (terral) i zones d'avisos de Meteocat. Per afegir o corregir un club: CSV + node scripts/clubs.mjs.
 // El Club Ocata Vent i el Club Nàutic El Masnou comparteixen meteo; cada club té la seva base.
-const LOCS = {
+const LOCS = window.OV_CLUBS && window.OV_CLUBS.masnou ? window.OV_CLUBS : {
   masnou:   {name:"Club Ocata Vent", muni:"El Masnou", com:"Maresme", lat:41.4766, lon:2.3185, mlat:41.465, mlon:2.33, home:[41.479804, 2.324024], wm:[41.4795, 2.3265], coast:135,
-             stations:["masnou","ocata"], st:"masnou", smp:[21, 96], beaches:{"081189-p1":"Platja d'Ocata", "081189-p0":"Platja del Masnou"}, flag:"081189-p1"},
-  cnmasnou: {name:"Club Nàutic El Masnou", muni:"El Masnou", com:"Maresme", lat:41.4766, lon:2.3185, mlat:41.465, mlon:2.33, home:[41.4772, 2.3168], wm:[41.4775, 2.3190], coast:135,
-             stations:["masnou","ocata"], st:"masnou", smp:[21, 96], beaches:{"081189-p0":"Platja del Masnou", "081189-p1":"Platja d'Ocata"}, flag:"081189-p0"},
-  vilassar: {name:"CN Vilassar de Mar", muni:"Vilassar de Mar", com:"Maresme", lat:41.5044, lon:2.3978, mlat:41.494, mlon:2.41, home:[41.5044, 2.3978], wm:[41.5040, 2.3995], coast:145,
-             stations:["vilassar"], st:"vilassar", smp:[21, 96], beaches:{}, flag:null},
-  badalona: {name:"Badalona", muni:"Badalona", com:"Barcelonès", lat:41.4461, lon:2.2506, mlat:41.435, mlon:2.262, home:[41.4461, 2.2506], wm:[41.4461, 2.2506], coast:135,
-             stations:["badalona"], st:"badalona", smp:[13, 95], beaches:{"080155-p5":"Platja dels Patins de Vela", "080155-p6":"Platja dels Pescadors"}, flag:"080155-p5"},
-  marbella: {name:"Base Nàutica Mar Bella", muni:"Barcelona", com:"Barcelonès", lat:41.4006, lon:2.2089, mlat:41.390, mlon:2.221, home:[41.4006, 2.2089], wm:[41.4000, 2.2100], coast:135,
-             stations:["portbcn"], st:"portbcn", stNote:"Estació a uns 3,5 km", smp:[13, 95], beaches:{}, flag:null},
-  cmv:      {name:"Centre Municipal de Vela", muni:"Barcelona", com:"Barcelonès", lat:41.3866, lon:2.2003, mlat:41.376, mlon:2.212, home:[41.3866, 2.2003], wm:[41.3860, 2.2015], coast:135,
-             stations:["portbcn"], st:"portbcn", stNote:"Estació a uns 2 km", smp:[13, 95], beaches:{}, flag:null},
-  barceloneta:{name:"Club Patí Vela Barcelona", muni:"Barcelona", com:"Barcelonès", lat:41.3771, lon:2.1922, mlat:41.367, mlon:2.204, home:[41.3771, 2.1922], wm:[41.3765, 2.1935], coast:135,
-             stations:["portbcn"], st:"portbcn", smp:[13, 95], beaches:{}, flag:null}
+             stations:["masnou","ocata"], st:"masnou", smp:[21, 96], beaches:{"081189-p1":"Platja d'Ocata", "081189-p0":"Platja del Masnou"}, flag:"081189-p1"}
 };
 let locKey = (() => { try{ return JSON.parse(localStorage.getItem("ov2_loc")); }catch(e){ return null; } })(); if(!LOCS[locKey]) locKey = "masnou";
 const LOC = LOCS[locKey];
@@ -790,7 +778,7 @@ function hourTable(date, h0, h1){
 
 /* ---------- informació oficial: bandera de bany (Gencat) i avisos (Meteocat) ---------- */
 // Bandera: dades obertes «Estat de les platges de Catalunya» (Platja d'Ocata = 081189-p1, Platja del Masnou = 081189-p0).
-// Avisos: Situacions Meteorològiques de Perill (SMP) de Meteocat per al Maresme (21) i la seva zona de mar (96).
+// Avisos: Situacions Meteorològiques de Perill (SMP) de Meteocat per a la comarca del club i la seva zona de mar (LOC.smp).
 const BEACHES = LOC.beaches;
 const SMP_ZONES = LOC.smp;   // Meteocat: comarca i zona de mar (Maresme 21/96 · Barcelonès 13/95)
 let INFO = {flag:null, alerts:[], at:0, ok:{flag:false, smp:false}};
@@ -825,7 +813,7 @@ async function loadSmp(){
       const h1 = Number((pe.nom || "00-00").split("-")[1]) || 24;
       if(day === todayK && h1 <= hourNow) return;              // franja ja passada
       const key = `${ep.meteor?.nom}|${day}`, cur = out.get(key) || {meteor: ep.meteor?.nom || "Avís", tipus: av.tipus, day, llindar: af.llindar || ev.llindar1, perill: 0, periods: new Set(), zones: new Set()};
-      cur.perill = Math.max(cur.perill, af.perill || 0); cur.periods.add(pe.nom); cur.zones.add(af.idComarca === 96 ? "mar" : "terra");
+      cur.perill = Math.max(cur.perill, af.perill || 0); cur.periods.add(pe.nom); cur.zones.add(af.idComarca === SMP_ZONES[1] ? "mar" : "terra");
       if(av.tipus === "Avís") cur.tipus = "Avís";
       out.set(key, cur);
     })))));
@@ -847,7 +835,7 @@ function renderInfo(){
     const hrs = a.periods.length === 4 ? "tot el dia" : a.periods.map(p => p.replace("-", "–")+" h").join(", ");
     const key = [a.day, a.tipus, a.meteor].join("|"), fold = smpFold().includes(key);
     parts.push(`<button type="button" class="info-row k-${pv.k}${fold ? " fold" : ""}" data-smp="${esc(key)}" aria-expanded="${!fold}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/></svg>
-      <span class="info-t"><b>${esc(a.tipus)} Meteocat · ${esc(a.meteor)}${fold ? " · " + when : ""}</b><span class="info-d"><br>${esc(a.llindar || "")} · ${when} ${esc(hrs)} · ${pv.t}${a.zones.includes("mar") ? " · zona de mar del Maresme" : " · Maresme"}</span></span>
+      <span class="info-t"><b>${esc(a.tipus)} Meteocat · ${esc(a.meteor)}${fold ? " · " + when : ""}</b><span class="info-d"><br>${esc(a.llindar || "")} · ${when} ${esc(hrs)} · ${pv.t}${a.zones.includes("mar") ? " · zona de mar " + (/^[AEIOU]/.test(LOC.com) ? "de l'" : "del ") + LOC.com : " · " + LOC.com}</span></span>
       <svg class="info-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fold ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"}"/></svg></button>`); });
   el.innerHTML = parts.join("");   // només hi surten avisos actius
   renderFlag(); if(window.renderPrep) renderPrep();

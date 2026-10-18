@@ -7,7 +7,8 @@
   const keys = Object.keys(LOCS);
   const hasSt = k => (LOCS[k].stations || []).length > 0;
   const norm = t => String(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  let el = null, map = null, marks = {}, q = "";
+  let el = null, map = null, marks = {}, q = "", onlySt = false;
+  const nSt = keys.filter(hasSt).length;
 
   function build(){
     el = document.createElement("div");
@@ -16,11 +17,12 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <input type="search" id="lsQ" placeholder="Vilassar, Mar Bella…" aria-label="Cerca per nom" autocomplete="off">
       <div class="ls-map" id="lsMap"></div>
-      <div class="ls-leg"><span><i style="background:${C_ST}"></i>Amb estació</span><span><i style="background:${C_FC}"></i>Només previsió</span></div>
+      <div class="ls-leg"><button type="button" id="lsSt" aria-pressed="false"><i style="background:${C_ST}"></i>Amb estació (${nSt})</button><span><i style="background:${C_FC}"></i>Només previsió (${keys.length - nSt})</span></div>
       <div class="ls-list" id="lsList"></div>`;
     document.body.appendChild(el);
     el.querySelector("#lsClose").addEventListener("click", () => close(true));
     el.querySelector("#lsQ").addEventListener("input", e => { q = norm(e.target.value.trim()); paint(true); });
+    el.querySelector("#lsSt").addEventListener("click", e => { onlySt = !onlySt; e.currentTarget.setAttribute("aria-pressed", String(onlySt)); paint(true); });
     el.querySelector("#lsList").addEventListener("click", e => { const r = e.target.closest("[data-k]"); if(r) pick(r.dataset.k); });
   }
   function initMap(){
@@ -28,16 +30,18 @@
     map = typeof baseMap === "function" ? baseMap(box) : L.map(box);
     if(typeof baseMap !== "function") L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, attribution:"© OpenStreetMap"}).addTo(map);
     keys.forEach(k => { const o = LOCS[k];
-      marks[k] = L.circleMarker(o.home, {radius:9, weight:2, color:"#fff", fillColor: hasSt(k) ? C_ST : C_FC, fillOpacity:1})
+      marks[k] = L.circleMarker(o.home, {radius:7, weight:2, color:"#fff", fillColor: hasSt(k) ? C_ST : C_FC, fillOpacity:1})
         .bindTooltip(o.name, {direction:"top", offset:[0, -8]}).on("click", () => pick(k)).addTo(map); });
+    keys.filter(hasSt).forEach(k => marks[k].bringToFront());   // els verds, per sobre
   }
-  const match = k => { if(!q) return true; const o = LOCS[k]; return norm(`${o.name} ${o.muni} ${o.com}`).includes(q); };
+  const match = k => { if(onlySt && !hasSt(k)) return false; if(!q) return true; const o = LOCS[k]; return norm(`${o.name} ${o.muni} ${o.com}`).includes(q); };
   function paint(fit){
     const vis = keys.filter(match);
     keys.forEach(k => { const sel = k === locKey, on = vis.includes(k);
-      marks[k].setStyle({radius: sel ? 12 : 9, color: sel ? "#0b1f33" : "#fff", weight: sel ? 3 : 2, opacity: on ? 1 : .25, fillOpacity: on ? 1 : .25});
+      marks[k].setStyle({radius: sel ? 11 : 7, color: sel ? "#0b1f33" : "#fff", weight: sel ? 3 : 2, opacity: on ? 1 : .25, fillOpacity: on ? 1 : .25});
       if(sel) marks[k].bringToFront(); });
-    if(fit){ const pts = (vis.length ? vis : keys).map(k => LOCS[k].home);
+    if(fit && !q && !onlySt) map.setView(LOC.home, 10);   // en obrir: el club actual i els del voltant
+    else if(fit){ const pts = (vis.length ? vis : keys).map(k => LOCS[k].home);
       if(pts.length === 1) map.setView(pts[0], 13); else map.fitBounds(pts, {padding:[28, 28], maxZoom:13}); }
     const byCom = {}; vis.forEach(k => (byCom[LOCS[k].com] = byCom[LOCS[k].com] || []).push(k));
     el.querySelector("#lsList").innerHTML = vis.length ? Object.keys(byCom).map(c => `<div class="ls-com">${esc(c)}</div>` + byCom[c].map(k => { const o = LOCS[k];

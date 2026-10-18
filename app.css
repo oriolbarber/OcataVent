@@ -1462,7 +1462,9 @@ body.ls-open{overflow:hidden}
 .ls-h h2{margin:0;font-family:var(--f-head);font-size:1.3rem;text-transform:uppercase;letter-spacing:.03em}
 .loc-sheet input[type=search]{width:100%;min-height:48px;font-size:1.05rem;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)}
 .ls-map{height:40vh;min-height:220px;border-radius:12px;border:1px solid var(--line);overflow:hidden;flex:none}
-.ls-leg{display:flex;gap:16px;font-size:.85rem;color:var(--muted);font-weight:600}
+.ls-leg{display:flex;gap:16px;align-items:center;font-size:.85rem;color:var(--muted);font-weight:600}
+.ls-leg button{font:inherit;color:inherit;background:none;border:1px solid var(--line);border-radius:999px;padding:4px 10px;min-height:32px;cursor:pointer}
+.ls-leg button[aria-pressed=true]{border-color:#1D9E75;color:var(--ink);background:var(--surface-2)}
 .ls-leg i,.ls-row > i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;flex:none}
 .ls-list{flex:1;overflow-y:auto;overscroll-behavior:contain;margin:0 -4px}
 .ls-com{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 4px 4px}
