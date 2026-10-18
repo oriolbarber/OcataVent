@@ -19,10 +19,10 @@ let savedY = 0;
 panel.querySelectorAll(".cfg-pg").forEach(p => {
   const bar = document.createElement("div"); bar.className = "cfg-bar";
   bar.innerHTML = `<button type="button" class="cfg-back" data-back aria-label="Enrere">${BACK}</button><h2></h2><span></span>`;
-  bar.querySelector("h2").textContent = p.dataset.title || "";
+  const h = bar.querySelector("h2"); h.textContent = p.dataset.title || ""; h.classList.toggle("long", h.textContent.length > 20);
   p.prepend(bar); p.setAttribute("role", "region"); p.setAttribute("aria-label", p.dataset.title || "");
 });
-function title(k, t){ const p = pg(k); if(!p) return; p.dataset.title = t; p.querySelector(".cfg-bar h2").textContent = t; p.setAttribute("aria-label", t); }
+function title(k, t){ const p = pg(k); if(!p) return; p.dataset.title = t; const h = p.querySelector(".cfg-bar h2"); h.textContent = t; h.classList.toggle("long", t.length > 20); p.setAttribute("aria-label", t); }
 
 /* ---------- menú ⋮ ---------- */
 const menuOpen = () => !menu.hidden;

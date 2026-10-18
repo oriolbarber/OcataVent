@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=163">
+<link rel="stylesheet" href="app.css?v=165">
 </head>
 <body>
 <div class="app">
@@ -47,6 +47,8 @@
   <div class="cfg-msep" role="separator"></div>
   <button type="button" role="menuitem" class="cfg-mi" data-cfg="acc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Compte<span class="cfg-badge" data-badge="acc" hidden></span></button>
   <button type="button" role="menuitem" class="cfg-mi" data-cfg="priv" data-for="priv"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privadesa<span class="cfg-badge" data-badge="priv" hidden></span></button>
+  <div class="cfg-msep" role="separator"></div>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="help"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.8"/><path d="M12 17.2v.3"/></svg>Ajuda i comentaris</button>
 </div>
 <div class="cfg" id="viewPanel" hidden>
   <div hidden><span id="peekAcc"></span><span id="peekAdm"></span><span id="peekPriv"></span><span id="peekLoc"></span><span id="peekVis"></span><span id="peekModel"></span><span id="peekCrit"></span></div>
@@ -101,7 +103,17 @@
     <div class="cfg-body" id="privBody"></div>
   </section>
 
+  <section class="cfg-pg" data-pg="help" data-title="Ajuda i comentaris"><div class="cfg-body" id="helpBody"></div></section>
+
   <!-- Nivell 2 -->
+  <section class="cfg-pg" data-pg="help-guia" data-title="Guia d'ús"><div class="cfg-body cfg-frame"><iframe id="helpGuia" title="Guia d'ús d'Ocata Vent" sandbox="allow-scripts allow-same-origin"></iframe></div></section>
+  <section class="cfg-pg" data-pg="help-fb" data-title="Envia comentaris"><div class="cfg-body" id="helpFbBody"></div></section>
+  <section class="cfg-pg" data-pg="help-legal" data-title="Condicions i privadesa"><div class="cfg-body" id="helpLegalBody"></div></section>
+  <section class="cfg-pg" data-pg="help-info" data-title="Informació de l'app"><div class="cfg-body" id="helpInfoBody"></div></section>
+  <!-- Nivell 3 -->
+  <section class="cfg-pg" data-pg="help-cond" data-title="Condicions d'ús"><div class="cfg-body cfg-text" id="helpCondBody"></div></section>
+  <section class="cfg-pg" data-pg="help-priv" data-title="Política de privacitat"><div class="cfg-body cfg-frame"><iframe id="helpPriv" title="Política de privacitat" sandbox="allow-scripts allow-same-origin"></iframe></div></section>
+  <section class="cfg-pg" data-pg="help-fonts" data-title="Fonts de dades"><div class="cfg-body" id="helpFontsBody"></div></section>
   <section class="cfg-pg" data-pg="crit-det" data-title="Llindars">
     <div class="cfg-body">
       <div class="crit" id="crit"></div>
@@ -394,7 +406,8 @@
 <script src="native.js?v=114"></script>
 <script src="clubs.js?v=1"></script>
 <script src="app.js?v=128"></script>
-<script src="cfg.js?v=4"></script>
+<script src="cfg.js?v=5"></script>
+<script src="ajuda.js?v=1"></script>
 <script src="trip.js?v=123"></script>
 <script src="maps.js?v=105"></script>
 <script src="llocs.js?v=7"></script>
