@@ -1466,14 +1466,14 @@ body.ls-open{overflow:hidden}
 .ls-leg button{font:inherit;color:inherit;background:none;border:1px solid var(--line);border-radius:999px;padding:4px 10px;min-height:32px;cursor:pointer}
 .ls-leg button[aria-pressed=true]{border-color:#1D9E75;color:var(--ink);background:var(--surface-2)}
 .ls-leg i,.ls-row > i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;flex:none}
-.ls-list{flex:1;overflow-y:auto;overscroll-behavior:contain;margin:0 -4px}
+.ls-list{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;margin:0 -4px}
 .ls-com{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 4px 4px}
 .ls-row{width:100%;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 10px;border:0;border-top:1px solid var(--grid);background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
 .ls-row > span{flex:1;min-width:0;display:flex;flex-direction:column}
 .ls-row b{font-size:1.05rem}
 .ls-row small{font-size:.85rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ls-rw{display:flex;align-items:center;border-top:1px solid var(--grid)}
-.ls-rw .ls-row{border-top:0}
+.ls-rw .ls-row{border-top:0;width:auto;flex:1;min-width:0}
 .ls-rw.sel{background:var(--surface-2);border-radius:10px}
 .ls-rw.sel .ls-row > svg{color:var(--accent);flex:none}
 .ls-hm{display:inline-flex;vertical-align:-3px;margin-right:6px;color:var(--accent)}

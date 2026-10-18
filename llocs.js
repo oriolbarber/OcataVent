@@ -73,7 +73,8 @@
     history.pushState({ls:1}, "");
     if(!map) initMap();
     setTimeout(() => { map.invalidateSize(); paint(true);
-      const r = el.querySelector(".ls-rw.sel"); if(r) r.scrollIntoView({block:"center"}); }, 30);   // la llista, al club actual
+      const L = el.querySelector("#lsList"), r = L.querySelector(".ls-rw.sel");   // només la llista (scrollIntoView també movia el mapa)
+      if(r) L.scrollTop = r.offsetTop - L.offsetTop - (L.clientHeight - r.offsetHeight) / 2; }, 30);   // la llista, al club actual
   }
   function close(back){ if(!el || el.hidden) return; el.hidden = true; document.body.classList.remove("ls-open"); if(back && history.state && history.state.ls) history.back(); }
   function pick(k){ if(k === locKey){ close(true); return; } close(false); setLoc(k); }
