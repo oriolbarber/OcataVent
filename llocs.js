@@ -56,7 +56,8 @@
     el.hidden = false; document.body.classList.add("ls-open");
     history.pushState({ls:1}, "");
     if(!map) initMap();
-    setTimeout(() => { map.invalidateSize(); paint(true); }, 30);
+    setTimeout(() => { map.invalidateSize(); paint(true);
+      const r = el.querySelector(".ls-row.sel"); if(r) r.scrollIntoView({block:"center"}); }, 30);   // la llista, al club actual
   }
   function close(back){ if(!el || el.hidden) return; el.hidden = true; document.body.classList.remove("ls-open"); if(back && history.state && history.state.ls) history.back(); }
   function pick(k){ if(k === locKey){ close(true); return; } close(false); setLoc(k); }
