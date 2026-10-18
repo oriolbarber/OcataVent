@@ -77,10 +77,10 @@ window.OV_NATIVE = {
   },
   // Petició GET nativa (CapacitorHttp, inclòs a Capacitor): sense CORS ni les restriccions de la WebView.
   // Retorna un objecte semblant a Response: {ok, status, text(), json()}.
-  async http(url){
+  async http(url, headers){
     const H = CAP.Plugins.CapacitorHttp || P("CapacitorHttp");
     const r = await H.request({url, method:"GET", responseType:"text", connectTimeout:15000, readTimeout:15000,
-      headers:{"Cache-Control":"no-cache"}});
+      headers:Object.assign({"Cache-Control":"no-cache"}, headers || {})});
     const body = typeof r.data === "string" ? r.data : JSON.stringify(r.data);
     return {ok: r.status >= 200 && r.status < 300, status: r.status, text: async () => body, json: async () => JSON.parse(body)};
   }

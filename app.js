@@ -188,7 +188,8 @@ const STATIONS = {
     url:"https://opendata.portdebarcelona.cat/dataset/1afd4f4d-f329-4959-b1d3-252d973a9c3b/resource/d4263236-5d2a-486e-9ba9-9c4cb27ddc8a/download/14-bocananord_opd_10m.csv",
     hist:"https://opendata.portdebarcelona.cat/dataset/1afd4f4d-f329-4959-b1d3-252d973a9c3b/resource/b724b1e7-26e3-4c6f-80d1-65a0b507065f/download/14-bocananord_opd_10m_hist.csv"},
   // CN Vilassar de Mar (Davis Vantage Pro2, sensor a 10 m), Weathercloud: JSON amb vent en m/s, sense ratxa, cada ~10 min. Sense CORS (com el port).
-  vilassar: {name:"CN Vilassar", long:"Club Nàutic Vilassar de Mar (Weathercloud)", type:"wcloud", unit:"ms", maxAge:30, info:"Vent mitjà i direcció cada ~10 min; no dona ratxa.", url:"https://app.weathercloud.net/device/values/0732654059"}
+  // Weathercloud: sense la capçalera X-Requested-With torna una resposta buida
+  vilassar: {name:"CN Vilassar", long:"Club Nàutic Vilassar de Mar (Weathercloud)", type:"wcloud", headers:{"X-Requested-With":"XMLHttpRequest"}, unit:"ms", maxAge:30, info:"Vent mitjà i direcció cada ~10 min; no dona ratxa.", url:"https://app.weathercloud.net/device/values/0732654059"}
 };
 const MS = 1.943844;
 // Port de Barcelona: CSV → registres {t, wind, gust, dir} en nusos (TIMESTAMP en UTC; «NAN» = sense dada)
@@ -207,9 +208,9 @@ let stKey = store.get("ov2_station_v3"); if(!LOC.stations.includes(stKey)) stKey
 
 async function getJSON(u){ const r = await fetch(u, {cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
 // Estacions (meteoelmasnou.cat): a l'app Android, petició nativa (la WebView les bloqueja); si falla, fetch normal.
-async function stFetch(u){
-  if(window.OV_NATIVE && OV_NATIVE.http){ try{ return await OV_NATIVE.http(u); }catch(e){} }
-  return fetch(u, {cache:"no-store"});
+async function stFetch(u, headers){
+  if(window.OV_NATIVE && OV_NATIVE.http){ try{ return await OV_NATIVE.http(u, headers); }catch(e){} }
+  return fetch(u, {cache:"no-store", headers: headers || {}});
 }
 function build(fc, ma){
   const hours = {}, H = fc.hourly;
@@ -369,7 +370,7 @@ async function load(){
 // següent de la llista que en tingui, i la capçalera ho indica amb «↪».
 const stNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
 async function stRead(key){
-  const S = STATIONS[key], r = await stFetch(S.url+"?t="+Date.now());
+  const S = STATIONS[key], r = await stFetch(S.url+"?t="+Date.now(), S.headers);
   if(!r.ok) throw new Error("HTTP "+r.status);
   if(S.type === "pbcn"){ const L = pbcnParse(await r.text()), o = L[L.length-1]; return o && o.wind != null ? Object.assign({key, hum:null, pres:null, at:o.t}, o) : null; }
   if(S.type === "wcloud"){ const j = await r.json(), W = stNum(j.wspdavg ?? j.wspd); if(W == null) return null;
