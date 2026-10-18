@@ -744,7 +744,7 @@ function selectHour(k, src){
   if(src !== "wm" && window.wmSelect) wmSelect(k, true);
 }
 window.SEL_K = () => DATA ? selKey() : SEL;
-window.mmSel = (k) => { if(DATA && DATA.hours[k]){ SEL = k; applySel(); } };
+window.mmSel = (k) => { if(DATA && DATA.hours[k]){ SEL = k; if(k.slice(0, 10) !== hoursDate && $("hoursBody")) renderHoursDay(); else applySel(); } };
 let hcDrag = null;
 function hcPick(svg, clientX){
   const r = svg.getBoundingClientRect(), d = svg.dataset, hs = d.hs.split(",");
@@ -977,8 +977,14 @@ function waveSrc(p){
 }
 function renderHours(){
   if(window.renderWindMap) setTimeout(renderWindMap, 0); if(window.renderPrep) setTimeout(renderPrep, 0);
-  // tot el dia (7–21 h) del dia que es mira al selector Avui/Demà; les hores passades surten com a «mesurat»
-  const td = viewDay(), isTom = td !== todayDate();
+  renderHoursDay();
+}
+// Dia de la taula d'hores: el de l'hora triada (selector de dia i hora del mapa, gràfic o taula); si no n'hi ha, el d'Avui/Demà
+let hoursDate = null;
+const hoursDay = () => { const d = selKey().slice(0, 10); return DATA.daily.time.includes(d) ? d : viewDay(); };
+function renderHoursDay(){
+  // tot el dia (7–21 h); les hores passades surten com a «mesurat»
+  const td = hoursDay(); hoursDate = td;
   const errs = modelErrors(), bestE = errs.length ? Math.min(...errs.map(e => e.mae)) : null;
   renderModelBox(errs, bestE);
   const tdI = DATA.daily.time.indexOf(todayDate()), hx = new Date(td + "T12:00:00");
