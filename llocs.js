@@ -34,6 +34,8 @@
   function initMap(){
     const box = el.querySelector("#lsMap");
     map = typeof baseMap === "function" ? baseMap(box) : L.map(box);
+    map.setView(LOC.home, 10, {animate:false});
+    if(window.ResizeObserver) new ResizeObserver(() => map.invalidateSize({animate:false})).observe(box);   // si el full canvia de mida, el mapa l'omple sencer
     if(typeof baseMap !== "function") L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, attribution:"© OpenStreetMap"}).addTo(map);
     keys.forEach(k => { const o = LOCS[k];
       marks[k] = L.circleMarker(o.home, {radius:7, weight:2, color:"#fff", fillColor: hasSt(k) ? C_ST : C_FC, fillOpacity:1})
@@ -53,7 +55,7 @@
     keys.forEach(k => { const sel = k === locKey, on = vis.includes(k);
       marks[k].setStyle({radius: sel ? 11 : 7, color: sel ? "#0b1f33" : "#fff", weight: sel ? 3 : 2, opacity: on ? 1 : .25, fillOpacity: on ? 1 : .25});
       if(sel) marks[k].bringToFront(); });
-    if(fit && !q && !onlySt) map.setView(LOC.home, 10);   // en obrir: el club actual i els del voltant
+    if(fit && !q && !onlySt) map.setView(LOC.home, 10, {animate:false});   // en obrir: el club actual i els del voltant
     else if(fit){ const pts = (vis.length ? vis : keys).map(k => LOCS[k].home);
       if(pts.length === 1) map.setView(pts[0], 13); else map.fitBounds(pts, {padding:[28, 28], maxZoom:13}); }
     const byCom = {}; vis.forEach(k => (byCom[LOCS[k].com] = byCom[LOCS[k].com] || []).push(k));
@@ -72,9 +74,9 @@
     el.hidden = false; document.body.classList.add("ls-open");
     history.pushState({ls:1}, "");
     if(!map) initMap();
-    setTimeout(() => { map.invalidateSize(); paint(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => { map.invalidateSize({animate:false}); paint(true);
       const L = el.querySelector("#lsList"), r = L.querySelector(".ls-rw.sel");   // només la llista (scrollIntoView també movia el mapa)
-      if(r) L.scrollTop = r.offsetTop - L.offsetTop - (L.clientHeight - r.offsetHeight) / 2; }, 30);   // la llista, al club actual
+      if(r) L.scrollTop = r.offsetTop - L.offsetTop - (L.clientHeight - r.offsetHeight) / 2; }));   // la llista, al club actual
   }
   function close(back){ if(!el || el.hidden) return; el.hidden = true; document.body.classList.remove("ls-open"); if(back && history.state && history.state.ls) history.back(); }
   function pick(k){ if(k === locKey){ close(true); return; } close(false); setLoc(k); }
