@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Instal·la Ocata Vent i dona't d'alta</title>
+<link rel="icon" href="../icons/favicon-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap">
+<style>
+/* Infografia per als socis: 2 processos en passos, captures reals amb la zona a tocar marcada. Colors i lletres de l'app i de la guia. */
+:root{
+  --bg:#f4f7fb; --paper:#ffffff; --ink:#0a1322; --muted:#4a5a72; --line:#cbd5e2; --soft:#eaf0f7;
+  --brand:#dc3427; --accent:#0068b8; --ideal:#007a45; --marg:#d05a00;
+  --ideal-t:#d4f2e2; --marg-t:#ffe4cf; --info-t:#dcebf8; --on-accent:#fff;
+  --f-head:"Rajdhani","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#060c19; --paper:#0d1729; --ink:#e9f1ff; --muted:#9fb2d0; --line:#24375a; --soft:#122039;
+  --brand:#ff5a4c; --accent:#3cc4f5; --ideal:#34d58f; --marg:#ff9a3c;
+  --ideal-t:#0f3a2c; --marg-t:#422409; --info-t:#0e2a45; --on-accent:#04121f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#060c19; --paper:#0d1729; --ink:#e9f1ff; --muted:#9fb2d0; --line:#24375a; --soft:#122039;
+  --brand:#ff5a4c; --accent:#3cc4f5; --ideal:#34d58f; --marg:#ff9a3c;
+  --ideal-t:#0f3a2c; --marg-t:#422409; --info-t:#0e2a45; --on-accent:#04121f; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5;
+  padding:24px max(16px,env(safe-area-inset-right,0px)) 56px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:62rem;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--f-head);line-height:1.05;margin:0;text-wrap:balance}
+p{margin:0}
+b{font-weight:600}
+.ui{font-weight:600;white-space:nowrap}
+.ui::before{content:"«"}.ui::after{content:"»"}
+
+/* capçalera */
+.top{display:flex;align-items:center;gap:16px}
+.top img{width:72px;height:72px;flex:none}
+.eyebrow{font-family:var(--f-head);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);font-size:.95rem}
+h1{font-size:clamp(2rem,7vw,3.4rem);font-weight:700}
+.compass{height:6px;border-radius:3px;background:linear-gradient(90deg,#c3162a 0 30%,var(--marg) 30% 55%,var(--ideal) 55% 100%)}
+
+/* salts */
+.jump{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:12px}
+.jump a{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;background:var(--paper);
+  border:2px solid var(--line);color:var(--ink);text-decoration:none;font-family:var(--f-head);font-weight:700;font-size:1.4rem}
+.jump a:hover,.jump a:focus-visible{border-color:var(--accent)}
+.jump .ic{font-size:1.7rem;line-height:1}
+.jump small{display:block;font-family:var(--f-body);font-weight:400;font-size:.9rem;color:var(--muted)}
+
+/* seccions */
+section{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:26px clamp(16px,3.5vw,34px);scroll-margin-top:12px}
+.head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.head h2{font-size:clamp(1.8rem,5.5vw,2.5rem);font-weight:700}
+.tag{font-family:var(--f-head);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.9rem;padding:3px 10px;border-radius:999px;background:var(--info-t);color:var(--accent)}
+.lead{color:var(--muted);margin-bottom:18px}
+
+/* passos */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(10.5rem,1fr));gap:18px 14px;align-items:start}
+.step{display:flex;flex-direction:column;gap:10px}
+.step .n{display:flex;align-items:center;gap:8px;font-family:var(--f-head);font-weight:700;font-size:1.25rem;line-height:1.1}
+.step .n i{font-style:normal;flex:none;display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;background:var(--brand);color:#fff;font-size:1.15rem}
+.step p{font-size:.98rem}
+.phone{position:relative;border-radius:18px;border:3px solid var(--ink);overflow:hidden;background:#000;box-shadow:0 6px 18px rgba(10,19,34,.18)}
+.phone img{display:block;width:100%;height:auto}
+.hl{position:absolute;border:3px solid #ffd21a;border-radius:10px;box-shadow:0 0 0 2px rgba(0,0,0,.55),0 0 14px 2px rgba(255,210,26,.7);pointer-events:none}
+.nophone{aspect-ratio:9/10;display:grid;place-items:center;text-align:center;padding:14px;border-radius:18px;border:3px dashed var(--line);background:var(--soft);font-family:var(--f-head);font-weight:700;font-size:1.25rem;line-height:1.15;gap:6px;align-content:center}
+.nophone span{font-size:2.4rem;line-height:1}
+
+/* botons i avisos */
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin:2px 0 18px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 20px;border-radius:12px;background:var(--accent);color:var(--on-accent);
+  text-decoration:none;font-family:var(--f-head);font-weight:700;font-size:1.3rem;letter-spacing:.02em}
+.btn.alt{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+.note{margin-top:20px;padding:13px 16px;border-radius:12px;background:var(--marg-t);border-left:6px solid var(--marg)}
+.note.ok{background:var(--ideal-t);border-left-color:var(--ideal)}
+.note.info{background:var(--info-t);border-left-color:var(--accent)}
+.note b:first-child{display:block;font-family:var(--f-head);font-size:1.15rem;letter-spacing:.02em}
+.foot{color:var(--muted);font-size:.9rem;text-align:center}
+@media (max-width:420px){.steps{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="top">
+    <img src="../icons/logo.svg" alt="Logo d'Ocata Vent">
+    <div>
+      <div class="eyebrow">Club Ocata Vent · El Masnou</div>
+      <h1>Instal·la l'app i dona't d'alta</h1>
+    </div>
+  </div>
+</header>
+<div class="compass" aria-hidden="true"></div>
+
+<nav class="jump" aria-label="Salta a un procés">
+  <a href="#instalar"><span class="ic" aria-hidden="true">📲</span><span>1 · Instal·la l'app<small>Android · 5 passos</small></span></a>
+  <a href="#alta"><span class="ic" aria-hidden="true">📝</span><span>2 · Dona't d'alta<small>Compte de soci o sòcia · 4 passos</small></span></a>
+</nav>
+
+<section id="instalar">
+  <div class="head"><h2>1 · Instal·la l'app a l'Android</h2><span class="tag">≈ 2 minuts</span></div>
+  <p class="lead">L'app encara no és al Google Play: s'instal·la amb un arxiu. Android et farà alguns avisos; és normal.</p>
+  <div class="btns">
+    <a class="btn" href="https://github.com/oriolbarber/OcataVent/releases/download/apk/ocata-vent.apk">⬇ Descarrega l'APK</a>
+  </div>
+
+  <ol class="steps">
+    <li class="step">
+      <div class="n"><i>1</i>Descarrega</div>
+      <div class="nophone"><span aria-hidden="true">⬇</span>Amb Chrome</div>
+      <p>Obre aquesta pàgina amb <b>Chrome</b> (no des de WhatsApp) i toca el botó blau de dalt, <span class="ui">Descarrega l'APK</span>. Si Android ho demana, permet instal·lar des d'aquesta font.</p>
+    </li>
+    <li class="step">
+      <div class="n"><i>2</i>Instal·la</div>
+      <div class="phone"><img src="instalacio/inst-2-instalar.jpg" alt="Pantalla «Vols instal·lar aquesta aplicació?»" loading="lazy"><div class="hl" style="left:62%;top:55%;width:28%;height:4.8%"></div></div>
+      <p>Obre l'arxiu descarregat i toca <span class="ui">Instal·la</span>.</p>
+    </li>
+    <li class="step">
+      <div class="n"><i>3</i>Play Protect avisa</div>
+      <div class="phone"><img src="instalacio/inst-3-bloquejat.jpg" alt="Google Play Protect diu que ha bloquejat l'aplicació" loading="lazy"><div class="hl" style="left:9%;top:63.6%;width:34%;height:3.6%"></div></div>
+      <p>Surt «S'ha bloquejat l'aplicació». Només és perquè Google no coneix encara l'app. Toca <span class="ui">Més detalls</span>.</p>
+    </li>
+    <li class="step">
+      <div class="n"><i>4</i>Instal·la igualment</div>
+      <div class="phone"><img src="instalacio/inst-4-igualment.jpg" alt="Play Protect amb l'opció «Instal·la igualment»" loading="lazy"><div class="hl" style="left:9%;top:70%;width:42%;height:3.6%"></div></div>
+      <p>Ara toca <span class="ui">Instal·la igualment</span>.</p>
+    </li>
+    <li class="step">
+      <div class="n"><i>5</i>Ja la tens</div>
+      <div class="phone"><img src="instalacio/inst-5-app.jpg" alt="L'app Ocata Vent oberta, amb la previsió del dia" loading="lazy"></div>
+      <p>Obre <b>Ocata Vent</b>. Ja veus la previsió, i la pots fer servir sense compte.</p>
+    </li>
+  </ol>
+
+  <div class="note info"><b>I a l'ordinador (Mac o PC)?</b>Obre <a href="https://oriolbarber.github.io/OcataVent/">oriolbarber.github.io/OcataVent</a> al navegador. A l'iPhone, amb Safari ▸ Comparteix ▸ Afegeix a la pantalla d'inici.</div>
+</section>
+
+<section id="alta">
+  <div class="head"><h2>2 · Dona't d'alta al club</h2><span class="tag">≈ 1 minut</span></div>
+  <p class="lead">El compte és opcional: amb l'alta aprovada, les sortides es desen al núvol i tens accés a la pestanya <span class="ui">Club</span> (mur, avisos, anuncis i base).</p>
+  <div class="btns">
+    <a class="btn alt" href="https://oriolbarber.github.io/OcataVent/">Obre l'app web</a>
+  </div>
+
+  <ol class="steps">
+    <li class="step">
+      <div class="n"><i>1</i>Alta nova</div>
+      <div class="phone"><img src="instalacio/alta-1-compte.jpg" alt="Configuració ▸ Compte, amb les pestanyes «Ja soc del club» i «Alta nova»" loading="lazy"><div class="hl" style="left:50.5%;top:20.5%;width:43%;height:7%"></div></div>
+      <p>Toca la roda de <b>Configuració</b> ▸ <span class="ui">Compte</span> i tria <span class="ui">Alta nova</span>.</p>
+    </li>
+    <li class="step">
+      <div class="n"><i>2</i>Omple les dades</div>
+      <div class="phone"><img src="instalacio/alta-2-formulari.jpg" alt="Formulari d'alta amb nom, correu i contrasenya" loading="lazy"><div class="hl" style="left:6%;top:46%;width:82%;height:8.5%"></div><div class="hl" style="left:6%;top:84.8%;width:88%;height:4.6%"></div></div>
+      <p>Nom i cognoms, correu i contrasenya (dues vegades). Marca que tens <b>18 anys o més</b> i accepta el tractament de dades. Toca <span class="ui">Crea el compte</span>.</p>
+    </li>
+    <li class="step">
+      <div class="n"><i>3</i>Queda pendent</div>
+      <div class="phone"><img src="instalacio/alta-3-pendent-compte.jpg" alt="Compte «Pendent d'aprovació»" loading="lazy"><div class="hl" style="left:6%;top:25.3%;width:88%;height:13.8%"></div></div>
+      <p>Surt <b>«Pendent d'aprovació»</b>: l'administració del club ha d'acceptar l'alta. Mentrestant, les sortides es desen només al teu mòbil.</p>
+    </li>
+    <li class="step">
+      <div class="n"><i>4</i>Torna-ho a comprovar</div>
+      <div class="phone"><img src="instalacio/alta-4-pendent-club.jpg" alt="Pestanya Club amb el botó «Torna-ho a comprovar»" loading="lazy"><div class="hl" style="left:6%;top:33.4%;width:88%;height:6.2%"></div></div>
+      <p>A la pestanya <span class="ui">Club</span>, toca <span class="ui">Torna-ho a comprovar</span>. Quan l'alta s'aprovi, hi veuràs el mur, els avisos, els anuncis i qui és a la base.</p>
+    </li>
+  </ol>
+
+  <div class="note ok"><b>Ja tenies compte?</b>Toca <span class="ui">Ja soc del club</span> i entra amb el correu. Si abans entraves amb Google, prem <span class="ui">He oblidat la contrasenya</span> per posar-ne una al mateix compte. A l'app d'Android no hi ha «Entra amb Google».</div>
+</section>
+
+<p class="foot">Ocata Vent · Club Ocata Vent, El Masnou</p>
+</div>
+</body>
+</html>

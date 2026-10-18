@@ -5,6 +5,7 @@ L'original de tota la documentació és aquesta carpeta. L'historial de versions
 | Què | Arxiu | On es veu |
 |---|---|---|
 | Guia d'usuari | `guia.html` | https://oriolbarber.github.io/OcataVent/docs/guia.html · PDF: https://github.com/oriolbarber/OcataVent/releases/download/docs/guia-ocata-vent.pdf |
+| Infografia: instal·lar l'app a l'Android i donar-se d'alta | `instalacio.html` (+ captures a `instalacio/`) | https://oriolbarber.github.io/OcataVent/docs/instalacio.html |
 | Llista per publicar al Play (**comença per aquí**) | `play/llista-publicacio.md` | |
 | Fitxa de la botiga (ca, es, en) | `play/fitxa-botiga.md` | |
 | Seguretat de les dades | `play/seguretat-dades.md` | |
