@@ -172,7 +172,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   <div class="tabbar" role="img" aria-label="Barra de pestanyes inferior: Previsió, Mapes, Sortida, Historial, Club">
     <div class="on">Previsió<small>Si fa bo</small></div><div>Mapes<small>Vent, onades, webcams</small></div><div>Sortida<small>Gravar</small></div><div>Historial<small>Les teves sortides</small></div><div>Club<small>Socis</small></div>
   </div>
-  <p>A la barra de dalt, al costat de les icones d'embarcació, hi ha el botó <b>⋮</b> (menú). Per actualitzar les dades, des de dalt de tot de la pantalla estira avall fins que la fletxa circular es pinti de color i deixa anar. El menú ⋮ obre: Ubicació, Aspecte, Model meteorològic, Llindars navegació, Administració Club (si tens permisos), Compte i Privadesa. Cada apartat s'obre en una pantalla nova; la fletxa de dalt a l'esquerra (o el botó enrere del mòbil) torna enrere.</p>
+  <p>A la barra de dalt, al costat de les icones d'embarcació, hi ha el botó <b>⋮</b> (menú). Per actualitzar les dades, des de dalt de tot de la pantalla estira avall fins que la fletxa circular es pinti de color i deixa anar. El menú ⋮ obre: Ubicació, Aspecte, Model meteorològic, Embarcacions i llindars, Administració Club (si tens permisos), Compte i Privadesa. Cada apartat s'obre en una pantalla nova; la fletxa de dalt a l'esquerra (o el botó enrere del mòbil) torna enrere.</p>
   <h3>Com està pensada</h3>
   <ul>
     <li><b>Gran i clar:</b> mentre navegues l'has de poder llegir d'un cop d'ull. Si et costa, posa la mida del text a <span class="ui">Gran</span>.</li>
@@ -213,7 +213,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   <h2 id="h3x"><span class="n">3</span>Primers passos</h2>
   <p>Cinc minuts el primer dia i ja la tens a punt.</p>
   <ol class="steps">
-    <li><div><b>Tria l'embarcació</b> amb les icones de la barra de dalt: patí català, windsurf o Hobie Cat. Tot el veredicte es calcula per a aquesta embarcació.</div></li>
+    <li><div><b>Tria l'embarcació</b> amb les icones de la barra de dalt. Tot el veredicte es calcula per a aquesta embarcació. Per defecte hi ha el patí català, el windsurf i el Hobie Cat; si tens compte i una embarcació donada d'alta a la Base, hi surt la teva. En pots posar fins a 4 a <span class="path">⋮ ▸ Embarcacions i llindars</span>.</div></li>
     <li><div><b>Tria el club</b> tocant el nom de sota «Ocata Vent», a dalt (o a <span class="path">⋮ ▸ Ubicació</span>): mapa amb els clubs i cerca per nom.</div></li>
     <li><div><b>Ajusta la visualització:</b> tema (automàtic, fosc o clar) i mida del text (Petita o Gran).</div></li>
     <li><div><b>Fes-te el compte de soci</b> a <span class="path">⋮ ▸ Compte ▸ Alta nova</span> si vols compartir i fer servir el Club. L'aprova l'administració (capítol 9).</div></li>
@@ -250,13 +250,35 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     <dt>Dades del moment</dt><dd>Vent mesurat a les estacions locals, onada mesurada a la boia de Barcelona, temperatura de l'aire i de l'aigua, posta de sol, bandera de la platja i avisos de Meteocat (toca'ls per plegar-los en una línia).</dd>
   </dl>
   <h3>Llindars per embarcació</h3>
-  <p>Valors de fàbrica, en nusos (vent) i metres (onada). Els pots canviar a <span class="path">⋮ ▸ Llindars navegació</span>: tria l'embarcació a la llista i canvia'n els valors. Es desen al teu mòbil i <span class="ui">Restaura valors</span> torna a aquests.</p>
+  <p>Valors de fàbrica, en nusos (vent) i metres (onada). Els pots canviar a <span class="path">⋮ ▸ Embarcacions i llindars</span>: toca el nom de l'embarcació i canvia'n els valors. Per a rem i motor, sense vent és ideal (mínim 0). Es desen al teu mòbil i <span class="ui">Restaura valors</span> torna a aquests.</p>
   <div class="tw"><table>
     <thead><tr><th>Embarcació</th><th class="num">Mínim</th><th class="num">Ideal</th><th class="num">Màxim</th><th class="num">Ratxa màx.</th><th class="num">Onada bona</th><th class="num">Onada màx.</th></tr></thead>
     <tbody>
+      <tr><th colspan="7">Vela lleugera</th></tr>
       <tr><td>Patí català</td><td class="num">5</td><td class="num">8–16</td><td class="num">20</td><td class="num">24</td><td class="num">0,6</td><td class="num">1,2</td></tr>
+      <tr><td>ILCA / Làser</td><td class="num">6</td><td class="num">9–18</td><td class="num">22</td><td class="num">26</td><td class="num">0,7</td><td class="num">1,3</td></tr>
+      <tr><td>Optimist</td><td class="num">4</td><td class="num">6–12</td><td class="num">15</td><td class="num">18</td><td class="num">0,4</td><td class="num">0,6</td></tr>
+      <tr><td>420</td><td class="num">6</td><td class="num">9–16</td><td class="num">20</td><td class="num">24</td><td class="num">0,6</td><td class="num">1,2</td></tr>
+      <tr><td>470</td><td class="num">6</td><td class="num">9–17</td><td class="num">21</td><td class="num">25</td><td class="num">0,7</td><td class="num">1,3</td></tr>
+      <tr><td>Snipe</td><td class="num">5</td><td class="num">8–15</td><td class="num">18</td><td class="num">22</td><td class="num">0,6</td><td class="num">1,1</td></tr>
+      <tr><td>29er</td><td class="num">8</td><td class="num">11–20</td><td class="num">22</td><td class="num">26</td><td class="num">0,7</td><td class="num">1,3</td></tr>
+      <tr><td>Vaurien</td><td class="num">5</td><td class="num">7–13</td><td class="num">16</td><td class="num">20</td><td class="num">0,5</td><td class="num">1</td></tr>
+      <tr><td>Bot d'escola (Raquero, RS Quest, Bahia…)</td><td class="num">5</td><td class="num">7–13</td><td class="num">16</td><td class="num">20</td><td class="num">0,5</td><td class="num">0,9</td></tr>
+      <tr><th colspan="7">Catamarans</th></tr>
+      <tr><td>Hobie Cat 16</td><td class="num">6</td><td class="num">10–18</td><td class="num">22</td><td class="num">26</td><td class="num">0,8</td><td class="num">1,5</td></tr>
+      <tr><td>Catamarà d'escola (Hobie 14, Dragoon, Topaz)</td><td class="num">6</td><td class="num">8–14</td><td class="num">16</td><td class="num">20</td><td class="num">0,5</td><td class="num">1</td></tr>
+      <tr><td>Nacra 15 / 17</td><td class="num">8</td><td class="num">11–18</td><td class="num">20</td><td class="num">25</td><td class="num">0,8</td><td class="num">1,5</td></tr>
+      <tr><th colspan="7">Taula</th></tr>
       <tr><td>Windsurf</td><td class="num">10</td><td class="num">14–24</td><td class="num">30</td><td class="num">34</td><td class="num">1,2</td><td class="num">2,2</td></tr>
-      <tr><td>Hobie Cat</td><td class="num">6</td><td class="num">10–18</td><td class="num">22</td><td class="num">26</td><td class="num">0,8</td><td class="num">1,5</td></tr>
+      <tr><th colspan="7">Rem i pala</th></tr>
+      <tr><td>Caiac de mar</td><td class="num">0</td><td class="num">0–8</td><td class="num">15</td><td class="num">20</td><td class="num">0,4</td><td class="num">0,8</td></tr>
+      <tr><td>Llagut de rem</td><td class="num">0</td><td class="num">0–8</td><td class="num">14</td><td class="num">18</td><td class="num">0,4</td><td class="num">0,8</td></tr>
+      <tr><td>Barca</td><td class="num">0</td><td class="num">0–10</td><td class="num">16</td><td class="num">22</td><td class="num">0,5</td><td class="num">1</td></tr>
+      <tr><th colspan="7">Tradicional i quilla</th></tr>
+      <tr><td>Llaüd de vela llatina</td><td class="num">5</td><td class="num">7–14</td><td class="num">18</td><td class="num">22</td><td class="num">0,6</td><td class="num">1</td></tr>
+      <tr><td>Creuer lleuger (J/70, J/80…)</td><td class="num">6</td><td class="num">8–18</td><td class="num">25</td><td class="num">30</td><td class="num">1</td><td class="num">1,8</td></tr>
+      <tr><th colspan="7">Motor</th></tr>
+      <tr><td>Semirígida</td><td class="num">0</td><td class="num">0–15</td><td class="num">22</td><td class="num">28</td><td class="num">0,8</td><td class="num">1,5</td></tr>
     </tbody>
   </table></div>
   <h3>Models de previsió</h3>
@@ -454,7 +476,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     <dt>Ubicació</dt><dd>Els clubs de vela de tota la costa catalana (llista de vela.cat). S'obre directament el mapa: es tria al mapa o cercant pel nom, el municipi o la comarca; la llista va per comarques, de nord a sud. <b>Verd</b> = club amb estació local (vent mesurat); <b>gris</b> = només previsió. El botó «Amb estació» mostra només els verds. La <b>casa</b> és el teu club: el botó de casa del mapa t'hi porta d'un toc. Per canviar-lo, tria el club i toca la casa de la seva fila (es desa en aquest mòbil). Canvia la previsió, l'onatge, l'estació, la bandera de la platja més propera i els avisos de Meteocat de la comarca. L'estació de Badalona és a Dalt de la Vila, lluny del mar: pot marcar menys vent. Les estacions del Port de Barcelona i del CN Vilassar només es llegeixen des de l'app Android. El detall de l'estació és al botó (i) de la targeta d'ara.</dd>
     <dt>Aspecte</dt><dd>Tema automàtic, fosc o clar, i mida de la lletra Petita o Gran.</dd>
     <dt>Model meteorològic</dt><dd>Capítol 4.</dd>
-    <dt>Llindars navegació</dt><dd>Una fila per embarcació (patí, windsurf, Hobie Cat) amb el resum; toca-la per canviar vent, ratxa i onada. Es desen al mòbil.</dd>
+    <dt>Embarcacions i llindars</dt><dd>A dalt, les de la barra (fins a 4); a sota, la resta del catàleg per famílies. L'interruptor posa o treu l'embarcació de la barra (la teva de la Base hi és sempre); tocant el nom canvies vent, ratxa i onada. Es desa al mòbil.</dd>
     <dt>Administració Club</dt><dd>Només si tens algun permís (capítol 13).</dd>
     <dt>Compte</dt><dd>Entrar, dades personals i telèfon, les teves embarcacions, contrasenya, sortir i esborrar el compte (capítol 9).</dd>
     <dt>Privadesa</dt><dd>Amistats i qui veu cada cosa (capítol 11).</dd>

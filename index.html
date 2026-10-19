@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=167">
+<link rel="stylesheet" href="app.css?v=168">
 </head>
 <body>
 <div class="app">
@@ -39,7 +39,7 @@
   <button type="button" role="menuitem" class="cfg-mi" id="mnLoc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Ubicació</button>
   <button type="button" role="menuitem" class="cfg-mi" data-cfg="vis"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>Aspecte</button>
   <button type="button" role="menuitem" class="cfg-mi" data-cfg="model"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 4.25 4.25 0 0 0 7 18z"/></svg>Model meteorològic</button>
-  <button type="button" role="menuitem" class="cfg-mi" data-cfg="crit"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Llindars navegació</button>
+  <button type="button" role="menuitem" class="cfg-mi" data-cfg="crit"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Embarcacions i llindars</button>
   <div class="cfg-msep" data-for="adm" role="separator"></div>
   <button type="button" role="menuitem" class="cfg-mi" data-cfg="adm" data-for="adm"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6z"/></svg>Administració Club<span class="cfg-badge" data-badge="adm" hidden></span></button>
   <div class="cfg-msep" role="separator"></div>
@@ -77,10 +77,10 @@
       </div></div>
     </div>
   </section>
-  <section class="cfg-pg" data-pg="crit" data-title="Llindars navegació">
+  <section class="cfg-pg" data-pg="crit" data-title="Embarcacions i llindars">
     <div class="cfg-body">
-      <p class="note">Si una condició surt del llindar, el veredicte baixa. Es desen en aquest mòbil.</p>
-      <div class="cfg-grp" id="critList"></div>
+      <p class="note">Amb l'interruptor tries les icones de la barra de dalt; tocant el nom, en canvies els llindars. Es desa en aquest mòbil.</p>
+      <div class="crit-list" id="critList"></div>
       <div class="vp-more"><button class="ib-i" type="button" data-info="iCrit" aria-label="Més informació sobre els criteris" aria-expanded="false">i</button>
       <div class="vp-info" id="iCrit" hidden>
         <p><b>Colors</b>: verd dins la franja ideal; taronja entre el mínim i l'ideal o entre l'ideal i el màxim; vermell fora dels límits.</p>
@@ -402,7 +402,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="native.js?v=114"></script>
 <script src="clubs.js?v=1"></script>
-<script src="app.js?v=133"></script>
+<script src="boats.js?v=1"></script>
+<script src="app.js?v=134"></script>
 <script src="cfg.js?v=5"></script>
 <script src="ajuda.js?v=1"></script>
 <script src="trip.js?v=123"></script>
@@ -413,8 +414,8 @@
 <script src="prep.js?v=103"></script>
 <script src="cloud.js?v=123"></script>
 <script src="amics.js?v=115"></script>
-<script src="planol-core.js?v=5"></script>
-<script src="club.js?v=142"></script>
+<script src="planol-core.js?v=6"></script>
+<script src="club.js?v=143"></script>
 <script src="admin.js?v=114"></script>
 <script src="avisos.js?v=208"></script>
 <script src="sos.js?v=2"></script>

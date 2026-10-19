@@ -8,13 +8,12 @@ const rot = (x, y, a) => { const c = Math.cos(a * D2R), s = Math.sin(a * D2R); r
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;"})[c]);
 
 // Mides estàndard (eslora l × mànega w, metres). El windsurf és provisional.
-const BOATS = {
-  pati:     {n:"Patí català", l:5.60, w:1.60},
-  hobie:    {n:"Hobie Cat",   l:5.11, w:2.34},
-  llaud:    {n:"Llaüd català", l:6.00, w:2.00},
-  barca:    {n:"Barca",       l:4.00, w:1.60},
-  windsurf: {n:"Windsurf (provisional)", l:2.50, w:0.70}
-};
+// Tipus d'embarcació: catàleg únic a boats.js (nom, mida estàndard i silueta). Reserva si no carrega.
+const BOATS = (() => { const L = window.OV_BOATS && window.OV_BOATS.LIST, o = {};
+  if(L) for(const k in L) o[k] = {n:L[k].n, l:L[k].l, w:L[k].w, sh:L[k].sh || ""};
+  else Object.assign(o, {pati:{n:"Patí català", l:5.60, w:1.60, sh:"pati"}, hobie:{n:"Hobie Cat 16", l:5.11, w:2.34, sh:"cat"},
+    llaud:{n:"Llaüd de vela llatina", l:6.00, w:2.00, sh:"llaud"}, barca:{n:"Barca", l:4.00, w:1.60, sh:"barca"}, windsurf:{n:"Windsurf", l:2.50, w:0.70, sh:"taula"}});
+  return o; })();
 const POLYS = {
   edifici:   {n:"Edifici",          fill:"#9aa3ad", stroke:"#5b636c", op:1},
   mar:       {n:"Mar",              fill:"#8fc3ea", stroke:"#3d86c6", op:1},
@@ -36,13 +35,14 @@ function hullPath(L, W, x0, y0){
   return `M${x0-l} ${y0-w*.8} L${x0+l*.55} ${y0-w} Q${x0+l*.92} ${y0-w*.7} ${x0+l} ${y0} Q${x0+l*.92} ${y0+w*.7} ${x0+l*.55} ${y0+w} L${x0-l} ${y0+w*.8} Z`;
 }
 // Silueta (coordenades locals, proa cap a +x)
-function shape(t, L, W){
-  const l = L/2, w = W/2;
+function shape(t0, L, W){
+  const l = L/2, w = W/2, t = (BOATS[t0] && BOATS[t0].sh) || t0;   // silueta del catàleg: pati | cat | llaud | barca | taula | (monocasc)
+  if(t === "taula") return `<path d="M${-l} ${-w*.55} Q${-l} ${-w} ${-l*.6} ${-w} Q${l*.45} ${-w} ${l} 0 Q${l*.45} ${w} ${-l*.6} ${w} Q${-l} ${w} ${-l} ${w*.55} Z"/>`;
   if(t === "pati"){ const hw = 0.36, yy = w - hw/2;
     return `<path d="${hullPath(L, hw, 0, -yy)} ${hullPath(L, hw, 0, yy)}"/>`
       + `<path d="M${-l*.30} ${-yy} L${-l*.30} ${yy} M${l*.18} ${-yy} L${l*.18} ${yy}" fill="none" stroke-width="0.12"/>`
       + `<rect x="${-l*.27}" y="${-w*.42}" width="${l*.42}" height="${w*.84}" rx=".08" fill-opacity=".55"/>`; }
-  if(t === "hobie"){ const hw = 0.42, yy = w - hw/2;
+  if(t === "cat" || t === "hobie"){ const hw = Math.min(0.48, W*.19), yy = w - hw/2;
     return `<path d="${hullPath(L, hw, 0, -yy)} ${hullPath(L, hw, 0, yy)}"/>`
       + `<rect x="${-l*.62}" y="${-yy}" width="${l*1.05}" height="${yy*2}" fill-opacity=".45"/>`; }
   if(t === "llaud") return `<path d="M${-l} 0 Q${-l*.85} ${-w*.95} ${-l*.2} ${-w} Q${l*.55} ${-w} ${l} 0 Q${l*.55} ${w} ${-l*.2} ${w} Q${-l*.85} ${w*.95} ${-l} 0 Z"/>`;

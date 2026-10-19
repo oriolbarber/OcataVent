@@ -255,6 +255,7 @@ button.src{border:1px solid var(--line);background:var(--surface-2);border-radiu
 /* selector d'embarcació amb icones, a la barra superior */
 .act-seg{padding:2px;border-radius:12px;gap:1px;flex:none}
 .act-seg button{width:40px;min-height:38px;padding:0;display:grid;place-items:center;border-radius:9px}
+.act-seg.n4 button{width:35px}
 .top{gap:8px}
 .top .t b,.top .t span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:400px){
@@ -1523,6 +1524,11 @@ button.cfg-row:hover{background:var(--surface-2)}
 .cfg-chev{flex:none;color:var(--muted)}
 .cfg-row .cfg-badge{margin-left:0}
 .cfg-row.add{color:var(--accent);font-weight:700}
+.crit-list{display:flex;flex-direction:column;gap:10px}
+.crit-row{padding:0 14px 0 0;gap:10px;cursor:default}
+.crit-open{display:flex;align-items:center;gap:14px;flex:1;min-width:0;min-height:64px;padding:10px 0 10px 14px;border:0;background:none;text-align:left;color:var(--ink);cursor:pointer;font:inherit}
+.crit-open:hover{background:var(--surface-2)}
+.crit-row .switch:disabled{opacity:.55;cursor:default}
 .cfg-seg{display:flex;width:100%}
 .cfg-seg button{flex:1 1 0;min-height:48px}
 .cfg-prof{display:flex;align-items:center;gap:14px;padding:14px}

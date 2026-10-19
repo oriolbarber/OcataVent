@@ -135,7 +135,8 @@ async function fetchK(k){
     if(canBoatsE()) qs.push([W("clubId", "==", club), W("tipus", "==", "fet")]);
     const out = new Map(); (await Promise.all(qs.map(w => getAll("fets", ...w).catch(() => [])))).flat().forEach(x => out.set(x.id, x));
     D.fets = [...out.values()].filter(f => f.clubId === club); }
-  if(k === "boats") D.boats = await getAll("embarcacions", W("clubId", "==", C.member.clubId)).catch(() => []);
+  if(k === "boats"){ D.boats = await getAll("embarcacions", W("clubId", "==", C.member.clubId)).catch(() => []);
+    window.OV_ACTS?.boats(myBoats().map(b => b.t)); }   // la barra de dalt porta els tipus de les meves embarcacions
   if(k === "pres"){
     D.pres = await getVisible("presencia");
     const mine = await C.F.getDoc(ref("presencia", uid()));
@@ -543,7 +544,7 @@ function newBoatSheet(pl){
       const data = Object.assign(v, {clubId:C.member.clubId, prop:C.member.nom || "", propUid:uid(), ocult:false, estat:"lloc", notes:"", pendent:!canBoatsE(),
         historial:[{at:now(), qui:C.member.nom || "", que:(canBoatsE() ? "Alta" : "Proposada") + (o ? " a la plaça " + (o.label || "") : "")}], actualitzat:C.F.serverTimestamp(), actualitzatPer:uid()});
       const r = C.F.doc(col("embarcacions")); await TO(C.F.setDoc(r, data));
-      D.boats.push(Object.assign({id:r.id}, data)); closeSheet(); render(); });
+      D.boats.push(Object.assign({id:r.id}, data)); window.OV_ACTS?.boats(myBoats().map(b => b.t)); closeSheet(); render(); });
   });
 }
 const ESTAT_T = k => (PL() ? PL().ESTATS[k] || PL().ESTATS.lloc : {n:k}).n;
@@ -630,7 +631,7 @@ function boatSheet(placeId, boatId){
     const da = $("shDelAsk"); if(da) da.onclick = () => { const box = sh.querySelector('[data-delbox="shDel"]'); da.hidden = true;
       slideConfirm(box, mgr && !b.pendent ? "Llisca per donar-la de baixa" : mgr ? "Llisca per rebutjar-la" : "Llisca per retirar-la", async () => {
         try{ await C.F.deleteDoc(ref("embarcacions", b.id, "privat", "p")).catch(() => {}); await C.F.deleteDoc(ref("embarcacions", b.id, "foto", "f")).catch(() => {});
-          await TO(C.F.deleteDoc(ref("embarcacions", b.id))); D.boats = D.boats.filter(x => x.id !== b.id); closeSheet(); render(); }catch(err){ sheetSay(errText(err)); } }); };
+          await TO(C.F.deleteDoc(ref("embarcacions", b.id))); D.boats = D.boats.filter(x => x.id !== b.id); window.OV_ACTS?.boats(myBoats().map(b => b.t)); closeSheet(); render(); }catch(err){ sheetSay(errText(err)); } }); };
     sh.querySelectorAll("[data-sstate]").forEach(x => x.onclick = () => busy(x, async () => { const k = x.dataset.sstate; if((b.estat || "lloc") === k) return;
       await boatSave(b, {estat:k}, ESTAT_T(k)); sh.querySelectorAll("[data-sstate]").forEach(y => y.setAttribute("aria-pressed", String(y.dataset.sstate === k))); render(); }));
     // foto: triar-la o tornar a enquadrar l'actual
@@ -746,7 +747,7 @@ function intentSheet(){
       <label class="cl-field" for="shDate"><span class="note">O tria un altre dia, fins a ${INT_DIES} dies</span>
         <input class="field" id="shDate" type="date" value="${ymd(d)}" min="${ymd(d)}" max="${ymd(new Date(now() + INT_DIES*DAY))}"></label></div>
     ${field("shHour", "Hora", `<input class="field" id="shHour" type="time" value="${h}">`)}
-    ${field("shAct", "Embarcació", `<select class="field" id="shAct">${Object.keys(DEFAULTS).map(k => `<option value="${k}"${k === act ? " selected" : ""}>${esc(DEFAULTS[k].name)}</option>`).join("")}</select>`)}
+    ${field("shAct", "Embarcació", `<select class="field" id="shAct">${(B => B.concat(Object.keys(DEFAULTS).filter(k => !B.includes(k))))(window.OV_ACTS ? OV_ACTS.bar() : []).map(k => `<option value="${k}"${k === act ? " selected" : ""}>${esc(DEFAULTS[k].name)}</option>`).join("")}</select>`)}
     <div class="cl-field"><span class="lbl">Previsió per a aquella hora</span><div class="cl-fitrow" id="shFit"></div></div>
     ${visSelect("intencions", prefOf("intencions"))}
     <p class="note">Qui ho veu s'hi pot apuntar, i veurà aquesta previsió. S'esborra l'endemà.</p>

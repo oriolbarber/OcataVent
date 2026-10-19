@@ -14,11 +14,10 @@ const LOC = LOCS[locKey];
 // a l'editor del plànol (eina «Mar») i es desa en aquest mòbil quan se'n llegeix el plànol (club.js → OV_SET_COAST).
 const COAST0 = LOC.coast ?? 135;
 let COAST = (() => { try{ const v = JSON.parse(localStorage.getItem("ov2_costa_" + locKey)); return typeof v === "number" ? v : COAST0; }catch(e){ return COAST0; } })();
-const DEFAULTS = {
-  pati:     {name:"Patí català", short:"Patí",     min:5,  iMin:8,  iMax:16, max:20, gust:24, wOk:0.6, wMax:1.2},
-  windsurf: {name:"Windsurf",    short:"Windsurf", min:10, iMin:14, iMax:24, max:30, gust:34, wOk:1.2, wMax:2.2},
-  hobie:    {name:"Hobie Cat",   short:"Hobie",    min:6,  iMin:10, iMax:18, max:22, gust:26, wOk:0.8, wMax:1.5}
-};
+// Tipus d'embarcació i llindars per defecte: catàleg únic a boats.js (window.OV_BOATS). Reserva mínima si no carrega.
+const OVB = window.OV_BOATS || {FAMS:{vela:"Vela"}, IC:{}, LIST:{pati:{n:"Patí català", s:"Patí", f:"vela", ic:"pati", c:{min:5, iMin:8, iMax:16, max:20, gust:24, wOk:0.6, wMax:1.2}}}};
+const DEFAULTS = {};
+for(const k in OVB.LIST){ const T = OVB.LIST[k]; DEFAULTS[k] = Object.assign({name:T.n, short:T.s, fam:T.f, ic:T.ic}, T.c); }
 const SLOTS = [
   {k:"mati",   label:"Matí",   ab:"M",  range:"9–12 h",  hours:[9,10,11]},
   {k:"migdia", label:"Migdia", ab:"Mg", range:"12–15 h", hours:[12,13,14]},
@@ -36,7 +35,17 @@ const store = {
   set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
-let act = store.get("ov2_act"); if(!DEFAULTS[act]) act = "pati";
+// Barra de dalt: els tipus de les meves embarcacions de la Base (ov2_acts_boat, els passa club.js) + els que el soci hi afegeix
+// (ov2_acts_extra). Sense embarcacions ni tria pròpia: patí, windsurf i Hobie (decisió de l'Oriol). Màxim BAR_MAX icones.
+const ACTS0 = ["pati", "windsurf", "hobie"].filter(k => DEFAULTS[k]), BAR_MAX = 4;
+let actsBoat = (store.get("ov2_acts_boat") || []).filter(k => DEFAULTS[k]);
+let actsExtra = store.get("ov2_acts_extra");   // null = encara no l'ha tocada
+function barActs(){
+  const ex = Array.isArray(actsExtra) ? actsExtra : (actsBoat.length ? [] : ACTS0);
+  const L = [...new Set(actsBoat.concat(ex))].filter(k => DEFAULTS[k]);
+  return L.length ? L.slice(0, BAR_MAX) : (ACTS0.length ? ACTS0 : [Object.keys(DEFAULTS)[0]]);   // primer les de la Base
+}
+let act = store.get("ov2_act"); if(!DEFAULTS[act] || !barActs().includes(act)) act = barActs()[0];
 let crit = JSON.parse(JSON.stringify(DEFAULTS));
 const savedCrit = store.get("ov2_crit"); if(savedCrit) for(const k in crit) if(savedCrit[k]) Object.assign(crit[k], savedCrit[k]);
 let DATA = null, ST = null, openDay = null;
@@ -884,15 +893,11 @@ function renderFlag(){
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".gflag-b"); if(!b) return; const t = b.nextElementSibling; t.hidden = !t.hidden; b.setAttribute("aria-expanded", String(!t.hidden)); });
 
 /* ---------- render ---------- */
-// Siluetes de les embarcacions: patí (casc doble, una vela), windsurf (taula i vela amb wishbone), Hobie Cat (catamarà amb major i floc)
-const BOAT_IC = {
-  pati: `<path d="M17 3.5L18.5 16.5"/><path d="M17 4L8 15L18 15"/><path d="M3 17.5L21.5 17.5L21.5 19L4.5 19Z"/><path d="M2 19L20.5 19"/>`,
-  windsurf: `<path d="M3 20.5c4 1.2 13 1.2 18-1.5"/><path d="M8.5 19.5 13 2.5"/><path d="M13 2.5c4.5 3 6.5 8 5.5 13L9.6 18"/><path d="M10.6 11.5l7.6 1.2"/>`,
-  hobie: `<path d="M16 1L15.5 16.5"/><path d="M16.5 5.5L20 15L16.5 14.5"/><path d="M16 1.5L7 14L14.5 14.5"/><path d="M3 17.5L21 17.5L20 19.5L5 19.5Z"/><path d="M3.5 20L18 20"/>`
-};
-const boatIcon = (k, z) => `<svg width="${z||22}" height="${z||22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BOAT_IC[k]}</svg>`;
+// Siluetes de les embarcacions: a boats.js (OV_BOATS.IC), una per tipus o compartida dins la família
+const boatIcon = (k, z) => `<svg width="${z||22}" height="${z||22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${OVB.IC[DEFAULTS[k]?.ic] || OVB.IC[k] || OVB.IC.pati || ""}</svg>`;
 function renderSeg(){
-  $("actSeg").innerHTML = Object.keys(DEFAULTS).map(k => `<button type="button" data-act="${k}" aria-pressed="${k===act}" aria-label="${esc(DEFAULTS[k].name)}" title="${esc(DEFAULTS[k].name)}">${boatIcon(k)}</button>`).join("");
+  $("actSeg").classList.toggle("n4", barActs().length > 3);
+  $("actSeg").innerHTML = barActs().map(k => `<button type="button" data-act="${k}" aria-pressed="${k===act}" aria-label="${esc(DEFAULTS[k].name)}" title="${esc(DEFAULTS[k].name)}">${boatIcon(k)}</button>`).join("");
 }
 function stat(ic, label, v, unit, x){ return `<div class="stat"><div class="k"><span class="chip-ic">${icon(ic)}</span><span class="lbl">${label}</span></div><div class="v">${v}${unit?`<small>${unit}</small>`:""}</div><div class="x">${x||"&nbsp;"}</div></div>`; }
 // Widget d'Android (APK): l'app hi passa el veredicte d'ara i la previsió de les 48 h següents; Android el refresca cada 30 min
@@ -1050,10 +1055,40 @@ function renderWeek(){
 // Llindars navegació: llista dels tipus d'embarcació (Configuració) i detall del tipus triat (critK)
 let critK = act;
 const critSum = k => { const c = crit[k]; return `Ideal ${c.iMin}–${c.iMax} kn · ratxa fins a ${c.gust} kn · onada fins a ${r1(c.wMax)} m`; };
+// Llista agrupada: primer les de la barra de dalt (interruptor encès), després la resta del catàleg per famílies.
+// Les de les meves embarcacions de la Base hi són sempre (interruptor bloquejat).
+function critRow(k, on){
+  const lock = actsBoat.includes(k);
+  return `<div class="cfg-row crit-row"><button type="button" class="crit-open" data-crit="${k}" data-cfg="crit-det"><span class="cfg-ic">${boatIcon(k, 24)}</span><span class="cfg-rt"><b>${esc(DEFAULTS[k].name)}</b><small>${esc(lock ? "La teva embarcació · " + critSum(k) : critSum(k))}</small></span></button>`
+    + `<input type="checkbox" class="switch" data-bar="${k}" aria-label="${esc(DEFAULTS[k].name)} a la barra de dalt"${on ? " checked" : ""}${lock ? " disabled" : ""}></div>`;
+}
 function renderCritList(){
   const L = $("critList"); if(!L) return;
-  L.innerHTML = Object.keys(DEFAULTS).map(k => `<button type="button" class="cfg-row" data-crit="${k}" data-cfg="crit-det"><span class="cfg-ic">${boatIcon(k, 24)}</span><span class="cfg-rt"><b>${esc(DEFAULTS[k].name)}${k === act ? ` <small class="note">· la que tens triada</small>` : ""}</b><small>${esc(critSum(k))}</small></span><svg class="cfg-chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`).join("");
+  const bar = barActs(), rest = Object.keys(DEFAULTS).filter(k => !bar.includes(k)), fams = OVB.FAMS || {};
+  L.innerHTML = `<span class="lbl cfg-h">A la barra de dalt (${bar.length} de ${BAR_MAX})</span><div class="cfg-grp">${bar.map(k => critRow(k, true)).join("")}</div>`
+    + Object.keys(fams).map(f => { const R = rest.filter(k => DEFAULTS[k].fam === f); return R.length ? `<span class="lbl cfg-h">${esc(fams[f])}</span><div class="cfg-grp">${R.map(k => critRow(k, false)).join("")}</div>` : ""; }).join("")
+    + `<p class="note" id="barNote" hidden></p>`;
 }
+// Canvia l'embarcació triada (barra de dalt) i ho redibuixa tot
+function setAct(k){
+  if(!DEFAULTS[k]) return; act = k; store.set("ov2_act", act);
+  if(DATA) applyModel(); render(); if(window.renderWindMap) renderWindMap(); if(window.renderPrep) renderPrep();
+}
+function barChanged(){ const B = barActs(); if(!B.includes(act)) setAct(B[0]); else renderSeg(); renderCritList(); }
+document.addEventListener("change", e => { const t = e.target; if(!t.matches || !t.matches("[data-bar]")) return;
+  const k = t.dataset.bar, B = barActs(), ex = Array.isArray(actsExtra) ? actsExtra.slice() : (actsBoat.length ? [] : ACTS0.slice());
+  if(t.checked && B.length >= BAR_MAX){ t.checked = false; const n = $("barNote"); if(n){ n.hidden = false; n.textContent = `A la barra hi caben ${BAR_MAX} embarcacions. Treu-ne una abans d'afegir-ne una altra.`; } return; }
+  if(!t.checked && B.length <= 1){ t.checked = true; return; }   // n'hi ha d'haver almenys una
+  actsExtra = t.checked ? [...new Set(ex.concat(k))] : ex.filter(x => x !== k);
+  store.set("ov2_acts_extra", actsExtra); barChanged(); });
+// club.js hi passa els tipus de les meves embarcacions de la Base cada vegada que les llegeix
+window.OV_ACTS = {
+  boats(types){
+    const T = [...new Set((types || []).filter(k => DEFAULTS[k]))];
+    if(T.join() === actsBoat.join()) return; actsBoat = T; store.set("ov2_acts_boat", T); barChanged();
+  },
+  bar: barActs
+};
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-crit]"); if(!b || !DEFAULTS[b.dataset.crit]) return; critK = b.dataset.crit; renderCrit(); });
 function renderCrit(){
   if(!DEFAULTS[critK]) critK = act;
@@ -1138,7 +1173,7 @@ function tick(){ const d = new Date(); $("clock").textContent = LOC.name + " · 
 tick(); setInterval(tick, 20000);
 
 /* ---------- events ---------- */
-$("actSeg").addEventListener("click", e => { const b = e.target.closest("button[data-act]"); if(!b) return; act = b.dataset.act; store.set("ov2_act", act); if(DATA) applyModel(); render(); if(window.renderWindMap) renderWindMap(); if(window.renderPrep) renderPrep(); });
+$("actSeg").addEventListener("click", e => { const b = e.target.closest("button[data-act]"); if(!b) return; setAct(b.dataset.act); });
 $("week").addEventListener("click", e => { const b = e.target.closest(".wrow"); if(!b) return; openDay = openDay === b.dataset.day ? null : b.dataset.day; renderWeek();
   if(openDay && (!SEL || SEL.slice(0,10) !== openDay)) selectHour(hourKey(openDay, Math.max(7, Math.min(21, +selKey().slice(11,13)))), "chart"); });
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-dayv]"); if(!b || !DATA) return;
