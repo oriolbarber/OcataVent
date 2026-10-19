@@ -163,7 +163,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Avisos de Meteocat (Previsió): una fila per fenomen amb tots els dies que l'afecten («demà i 20/10»; `renderInfo` agrupa, `INFO.alerts` continua per dia per a «Nova sortida»); es pleguen en una línia tocant-los (`ov_smp_fold`, en aquest mòbil).
 - Avís legal: no substitueix el VHF canal 16 ni el 112.
 
-- **Rosa dels vents (`roseSvg`, `roseHist`):** barres cada 10° apilades per idoneïtat per a l'embarcació triada (verd → taronja → vermell del centre enfora, `kOf(scoreHour())`); les hores passades vénen de l'estació (amb onada i pluja de la previsió de la mateixa hora) i les que falten, de la previsió, sense distingir-les. Fletxa del vent actual: vora `--ink`, interior segons la idoneïtat global (`kOf(s.score)`), ombra, i la punta passa per sota del número central. L'onada continua blava per fora de la rosa.
+- **Rosa dels vents (`roseSvg`, `roseHist`):** barres cada 10° apilades per idoneïtat per a l'embarcació triada (verd → taronja → vermell del centre enfora, `kOf(scoreHour())`); les hores passades vénen de l'estació (amb onada i pluja de la previsió de la mateixa hora) i les que falten, de la previsió, sense distingir-les. Direcció del vent actual: con (la forma d'abans, de la vora al cercle central) amb vora `--ink` (negra en clar, blanca en fosc), interior del color de la idoneïtat al 60 % i ombra.score)`), ombra, i la punta passa per sota del número central. L'onada continua blava per fora de la rosa.
 
 ## Pendent de la junta
 - Qui rep els avisos.

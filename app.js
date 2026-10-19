@@ -562,11 +562,10 @@ function roseSvg(o){
     if(Math.abs(dw) < 24) a += dw > 0 ? dw - 24 : dw + 24;   // l'onada hi cau a sobre: la lletra es desplaça una mica al costat
     const [x,y] = P(a, R+48);
     g += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><text class="upr" y="7" text-anchor="middle" font-size="21" font-weight="800" fill="var(--ink)" font-family="Rajdhani,sans-serif">${t}</text></g>`; });
-  // fletxa del vent actual: de la vora fins a sota del número central (el cercle del centre la tapa).
+  // con de la direcció del vent actual (forma d'abans): de la vora fins al cercle central.
   // Vora del color del text (negra en clar, blanca en fosc), interior segons la idoneïtat i ombra perquè floti sobre les barres
-  if(o.dir!=null){ const yt = -(R+8), yh = -(ri+14), yb = -(ri-10), w = 6, hw = 14;
-    const pts = `-${w},${yt} ${w},${yt} ${w},${yh} ${hw},${yh} 0,${yb} -${hw},${yh} -${w},${yh}`;
-    g += `<g class="needle" transform="rotate(${o.dir})"><polygon points="${pts}" fill="${o.k ? `var(--${o.k})` : "var(--surface-2)"}" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/></g>`; }
+  if(o.dir!=null){ const [x0,y0] = P(o.dir-11, R), [x1,y1] = P(o.dir+11, R), [xc,yc] = P(o.dir, ri-6);
+    g += `<g class="needle"><path d="M${xc.toFixed(1)} ${yc.toFixed(1)} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z" fill="${o.k ? `var(--${o.k})` : "var(--surface-2)"}" fill-opacity=".6" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/></g>`; }
   // pantalla de ruta: rumb del GPS (agulla blava) i direcció cap a la base (punt verd)
   if(o.cog!=null){ const y0 = -(ri-2), yh = -(R-22), y1 = -(R+4);   // fletxa de cartell: tija gruixuda i punta ampla
     g += `<polygon transform="rotate(${o.cog})" points="-6,${y0} 6,${y0} 6,${yh} 15,${yh} 0,${y1} -15,${yh} -6,${yh}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke"/>`; }
