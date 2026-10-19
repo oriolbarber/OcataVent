@@ -5,7 +5,7 @@
    sh = silueta al plànol (pati | cat | llaud | barca | taula; sense = monocasc), c = llindars per defecte:
    min / iMin / iMax / max = vent (kn), gust = ratxa màxima (kn), wOk / wMax = onada còmoda / màxima (m).
    Claus: no es poden canviar mai (són a les sortides, publicacions i fitxes desades al núvol). Les de rem i motor tenen min = iMin = 0:
-   sense vent és ideal. Wing foil, kitesurf, iQFoil i pàdel surf necessiten regles pròpies: s'afegiran a part. */
+   sense vent és ideal. Onada curta (pMin): de moment només la porten per defecte el foil, el kite i el pàdel. */
 (function(){
 const FAMS = {
   vela:  "Vela lleugera",
@@ -15,7 +15,8 @@ const FAMS = {
   trad:  "Tradicional i quilla",
   motor: "Motor"
 };
-const c = (min, iMin, iMax, max, gust, wOk, wMax) => ({min, iMin, iMax, max, gust, wOk, wMax});
+// pMin = període mínim de l'onada (s): per sota, «onada curta» i la nota baixa. null = indiferent (per defecte)
+const c = (min, iMin, iMax, max, gust, wOk, wMax, pMin) => ({min, iMin, iMax, max, gust, wOk, wMax, pMin: pMin || null});
 const LIST = {
   pati:       {n:"Patí català",          s:"Patí",       f:"vela",  ic:"pati",  l:5.60, w:1.60, sh:"pati",  c:c(5, 8, 16, 20, 24, 0.6, 1.2)},
   ilca:       {n:"ILCA / Làser",         s:"ILCA",       f:"vela",  ic:"vela1", l:4.23, w:1.42,               c:c(6, 9, 18, 22, 26, 0.7, 1.3)},
@@ -30,7 +31,11 @@ const LIST = {
   catesc:     {n:"Catamarà d'escola (Hobie 14, Dragoon, Topaz)", s:"Cat d'escola", f:"cat", ic:"cat1", l:4.25, w:2.25, sh:"cat", c:c(6, 8, 14, 16, 20, 0.5, 1.0)},
   nacra:      {n:"Nacra 15 / 17",        s:"Nacra",      f:"cat",   ic:"hobie", l:5.25, w:2.60, sh:"cat",   c:c(8, 11, 18, 20, 25, 0.8, 1.5)},
   windsurf:   {n:"Windsurf",             s:"Windsurf",   f:"taula", ic:"windsurf", l:2.50, w:0.70, sh:"taula", c:c(10, 14, 24, 30, 34, 1.2, 2.2)},
+  wing:       {n:"Wing foil",            s:"Wing",       f:"taula", ic:"wing",  l:2.00, w:0.80, sh:"taula", c:c(10, 13, 22, 28, 32, 0.8, 1.5, 5)},
+  kite:       {n:"Kitesurf",             s:"Kite",       f:"taula", ic:"kite",  l:1.50, w:0.50, sh:"taula", c:c(11, 14, 24, 30, 34, 1.0, 2.0, 4)},
+  iqfoil:     {n:"iQFoil",               s:"iQFoil",     f:"taula", ic:"iqfoil", l:2.20, w:0.95, sh:"taula", c:c(7, 10, 22, 26, 30, 0.6, 1.2, 5)},
   caiac:      {n:"Caiac de mar",         s:"Caiac",      f:"rem",   ic:"caiac", l:4.80, w:0.65, sh:"taula", c:c(0, 0, 8, 15, 20, 0.4, 0.8)},
+  padel:      {n:"Pàdel surf",           s:"Pàdel",      f:"rem",   ic:"padel", l:3.30, w:0.80, sh:"taula", c:c(0, 0, 6, 10, 14, 0.3, 0.6, 6)},
   llagutrem:  {n:"Llagut de rem",        s:"Llagut",     f:"rem",   ic:"rem",   l:7.50, w:1.80, sh:"llaud", c:c(0, 0, 8, 14, 18, 0.4, 0.8)},
   barca:      {n:"Barca",                s:"Barca",      f:"rem",   ic:"barca", l:4.00, w:1.60, sh:"barca", c:c(0, 0, 10, 16, 22, 0.5, 1.0)},
   llaud:      {n:"Llaüd de vela llatina", s:"Llaüd",     f:"trad",  ic:"llati", l:6.00, w:2.00, sh:"llaud", c:c(5, 7, 14, 18, 22, 0.6, 1.0)},
@@ -54,6 +59,10 @@ const IC = {
   caiac: `<path d="M2 18.5c5 2.2 15 2.2 20 0c-5-2.2-15-2.2-20 0Z"/><path d="M6.5 5.5L17.5 15.5"/><path d="M4.2 2.6L7.9 4.2L6.3 6.9L3.4 5Z"/><path d="M19.8 18.4L16.1 16.8L17.7 14.1L20.6 16Z"/>`,
   rem: `<path d="M2 12.5H22L19.5 16.5H4.5Z"/><path d="M7 12.5L4.5 20.5"/><path d="M12 12.5L9.5 20.5"/><path d="M17 12.5L14.5 20.5"/><circle cx="7" cy="10" r="1.3"/><circle cx="12" cy="10" r="1.3"/><circle cx="17" cy="10" r="1.3"/>`,
   barca: `<path d="M2.5 13H21.5L18.5 18H5.5Z"/><path d="M10 13L6.5 21"/><path d="M14 13L17.5 21"/>`,
+  wing: `<path d="M4.5 13C4.5 6.5 9.5 3 18.5 3C17.5 9.5 13 13 4.5 13Z"/><path d="M8 10.8L15.5 5.2"/><path d="M3.5 17.5H20.5"/><path d="M12 17.5V21.5M9 21.5H15"/>`,
+  kite: `<path d="M3.5 7.5C7 3 17 3 20.5 7.5L18.5 9C15.5 6.3 8.5 6.3 5.5 9Z"/><path d="M5.5 9L11 16.5M18.5 9L13 16.5"/><path d="M10 16.5H14"/><path d="M3.5 19.5C8 21.2 16 21.2 20.5 19"/>`,
+  iqfoil: `<path d="M3 16.5c4 1 13 1 18-1"/><path d="M8.5 15.5L12.5 2.5"/><path d="M12.5 2.5c4 3 6 7 5 11L9.4 14"/><path d="M12 17.3V21.5M9 21.5H15"/>`,
+  padel: `<path d="M2 18.5c5 2 15 2 20 0c-5-2-15-2-20 0Z"/><path d="M14.6 3L12.4 14.2"/><path d="M13.3 3H16"/><path d="M11.4 13.8L11.9 17.4L13.6 14.4Z"/>`,
   neuma: `<path d="M5 14H19.5A2.5 2.5 0 0 1 19.5 19H6.5L3.5 16.5Z"/><path d="M9 14V10.5H13.5L15.5 14"/><path d="M21.5 11V16"/>`
 };
 window.OV_BOATS = {FAMS, LIST, IC};

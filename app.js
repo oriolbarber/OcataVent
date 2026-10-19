@@ -125,6 +125,8 @@ function scoreHour(p, c){
   if(p.gust!=null && p.gust > c.gust){ s = Math.min(s, 25); pw = Math.min(pw, 25); flags.push("Ratxes fortes"); }
   else if(p.gust!=null && p.wind!=null && p.wind >= 4 && p.gust / p.wind > 1.6){ s -= 15; pw -= 15; flags.push("Ràfagues"); }   // racheig relatiu
   if(p.tp!=null && p.tp >= 7 && p.wave!=null && p.wave >= 0.4) flags.push("Mar de fons");   // ja compta a l'onada de platja
+  // Onada curta i picada: període mitjà per sota del mínim de l'embarcació (c.pMin, s; buit = indiferent) amb 0,3 m d'onada o més
+  if(c.pMin && p.per!=null && p.per < c.pMin && p.wave!=null && p.wave >= 0.3){ const pen = Math.min(35, 15 + 10*(c.pMin - p.per)); s -= pen; po -= pen; flags.push("Onada curta"); }
   if(isOffshore(p.dir) && p.wind >= 6){
     s = p.wind >= 10 ? Math.min(s-25, 40) : s-25; pw = p.wind >= 10 ? Math.min(pw-25, 40) : pw-25; flags.push("Terral");
     if(p.wind >= 10){ s = Math.min(s, 20); pw = Math.min(pw, 20); flags.push("Terral fort"); } }
@@ -141,7 +143,7 @@ function scoreHour(p, c){
   if(p.wind > c.max) why.push("massa vent"); else if(p.wind > c.iMax) why.push("vent fort");
   if(flags.includes("Ratxes fortes")) why.push("ratxes fortes"); else if(flags.includes("Ràfagues")) why.push("vent a ràfagues");
   if(hb!=null && hb > c.wMax) why.push("onada alta"); else if(hb!=null && hb > c.wOk) why.push("onada");
-  [["Terral fort","terral fort"],["Terral","terral"],["Mar de fons","mar de fons"],["Tempesta","tempesta"],["Pluja","pluja"],["Plugim","plugim"],["Probable pluja","pluja probable"],["Poca llum","poca llum"]]
+  [["Terral fort","terral fort"],["Terral","terral"],["Mar de fons","mar de fons"],["Onada curta","onada curta"],["Tempesta","tempesta"],["Pluja","pluja"],["Plugim","plugim"],["Probable pluja","pluja probable"],["Poca llum","poca llum"]]
     .forEach(([f,t]) => { if(flags.includes(f) && !why.includes(t) && !(t === "terral" && why.includes("terral fort"))) why.push(t); });
   // primer els motius que ho fan no recomanable
   const PRI = ["poca llum","tempesta","pluja","terral fort","ratxes fortes","massa vent","onada alta","poc vent"];
@@ -1054,7 +1056,7 @@ function renderWeek(){
 }
 // Llindars navegació: llista dels tipus d'embarcació (Configuració) i detall del tipus triat (critK)
 let critK = act;
-const critSum = k => { const c = crit[k]; return `Ideal ${c.iMin}–${c.iMax} kn · ratxa fins a ${c.gust} kn · onada fins a ${r1(c.wMax)} m`; };
+const critSum = k => { const c = crit[k]; return `Ideal ${c.iMin}–${c.iMax} kn · ratxa fins a ${c.gust} kn · onada fins a ${r1(c.wMax)} m${c.pMin ? ` · període mín. ${c.pMin} s` : ""}`; };
 // Llista agrupada: primer les de la barra de dalt (interruptor encès), després la resta del catàleg per famílies.
 // Les de les meves embarcacions de la Base hi són sempre (interruptor bloquejat).
 function critRow(k, on){
@@ -1095,8 +1097,9 @@ function renderCrit(){
   const c = crit[critK];
   if(window.OV_CFG) OV_CFG.title("crit-det", DEFAULTS[critK].name);
   $("peekCrit").textContent = `${DEFAULTS[act].short} · ideal ${crit[act].iMin}–${crit[act].iMax} kn · onada fins a ${r1(crit[act].wMax)} m`;
-  const F = [["min","Vent mínim (kn)",1],["iMin","Ideal des de (kn)",1],["iMax","Ideal fins a (kn)",1],["max","Vent màxim (kn)",1],["gust","Ratxa màxima (kn)",1],["wOk","Onada còmoda (m)",0.1],["wMax","Onada màxima (m)",0.1]];
-  $("crit").innerHTML = F.map(([k,l,st]) => `<label for="c_${k}">${l}<input id="c_${k}" type="number" inputmode="decimal" step="${st}" min="0" value="${c[k]}" data-k="${k}"></label>`).join("");
+  const F = [["min","Vent mínim (kn)",1],["iMin","Ideal des de (kn)",1],["iMax","Ideal fins a (kn)",1],["max","Vent màxim (kn)",1],["gust","Ratxa màxima (kn)",1],["wOk","Onada còmoda (m)",0.1],["wMax","Onada màxima (m)",0.1],["pMin","Període mínim (s)",1]];
+  $("crit").innerHTML = F.map(([k,l,st]) => `<label for="c_${k}">${l}<input id="c_${k}" type="number" inputmode="decimal" step="${st}" min="0" value="${c[k] ?? ""}"${k === "pMin" ? ' placeholder="Indiferent"' : ""} data-k="${k}"></label>`).join("")
+    + `<p class="note crit-wide">Onada curta: buit = indiferent. Amb un període més curt (i 0,3 m o més), la nota baixa.</p>`;
 }
 function render(){
   renderSeg(); renderCrit();
@@ -1236,7 +1239,9 @@ function refreshAll(){ document.dispatchEvent(new Event("ov-pull")); return Prom
   addEventListener("touchend", end); addEventListener("touchcancel", end);
 })();
 $("src").addEventListener("click", () => { const L = LOC.stations; if(L.length < 2) return; stKey = L[(L.indexOf(stKey) + 1) % L.length]; store.set("ov2_station_v3", stKey); ST = null; renderNow(); loadStation(); loadObs(); });
-$("crit").addEventListener("change", e => { const k = e.target.dataset.k; if(!k) return; const v = parseFloat(String(e.target.value).replace(",", ".")); if(isNaN(v) || v < 0){ renderCrit(); return; }
+$("crit").addEventListener("change", e => { const k = e.target.dataset.k; if(!k) return; const v = parseFloat(String(e.target.value).replace(",", "."));
+  if(k === "pMin" && (isNaN(v) || v <= 0)){ crit[critK].pMin = null; store.set("ov2_crit", crit); renderCrit(); renderCritList(); if(DATA && critK === act){ applyModel(); renderNow(); renderHours(); renderWeek(); } return; }   // buit = indiferent
+  if(isNaN(v) || v < 0){ renderCrit(); return; }
   crit[critK][k] = v; store.set("ov2_crit", crit); renderCrit(); renderCritList(); if(DATA && critK === act){ applyModel(); renderNow(); renderHours(); renderWeek(); } });
 $("resetCrit").addEventListener("click", () => { crit[critK] = JSON.parse(JSON.stringify(DEFAULTS[critK])); store.set("ov2_crit", crit); renderCritList(); render(); });
 
