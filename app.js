@@ -327,11 +327,21 @@ async function loadEncerts(){
   try{ ENC = await getJSON("data/encerts.json?t=" + Date.now()); }catch(e){ ENC = null; }
   if(DATA){ applyModel(); render(); }
 }
+// Tipus de vent d'un dia amb l'orientació del mar d'aquest club (COAST): mateix criteri que tipusVent de scripts/llocs.mjs.
+// Es recalcula aquí perquè el club pot corregir l'orientació al plànol; si el dia no té direcció, es fa servir el desat.
+function tipusDia(d){
+  if(d.dir == null || d.vent == null) return d.tipus || null;
+  if(d.vent < 3) return "calma";
+  if(isOffshore(d.dir)) return "terral";
+  let rel = norm(d.dir - COAST); if(rel > 180) rel -= 360;   // des de la direcció del mar: marinada de −10° a +65°, llevant per l'esquerra, garbí per la dreta
+  if(rel >= -10 && rel <= 65) return "marinada";
+  return rel < -10 ? "llevant" : "garbi";
+}
 // Error mitjà de cada model (mitjana dels errors diaris) a la ubicació actual, dels últims «dies» dies i, si es vol, d'un tipus de vent
 function encertsResum(dies, tipus){
   if(!ENC || !Array.isArray(ENC.dies)) return [];
   const d0 = new Date(Date.now() - dies*864e5), since = `${d0.getFullYear()}-${pad(d0.getMonth()+1)}-${pad(d0.getDate())}`, acc = {};
-  ENC.dies.filter(d => d.loc === locKey && d.data >= since && (!tipus || d.tipus === tipus)).forEach(d => {
+  ENC.dies.filter(d => d.loc === locKey && d.data >= since && (!tipus || tipusDia(d) === tipus)).forEach(d => {
     for(const k in d.models){ const a = acc[k] = acc[k] || {s:0, dies:0}; a.s += d.models[k].mae; a.dies++; } });
   return Object.entries(acc).filter(([k]) => MODELS[k]).map(([k, a]) => ({k, mae:a.s/a.dies, dies:a.dies})).sort((a, b) => a.mae - b.mae);
 }

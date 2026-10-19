@@ -56,14 +56,14 @@ export function perHores(recs, dia) {
 }
 
 /* ---------- comparació ---------- */
-export function compara(prev, obs) {
+export function compara(prev, obs, costa) {
   const hores = HORES.map(pad).filter(h => obs[h]), models = {};
   for (const [k, f] of Object.entries(prev || {})) {
     let s = 0, n = 0; for (const h of hores) if (f[h] != null) { s += Math.abs(f[h] - obs[h].wind); n++; }
     if (n >= 4) models[k] = {mae: Math.round(s / n * 100) / 100, n};
   }
   const L = hores.map(h => obs[h]), vent = L.length ? L.reduce((a, o) => a + o.wind, 0) / L.length : null, dir = vecDir(L);
-  return {n: hores.length, vent: vent == null ? null : Math.round(vent * 10) / 10, dir, tipus: tipusVent(dir, vent), models};
+  return {n: hores.length, vent: vent == null ? null : Math.round(vent * 10) / 10, dir, tipus: tipusVent(dir, vent, costa), models};
 }
 
 async function main() {
@@ -86,7 +86,7 @@ async function main() {
       enc.dies = enc.dies.filter(d => d.data !== dia);
       for (const loc of Object.keys(LLOCS)) {
         try {
-          const r = compara(prev.locs[loc], perHores(await mesures(loc), dia));
+          const r = compara(prev.locs[loc], perHores(await mesures(loc), dia), LLOCS[loc].costa);
           if (r.n >= 4 && Object.keys(r.models).length) { enc.dies.push({data: dia, loc, estacio: LLOCS[loc].nomEstacio, ...r}); console.log(loc, JSON.stringify(r)); }
           else console.log(loc, "massa poques hores mesurades:", r.n);
         } catch (e) { console.warn("Comparació", loc, e.message); }
