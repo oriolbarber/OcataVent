@@ -128,7 +128,8 @@ async function fetchK(k){
       else ui.interest[a.id] = (await C.F.getDoc(ref("anuncis", a.id, "interessats", uid()))).exists();
     }));
   }
-  if(k === "planol"){ const d = await C.F.getDoc(ref("clubs", C.member.clubId, "planol", "actual")).catch(() => null); D.planol = d && d.exists() ? d.data() : null; if(D.planol) D.planol.objs = PL() ? PL().fromStore(D.planol.objs) : []; }
+  if(k === "planol"){ const d = await C.F.getDoc(ref("clubs", C.member.clubId, "planol", "actual")).catch(() => null); D.planol = d && d.exists() ? d.data() : null;
+    window.OV_SET_COAST?.(C.member.clubId, D.planol ? D.planol.costa : null); if(D.planol) D.planol.objs = PL() ? PL().fromStore(D.planol.objs) : []; }
   if(k === "fets"){   // una consulta per cada manera de veure'ls (les regles no deixen llegir-los tots de cop)
     const club = C.member.clubId, qs = [[W("clubId", "==", club), W("public", "==", true)], [W("clubId", "==", club), W("userId", "==", uid())], [W("propUid", "==", uid())]];
     if(canBoatsE()) qs.push([W("clubId", "==", club), W("tipus", "==", "fet")]);
@@ -1281,5 +1282,6 @@ const OV_CLUB = window.OV_CLUB = {
   }
 };
 ctaUpdate();
-ctx().then(() => { tabBtn(); ctaUpdate(); loadAlerts(); loadEvents(); autoTick(true); });
+ctx().then(() => { tabBtn(); ctaUpdate(); loadAlerts(); loadEvents(); autoTick(true);
+  if(C) fetchK("planol").catch(() => {}); });   // orientació del mar (terral) definida pel club
 })();

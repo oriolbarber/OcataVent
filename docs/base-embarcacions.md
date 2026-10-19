@@ -47,4 +47,5 @@ Pestanya Club ▸ **Base** (primera: Base · Mur · Avisos · Anuncis). Dins de 
 - Windsurf: provisional 2,5 × 0,7 m (cal confirmar).
 - Caiacs: no es dibuixen; van en un «Espai de caiacs» (zona) amb prestatgeries.
 
+- **Orientació del mar (eina «Mar» de l'editor):** cap on mira la platja; defineix quins vents són terral a l'app. Per defecte, la calculada per al club; amb permís de plànol es corregeix amb el control lliscant o ±5°. No es dibuixa a l'app.
 - **Vista a l'app:** el plànol és fix a l'app. L'enquadrament (`vista`, metres) el dibuixa qui té el permís de plànol amb l'eina «Vista app» de l'editor; sense enquadrament es veu tot el plànol.

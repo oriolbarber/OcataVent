@@ -10,7 +10,10 @@ const LOCS = window.OV_CLUBS && window.OV_CLUBS.masnou ? window.OV_CLUBS : {
 };
 let locKey = (() => { try{ return JSON.parse(localStorage.getItem("ov2_loc")); }catch(e){ return null; } })(); if(!LOCS[locKey]) locKey = "masnou";
 const LOC = LOCS[locKey];
-const COAST = LOC.coast ?? 135; // cap on mira la platja (graus): el terral bufa des de terra
+// Cap on mira la platja (graus, de terra cap al mar). Per defecte, la calculada a clubs.js; el club la pot corregir
+// a l'editor del plànol (eina «Mar») i es desa en aquest mòbil quan se'n llegeix el plànol (club.js → OV_SET_COAST).
+const COAST0 = LOC.coast ?? 135;
+let COAST = (() => { try{ const v = JSON.parse(localStorage.getItem("ov2_costa_" + locKey)); return typeof v === "number" ? v : COAST0; }catch(e){ return COAST0; } })();
 const DEFAULTS = {
   pati:     {name:"Patí català", short:"Patí",     min:5,  iMin:8,  iMax:16, max:20, gust:24, wOk:0.6, wMax:1.2},
   windsurf: {name:"Windsurf",    short:"Windsurf", min:10, iMin:14, iMax:24, max:30, gust:34, wOk:1.2, wMax:2.2},
@@ -45,8 +48,10 @@ const r0 = v => v==null||isNaN(v) ? "–" : String(Math.round(v));
 const norm = d => ((d%360)+360)%360;
 const windName = d => d==null ? "–" : WINDS[Math.round(norm(d)/45)%8];
 const windAbbr = d => d==null ? "–" : WABBR[Math.round(norm(d)/45)%8];
-const isOffshore = d => { if(d==null) return false; const x = norm(d); return x>=255 || x<=15; };
-const isOnshore = d => { if(d==null) return false; const x = norm(d); return x>=75 && x<=195; };
+// Terral: bufa de terra, fins a 75° a cada costat de la direcció contrària a la platja. De mar: fins a 60° a cada costat d'on mira la platja.
+const angDiff = (a, b) => { const x = Math.abs(norm(a) - norm(b)) % 360; return x > 180 ? 360 - x : x; };
+const isOffshore = d => d != null && angDiff(d, COAST + 180) <= 75;
+const isOnshore = d => d != null && angDiff(d, COAST) <= 60;
 const pad = n => String(n).padStart(2,"0");
 function arrow(deg, size){
   if(deg==null) return "";
@@ -1203,5 +1208,12 @@ if("serviceWorker" in navigator && location.protocol === "https:") navigator.ser
 
 /* ---------- ubicació (configuració) ---------- */
 // El selector (mapa + cerca) és a llocs.js. Canviar de lloc recarrega l'app: així totes les dades són del club triat.
+// Orientació del mar definida pel club al plànol (club.js): si canvia, es desa i es torna a calcular tot
+window.OV_SET_COAST = (club, v) => {
+  if(({ocatavent:"masnou"})[club] !== locKey && club !== locKey) return;   // només per al club que es mira
+  const nv = typeof v === "number" ? norm(Math.round(v)) : COAST0; if(nv === COAST) return;
+  COAST = nv; try{ if(typeof v === "number") localStorage.setItem("ov2_costa_" + locKey, JSON.stringify(nv)); else localStorage.removeItem("ov2_costa_" + locKey); }catch(e){}
+  if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); }
+};
 function setLoc(k){ if(!LOCS[k] || k === locKey) return; store.set("ov2_loc", k); store.set("ov2_station_v3", LOCS[k].st); location.reload(); }
 $("peekLoc").textContent = LOC.name;

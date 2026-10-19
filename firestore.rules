@@ -389,7 +389,8 @@ service cloud.firestore {
     match /clubs/{club}/planol/{d} {
       allow read: if isAdmin() || (isApproved() && club == myClub());
       allow write: if canPlan(club) && d == 'actual'
-        && request.resource.data.keys().hasOnly(['objs', 'bg', 'origin', 'vista', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.keys().hasOnly(['objs', 'bg', 'origin', 'vista', 'costa', 'actualitzat', 'actualitzatPer'])
+        && (request.resource.data.get('costa', null) == null || (request.resource.data.costa is number && request.resource.data.costa >= 0 && request.resource.data.costa < 360))
         && request.resource.data.objs is list && request.resource.data.objs.size() <= 600
         && request.resource.data.actualitzatPer == me();
     }

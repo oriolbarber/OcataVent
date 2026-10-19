@@ -47,7 +47,7 @@ async function start(){
     const boats = bq.docs.map(d => Object.assign({id:d.id}, d.data()));
     if(can.boats) await Promise.all(boats.filter(b => b.ocult).map(async b => {   // nom ocult: el llegeix qui gestiona les embarcacions
       const pv = await F.getDoc(F.doc(db, "embarcacions", b.id, "privat", "p")).catch(() => null); if(pv && pv.exists()) b.prop = pv.data().prop || ""; }));
-    const doc = {v:1, origin:plan.origin || {lat:41.479804, lon:2.324024}, vista:plan.vista || null, bg:Object.assign({src:"icgc", dx:0, dy:0, s:1, r:0, op:.75}, plan.bg || {}), objs:window.OV_PLAN.fromStore(plan.objs).concat(boats.map(b => {
+    const doc = {v:1, origin:plan.origin || {lat:41.479804, lon:2.324024}, vista:plan.vista || null, costa:typeof plan.costa === "number" ? plan.costa : null, bg:Object.assign({src:"icgc", dx:0, dy:0, s:1, r:0, op:.75}, plan.bg || {}), objs:window.OV_PLAN.fromStore(plan.objs).concat(boats.map(b => {
       const o = {k:"boat", id:b.id}; BOAT_F.forEach(k => o[k] = b[k] ?? (k === "estat" ? "lloc" : k === "ocult" || k === "pendent" ? false : k === "place" ? null : "")); o.historial = b.historial || []; return o; }))};
     last = clean(doc);
     const members = pq.docs.map(d => ({uid:d.id, nom:d.data().nom || ""})).sort((x, y) => x.nom.localeCompare(y.nom, "ca"));
@@ -61,7 +61,7 @@ async function flush(){
   if(busy){ again = true; return; } busy = true; const doc = clean(pendingDoc); status("Desant…");
   try{
     const ts = F.serverTimestamp();
-    const planOf = d => ({objs:window.OV_PLAN.toStore(d.objs.filter(o => o.k !== "boat")), bg:(({src, dx, dy, s, r, op}) => ({src:src === "img" ? "icgc" : src, dx, dy, s, r, op}))(d.bg), origin:d.origin, vista:d.vista || null});
+    const planOf = d => ({objs:window.OV_PLAN.toStore(d.objs.filter(o => o.k !== "boat")), bg:(({src, dx, dy, s, r, op}) => ({src:src === "img" ? "icgc" : src, dx, dy, s, r, op}))(d.bg), origin:d.origin, vista:d.vista || null, costa:typeof d.costa === "number" ? d.costa : null});
     const np = planOf(doc), op = last ? planOf(last) : null;
     if(!op || JSON.stringify(np) !== JSON.stringify(op))
       await F.setDoc(F.doc(db, "clubs", club, "planol", "actual"), Object.assign(np, {actualitzat:ts, actualitzatPer:user.uid}));

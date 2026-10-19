@@ -183,6 +183,10 @@ function drawUi(){
       + `<circle class="h-bgrot" cx="${hx}" cy="${hy}" r="${H*1.6}" fill="#ffcf33" stroke="#0a1322" stroke-width="${lw*1.5}"/>`
       + `<text x="${hx}" y="${hy}" font-size="${H*1.7}" text-anchor="middle" dominant-baseline="central" pointer-events="none" fill="#0a1322">⟳</text>`; }
   if(tool === "app") h = vistaSvg(lw) + h;
+  if(tool === "costa"){ const c = coastNow(), L = Math.max(view.w, view.w*aspect()) * 2, ux = Math.sin(c * D2R), uy = -Math.cos(c * D2R), A = Math.min(view.w, view.w*aspect()) * .18;   // línia de costa per la base i fletxa cap al mar
+    h += `<g pointer-events="none"><line x1="${-uy*L}" y1="${ux*L}" x2="${uy*L}" y2="${-ux*L}" stroke="#0a63c9" stroke-width="${lw*3}" stroke-dasharray="${lw*10} ${lw*6}"/>`
+      + `<line x1="0" y1="0" x2="${ux*A}" y2="${uy*A}" stroke="#0a63c9" stroke-width="${lw*4}"/><circle cx="${ux*A}" cy="${uy*A}" r="${lw*7}" fill="#0a63c9"/>`
+      + `<text x="${ux*A*1.18}" y="${uy*A*1.18}" font-size="${14/ppm()}" text-anchor="middle" dominant-baseline="central" class="tx measure">MAR · ${c}°</text></g>`; }
   $("gUi").innerHTML = h; if($("bgbar")) bgBar();
 }
 /* ---------- enquadrament de l'app (doc.vista, metres) ---------- */
@@ -212,8 +216,28 @@ const TIPS = {
   point:"Clica on vols el punt de servei.",
   measure:"Arrossega per mesurar una distància.",
   app:"Arrossega un rectangle: és el que veuran els socis a l'app (Club ▸ Base), fix, sense moure'l ni ampliar-lo.",
-  bg:"Arrossega per moure la foto · roda: escala · cercle groc ⟳, Maj+roda o [ ]: gira"
+  bg:"Arrossega per moure la foto · roda: escala · cercle groc ⟳, Maj+roda o [ ]: gira",
+  costa:"Indica cap on mira la platja (de terra cap al mar). Amb això l'app sap quins vents són terral. No es dibuixa a l'app."
 };
+/* ---------- orientació del mar (doc.costa, graus; null = la calculada per al club a clubs.js) ---------- */
+const WN = ["Tramuntana", "Gregal", "Llevant", "Xaloc", "Migjorn", "Garbí", "Ponent", "Mestral"];
+const angD = (a, b) => { const x = Math.abs(((a - b) % 360 + 360) % 360); return x > 180 ? 360 - x : x; };
+const coastDef = () => { const C = window.OV_CLUBS || {}, k = ({ocatavent:"masnou"})[cl && cl.club] || (cl && cl.club) || "masnou"; return (C[k] && C[k].coast) ?? 135; };
+let costaLive = null;   // mentre s'arrossega el control lliscant
+const coastNow = () => costaLive != null ? costaLive : typeof doc.costa === "number" ? doc.costa : coastDef();
+const terrals = c => WN.filter((n, i) => angD(i * 45, c + 180) <= 75);
+const marins = c => WN.filter((n, i) => angD(i * 45, c) <= 60);
+function coastRose(c){   // brúixola: meitat de terra, meitat de mar i vents de terral en taronja
+  const R = 70, P = (a, r) => [Math.sin(a * D2R) * r, -Math.cos(a * D2R) * r], arc = (a0, a1, col) => { const [x0, y0] = P(a0, R), [x1, y1] = P(a1, R); return `<path d="M0 0L${x0} ${y0}A${R} ${R} 0 0 1 ${x1} ${y1}Z" fill="${col}"/>`; };
+  const [sx, sy] = P(c, R - 8), [lx0, ly0] = P(c - 90, R), [lx1, ly1] = P(c + 90, R);
+  return `<svg viewBox="-100 -100 200 200" width="220" height="220" role="img" aria-label="La platja mira a ${c}°">${arc(c - 90, c + 90, "#cfe6f5")}${arc(c + 90, c + 270, "#efe3cc")}
+    ${arc(c + 180 - 75, c + 180 + 75, "#f6c08f")}<circle r="${R}" fill="none" stroke="#1c2530" stroke-width="1.5"/>
+    <line x1="${lx0}" y1="${ly0}" x2="${lx1}" y2="${ly1}" stroke="#1c2530" stroke-width="3"/>
+    <line x1="0" y1="0" x2="${sx}" y2="${sy}" stroke="#0a63c9" stroke-width="4" marker-end="url(#ca)"/><defs><marker id="ca" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0a63c9"/></marker></defs>
+    ${WN.map((n, i) => { const [x, y] = P(i * 45, R + 16), t = angD(i * 45, c + 180) <= 75; return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="${t ? "#b45309" : "#0a63c9"}">${n.slice(0, 3).toUpperCase()}</text>`; }).join("")}
+    <text x="${P(c, R * .45)[0]}" y="${P(c, R * .45)[1] + 16}" text-anchor="middle" font-size="12" font-weight="700" fill="#0a4f8a">MAR</text></svg>`;
+}
+function setCoast(v){ if(!can.plan){ noPlan(); return; } snapshot(); doc.costa = v == null ? null : ((Math.round(v) % 360) + 360) % 360; save(); panel(); drawUi(); }
 function setTool(t){ if(!can.plan && planTools.includes(t)){ noPlan(); return; } tool = t; ghost = null; draft = null; measure = null; calib = null; askDel = false; if(t !== "sel") sel.clear(); tip(TIPS[t], 6000); all(); }
 
 /* ---------- panell lateral ---------- */
@@ -236,6 +260,12 @@ function panel(){
       <p class="note">${doc.vista ? `Ara: <b>${fmt(doc.vista.w)} × ${fmt(doc.vista.h)} m</b>.` : "Ara és <b>automàtic</b>: tot el que hi ha dibuixat."}${v ? ` Al mòbil, una plaça de patí farà uns <b>${px} px</b>${px < 30 ? " (petita: enquadra menys espai)" : ""}.` : ""}</p>
       <p class="note">El mòbil és vertical: un rectangle quadrat o més alt que ample s'hi veu més gran.</p>
       <button class="tb" id="vistaAuto"${doc.vista ? "" : " disabled"}>Torna a l'automàtic</button>`; }
+  else if(tool === "costa"){ const c = coastNow(), def = coastDef();
+    h = `<h2>Orientació del mar</h2><p class="note">${TIPS.costa}</p><div style="display:grid;place-items:center">${coastRose(c)}</div>
+      <label class="f"><span class="lbl">La platja mira cap a · ${c}° (${WN[Math.round(c / 45) % 8].toLowerCase()})</span><input type="range" id="costaR" min="0" max="355" step="5" value="${c}"${can.plan ? "" : " disabled"}></label>
+      <div class="chips">${[-5, 5].map(d => `<button class="chip" data-costa="${d}">${d > 0 ? "+" : "−"}5°</button>`).join("")}<button class="chip" id="costaDef"${typeof doc.costa === "number" ? "" : " disabled"}>Valor calculat (${def}°)</button></div>
+      <p class="note"><b>Terral:</b> ${terrals(c).join(", ") || "cap"}.<br><b>De mar:</b> ${marins(c).join(", ")}.<br>La resta, laterals.</p>
+      <p class="note">${typeof doc.costa === "number" ? "Valor definit pel club." : "Ara és el valor calculat per a aquest club."} Els socis el reben en obrir Club ▸ Base o en entrar a l'app.</p>`; }
   else if(tool === "measure") h = `<h2>Mesura</h2><p class="note">${TIPS.measure}</p>${measure && measure.b ? `<p style="font:700 1.6rem var(--f-mono);margin:0">${fmt(Math.hypot(measure.b[0]-measure.a[0], measure.b[1]-measure.a[1]))} m</p>` : ""}`;
   else if(tool === "bg"){ const b = doc.bg;
     h = `<h2>Foto de fons</h2>${chips("bgsrc", SRC, b.src)}
@@ -289,7 +319,8 @@ const clipRow = () => `<div class="row3"><button class="tb" id="cpy" title="Ctrl
 const rowBox = () => `<details${rowN ? "" : ""}><summary>Duplica en fila</summary><div class="row3" style="margin-top:8px">${field("Quantes", `<input type="number" id="rowN" value="${rowN}" min="1" max="40" step="1">`)}${field("Separació", `<input type="number" id="rowGap" value="${rowGap}" step="0.05" min="0">`)}${field("Cap a", `<select id="rowDir"><option value="w"${rowDir === "w" ? " selected" : ""}>Al costat</option><option value="l"${rowDir === "l" ? " selected" : ""}>Darrere</option></select>`)}</div><button class="tb" id="rowGo" style="margin-top:8px">Crea la fila</button></details>`;
 const delBox = n => askDel ? `<div class="slide" id="delSlide"><input type="range" min="0" max="100" value="0" aria-label="Llisca per esborrar"><i></i><span>Llisca per esborrar${n > 1 ? " (" + n + ")" : ""}</span></div><button class="tb" id="delNo">Cancel·la</button>` : `<button class="tb" id="delAsk">Esborra${n > 1 ? " (" + n + ")" : ""}</button>`;
 
-$("side").addEventListener("click", e => {
+$("side").addEventListener("click", e => { const cb = e.target.closest && e.target.closest("[data-costa],#costaDef");
+  if(cb){ if(cb.id === "costaDef") setCoast(null); else setCoast(coastNow() + Number(cb.dataset.costa)); return; }
   const b = e.target.closest("button"); if(!b) return; const d = b.dataset;
   if(d.crot){ const v = d.crot; cur.rot = v[0] === "+" || v[0] === "-" ? ((cur.rot + +v) % 360 + 360) % 360 : +v; ghostPlace(lastPt); drawUi(); panel(); return; }
   if(b.id === "clipRot"){ rotClip(90); return; }
@@ -318,6 +349,8 @@ $("side").addEventListener("click", e => {
   if(b.id === "boatOk"){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return; snapshot(); bt.pendent = false; save(); drawObjs(); panel(); tip("Validada.", 2000); return; }
   if(b.id === "boatOut"){ const p = selObjs()[0], bt = p && doc.objs.find(x => x.k === "boat" && x.place === p.id); if(!bt) return; snapshot(); bt.place = null; save(); drawObjs(); panel(); tip("Ara és a «Sense plaça» (panell general).", 3000); return; }
 });
+$("side").addEventListener("input", e => { if(e.target.id === "costaR"){ costaLive = Number(e.target.value); drawUi(); const l = e.target.previousElementSibling; if(l) l.textContent = `La platja mira cap a · ${costaLive}° (${WN[Math.round(costaLive / 45) % 8].toLowerCase()})`; return; } });
+$("side").addEventListener("change", e => { if(e.target.id === "costaR"){ costaLive = null; setCoast(Number(e.target.value)); } });
 $("side").addEventListener("input", e => { const t = e.target; if(!t.dataset.bg) return; const k = t.dataset.bg, v = parseFloat(String(t.value).replace(",", ".")); if(!isFinite(v)) return;
   doc.bg[k] = k === "s" ? Math.max(.01, v/100) : k === "op" ? Math.max(0, Math.min(1, v/100)) : v; save(); drawBg(); drawUi(); });
 $("side").addEventListener("change", e => {
@@ -422,7 +455,7 @@ function moveObjs(S, dx, dy){ for(const o of S){ if(o.k === "poly") o.pts = o.pt
 /* ---------- ratolí i dits ---------- */
 const ptrs = new Map();
 function hitId(ev){ const g = ev.target.closest && ev.target.closest("[data-id]"); return g ? g.dataset.id : null; }
-const planTools = ["place", "poly", "point", "paste", "bg", "app"];
+const planTools = ["place", "poly", "point", "paste", "bg", "app"];   // «costa» es pot obrir per consultar-la; només canvia amb permís de plànol
 function noPlan(){ tip("No tens permís per editar el plànol (només les embarcacions).", 3000); }
 svg.addEventListener("pointerdown", ev => {
   svg.setPointerCapture(ev.pointerId); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
@@ -554,7 +587,7 @@ document.addEventListener("keydown", ev => {
   if(tool === "place" && "qQeErR".includes(k)){ cur.rot = ((cur.rot + ({q:-5, e:5, r:90})[k.toLowerCase()]) % 360 + 360) % 360; ghostPlace(lastPt); drawUi(); panel(); return; }
   if(tool === "paste" && "rR".includes(k)){ rotClip(90); return; }
   if(k === "q" || k === "Q"){ rotSel(-5); return; } if(k === "e" || k === "E"){ rotSel(5); return; } if(k === "r" || k === "R"){ rotSel(90); return; }
-  const T = {v:"sel", p:"place", z:"poly", s:"point", m:"measure", f:"bg", a:"app"}[k.toLowerCase()]; if(T && !ctrl) setTool(T);
+  const T = {v:"sel", p:"place", z:"poly", s:"point", m:"measure", f:"bg", a:"app", o:"costa"}[k.toLowerCase()]; if(T && !ctrl) setTool(T);
 });
 
 /* ---------- barra superior ---------- */
