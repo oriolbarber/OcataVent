@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=171">
+<link rel="stylesheet" href="app.css?v=172">
 </head>
 <body>
 <div class="app">
@@ -33,6 +33,17 @@
   <div class="seg act-seg" role="group" aria-label="Embarcació" id="actSeg"></div>
   <button class="ib" id="themeBtn" type="button" aria-label="Configuració" aria-haspopup="menu" aria-expanded="false" aria-controls="cfgMenu"></button>
 </header>
+<script>
+  // Marca del club (logo i títol de la capçalera): la defineix el club a la web de gestió (clubs/{id}.logo, .titol).
+  // club.js la llegeix en entrar amb compte aprovat i la desa en aquest mòbil (ov2_brand), així surt de seguida en obrir.
+  window.OV_BRAND = (b, save) => {
+    const img = document.querySelector("header.top img"), t = document.querySelector("#locBtn b");
+    if(img){ img.src = b && b.logo || "icons/logo.svg?v=3"; img.alt = b && b.nom || "Club Ocata Vent"; }
+    if(t) t.textContent = b && b.titol || "Ocata Vent";
+    if(save){ try{ b ? localStorage.setItem("ov2_brand", JSON.stringify(b)) : localStorage.removeItem("ov2_brand"); }catch(e){} }
+  };
+  try{ const b = JSON.parse(localStorage.getItem("ov2_brand")); if(b) OV_BRAND(b); }catch(e){}
+</script>
 <div class="ptr" id="ptr" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></div>
 <div class="cfg-scrim" id="cfgScrim" hidden></div>
 <div class="cfg-menu" id="cfgMenu" role="menu" aria-label="Configuració" hidden>
@@ -416,7 +427,7 @@
 <script src="cloud.js?v=123"></script>
 <script src="amics.js?v=115"></script>
 <script src="planol-core.js?v=6"></script>
-<script src="club.js?v=143"></script>
+<script src="club.js?v=144"></script>
 <script src="admin.js?v=114"></script>
 <script src="avisos.js?v=208"></script>
 <script src="sos.js?v=2"></script>

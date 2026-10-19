@@ -119,7 +119,7 @@ const inClub = () => members.filter(m => m.clubId === club);
 function head(){
   $("gTitle").textContent = GLOBAL ? (club ? clubName(club) : "Administració global") : "Gestió · " + clubName(club || (me && me.clubId) || "ocatavent");
   $("gWho").textContent = user ? (me?.nom || user.email || "") + (isAdm ? " · administració" : me?.premium ? " · premium" : "") : "";
-  $("gOut").hidden = !user;
+  $("gOut").hidden = !user; brandHead();
 }
 
 /* ---------- entrada ---------- */
@@ -150,7 +150,7 @@ function render(){
     <nav class="cl-tabs g-tabs" aria-label="Seccions">
       <button type="button" data-view="socis"${view === "socis" ? ' aria-current="page"' : ""}>Socis${pend ? `<span class="cl-dot" aria-label="${pend} pendents">${pend}</span>` : ""}</button>
       <button type="button" data-view="rols"${view === "rols" ? ' aria-current="page"' : ""}>Rols</button>
-      <button type="button" data-view="coms"${view === "coms" ? ' aria-current="page"' : ""}>Comissions</button>
+      <button type="button" data-view="coms"${view === "coms" ? ' aria-current="page"' : ""}>Club</button>
       <button type="button" data-view="planol"${view === "planol" ? ' aria-current="page"' : ""}>Plànol</button>
     </nav>
     ${({socis:renderSocis, rols:renderRols, coms:renderComs, planol:renderPlanol})[view](L)}`);
@@ -219,15 +219,46 @@ const catalog = () => `<article class="card g-card"><span class="lbl">Catàleg d
   <p class="note">Els permisos els defineix l'app: cadascun té la seva regla de seguretat. Premium i l'administració els tenen tots.</p></article>`;
 function renderComs(L){
   const C = comsOf(club), n = k => L.filter(m => m.estat === "aprovat" && (m.comissions || []).includes(k)).length;
-  return `<article class="card g-card"><label class="lbl" for="gClubNom">Nom del club</label>
-      <input class="field" id="gClubNom" type="text" maxlength="80" value="${esc(clubs[club]?.nom || clubName(club))}">
-      <p class="note">Es desa en sortir del camp.</p></article>
+  return `${brandCard()}
     <article class="card g-card"><span class="lbl">Comissions · ${Object.keys(C).length}</span>
       ${Object.entries(C).map(([k, t]) => `<div class="g-com"><input class="field" type="text" maxlength="40" value="${esc(t)}" data-comname="${esc(k)}" aria-label="Nom de la comissió"><span class="g-n">${n(k)} pers.</span>
         ${k === "junta" ? `<span class="note">Fixa</span>` : `<button class="btn sm" type="button" data-comdel="${esc(k)}">Elimina</button>`}</div><div data-combox="${esc(k)}"></div>`).join("")}
       <div class="g-com"><input class="field" type="text" maxlength="40" id="gNewCom" placeholder="Nova comissió"><button class="btn cl-pri" type="button" id="gAddCom">Afegeix</button></div>
       <p class="note">La Junta no es pot eliminar: la fan servir els avisos de seguretat. Per vincular persones a una comissió, obre la seva fitxa a «Socis».</p></article>`;
 }
+/* ---------- marca del club: logo i títol de la capçalera de l'app (clubs/{id}.logo, .titol) ---------- */
+const LOGO0 = "icons/logo.svg?v=3", TITOL0 = "Ocata Vent";
+function brandCard(){
+  const c = clubs[club] || {}, lg = c.logo || LOGO0, tt = c.titol || TITOL0;
+  return `<article class="card g-card"><span class="lbl">Identitat del club</span>
+    <div class="g-brand"><div class="g-prev" aria-label="Com es veu a la capçalera de l'app"><img id="gLogoPrev" src="${esc(lg)}" alt="" width="44" height="44">
+      <div class="t"><b id="gTitPrev">${esc(tt)}</b><span>Club on navegues ▾</span></div></div>
+      <div class="g-row"><label class="btn" for="gLogoFile">Canvia el logo</label><input id="gLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+        ${c.logo ? `<button class="btn" type="button" id="gLogoDel">Logo d'Ocata Vent</button>` : ""}</div></div>
+    <label class="lbl" for="gClubTit">Títol de la capçalera</label>
+    <input class="field g-up" id="gClubTit" type="text" maxlength="24" placeholder="${TITOL0}" value="${esc(c.titol || "")}">
+    <label class="lbl" for="gClubNom">Nom complet del club</label>
+    <input class="field" id="gClubNom" type="text" maxlength="80" value="${esc(c.nom || clubName(club))}">
+    <p class="note">El títol surt en majúscules a dalt de l'app de tots els socis, amb el logo; a sota hi continua el club on naveguen. Buit = «${TITOL0}». El logo es retalla en un cercle: millor quadrat, amb el motiu al centre (PNG, JPG, WebP o SVG). Es desa en sortir del camp.</p></article>`;
+}
+// Imatge → data URL petit: SVG tal qual (≤ 60 kB); la resta, retallada quadrada i reduïda a 256 px
+async function logoData(f){
+  if(f.type === "image/svg+xml"){
+    if(f.size > 60000) throw new Error("L'SVG fa més de 60 kB: simplifica'l o fes-ne un PNG.");
+    const txt = await f.text(); return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(txt)));
+  }
+  const url = URL.createObjectURL(f);
+  try{
+    const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error("No es pot llegir la imatge.")); i.src = url; });
+    const S = 256, m = Math.min(img.naturalWidth, img.naturalHeight), cv = document.createElement("canvas"); cv.width = cv.height = S;
+    cv.getContext("2d").drawImage(img, (img.naturalWidth - m) / 2, (img.naturalHeight - m) / 2, m, m, 0, 0, S, S);
+    let d = cv.toDataURL("image/webp", .9); if(!d.startsWith("data:image/webp")) d = cv.toDataURL("image/png");
+    if(d.length > 140000) d = cv.toDataURL("image/jpeg", .85);
+    return d;
+  }finally{ URL.revokeObjectURL(url); }
+}
+function brandHead(){ const i = document.querySelector(".g-top img"); if(i){ const c = clubs[club || me?.clubId]; i.src = c && c.logo || LOGO0; } }
+
 function renderGlobal(){
   const ids = Object.keys(clubs).sort((a, b) => clubName(a).localeCompare(clubName(b), "ca"));
   const q = flt.q.trim().toLowerCase(), all = q ? members.filter(m => String(m.nom).toLowerCase().includes(q) || String(m.email).toLowerCase().includes(q)) : [];
@@ -336,8 +367,10 @@ async function recalc(id){
 
 /* ---------- comissions, rols i clubs ---------- */
 async function saveClub(id, patch){
-  const cur = clubs[id] || {nom:"", comissions:COMS0}, next = {nom:cur.nom || clubName(id), comissions:cur.comissions || COMS0, rols:cur.rols || tpl, ...patch};
-  try{ await F.setDoc(F.doc(db, "clubs", id), {nom:next.nom, comissions:next.comissions, rols:next.rols, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid}); clubs[id] = next; say(""); if(patch.rols) await recalc(id); render(); return true; }
+  const cur = clubs[id] || {nom:"", comissions:COMS0}, next = {nom:cur.nom || clubName(id), titol:cur.titol || "", logo:cur.logo || "", comissions:cur.comissions || COMS0, rols:cur.rols || tpl, ...patch};
+  const doc = {nom:next.nom, comissions:next.comissions, rols:next.rols, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid};
+  if(next.titol) doc.titol = next.titol; if(next.logo) doc.logo = next.logo;
+  try{ await F.setDoc(F.doc(db, "clubs", id), doc); clubs[id] = next; say(""); if(patch.rols) await recalc(id); render(); return true; }
   catch(e){ say(errText(e)); return false; }
 }
 
@@ -412,6 +445,7 @@ document.addEventListener("click", async e => {
   if(b.dataset.admdel){ const u = b.dataset.admdel, box = document.querySelector(`[data-admbox="${CSS.escape(u)}"]`);
     if(box) slideConfirm(box, "Llisca per treure l'administració", async () => { try{ await F.deleteDoc(F.doc(db, "admins", u)); await loadAdmins(); say(""); render(); }catch(err){ say(errText(err)); } }); return; }
   if(b.id === "gReload"){ b.disabled = true; if(GLOBAL){ const c = club; await loadAll(); club = c; } else await openClub(club); render(); return; }
+  if(b.id === "gLogoDel"){ saveClub(club, {logo:""}); return; }
   if(b.id === "gAddCom"){ const n = ($("gNewCom")?.value || "").trim(); if(!n) return; const C = comsOf(club); let k = slug(n) || "comissio", i = 2; while(C[k]) k = (slug(n) || "comissio") + "-" + i++;
     saveClub(club, {comissions:Object.assign({}, C, {[k]: n.slice(0, 40)})}); return; }
   if(b.dataset.comdel){ const k = b.dataset.comdel, box = document.querySelector(`[data-combox="${CSS.escape(k)}"]`), C = comsOf(club);
@@ -425,9 +459,13 @@ document.addEventListener("change", e => {
     if(v && v !== C[k]) saveClub(club, {comissions:Object.assign({}, C, {[k]: v})}); else t.value = C[k]; }
   if(t.dataset && t.dataset.rname){ const sc = t.dataset.scope, R = rolesIn(sc), k = t.dataset.rname, v = t.value.trim().slice(0, 40);
     if(R[k] && v && v !== R[k].nom) saveRoles(sc, Object.assign({}, R, {[k]: Object.assign({}, R[k], {nom:v})})); else if(R[k]) t.value = R[k].nom; }
+  if(t.id === "gClubTit"){ const v = t.value.trim().replace(/\s+/g, " ").slice(0, 24); if(v !== (clubs[club]?.titol || "")) saveClub(club, {titol:v}); }
+  if(t.id === "gLogoFile" && t.files && t.files[0]){ const f = t.files[0]; t.value = "";
+    logoData(f).then(d => saveClub(club, {logo:d})).catch(err => say(err.message || "No s'ha pogut fer servir aquesta imatge.")); }
   if(t.id === "gClubNom"){ const v = t.value.trim().slice(0, 80); if(v && v !== clubs[club]?.nom) saveClub(club, {nom:v}); }
 });
 document.addEventListener("input", e => {
+  if(e.target.id === "gClubTit"){ const p = $("gTitPrev"); if(p) p.textContent = e.target.value.trim() || TITOL0; return; }
   if(e.target.id !== "gQ") return;
   flt.q = e.target.value; const pos = e.target.selectionStart; render();
   const i = $("gQ"); if(i){ i.focus(); try{ i.setSelectionRange(pos, pos); }catch(err){} }

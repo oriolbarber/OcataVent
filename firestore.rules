@@ -377,7 +377,10 @@ service cloud.firestore {
     match /clubs/{club} {
       allow read: if isAdmin() || (isApproved() && club == myClub());
       allow create, update: if (isAdmin() || (hasPerm('rols') && club == myClub()))
-        && request.resource.data.keys().hasOnly(['nom', 'comissions', 'rols', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.keys().hasOnly(['nom', 'titol', 'logo', 'comissions', 'rols', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.get('titol', '') is string && request.resource.data.get('titol', '').size() <= 24
+        && request.resource.data.get('logo', '') is string && request.resource.data.get('logo', '').size() <= 150000
+        && (request.resource.data.get('logo', '') == '' || request.resource.data.get('logo', '').matches('^data:image/(png|jpeg|webp|svg[+]xml);base64,[A-Za-z0-9+/=]+$'))
         && request.resource.data.get('rols', {}) is map && request.resource.data.get('rols', {}).size() <= 30
         && request.resource.data.get('nom', '') is string && request.resource.data.get('nom', '').size() <= 80
         && request.resource.data.comissions is map && request.resource.data.comissions.size() <= 20

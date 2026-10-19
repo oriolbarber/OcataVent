@@ -1183,8 +1183,15 @@ window.addEventListener("ov-coms", () => { publishEvents(); if(visible()) render
 const isRec = () => typeof LIVE !== "undefined" && !!LIVE;
 function ctaUpdate(){ const b = $("ctaTrip"); if(b) b.hidden = !isRec() && !C; }
 document.addEventListener("click", e => { if(!e.target.closest("#ctaTrip")) return; if(isRec()) go("trip"); else if(C) intentSheet(); });
+// Marca del club (logo i títol de la capçalera, web de gestió): sense compte aprovat, la d'Ocata Vent
+// (clear = en canviar la sessió; en obrir sense connexió no es toca la que hi ha desada)
+async function loadBrand(clear){
+  if(!C){ if(clear) window.OV_BRAND?.(null, true); return; }
+  try{ const d = await C.F.getDoc(ref("clubs", C.member.clubId)); const x = d.exists() ? d.data() : {};
+    window.OV_BRAND?.(x.logo || x.titol ? {logo:x.logo || "", titol:x.titol || "", nom:x.nom || ""} : null, true); }catch(e){}
+}
 window.addEventListener("ov-cloud", async () => {
-  await ctx(); tabBtn(); ctaUpdate(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { navDot(); window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
+  await ctx(); loadBrand(true); tabBtn(); ctaUpdate(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { navDot(); window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
   if(C && typeof LIVE !== "undefined" && LIVE) OV_CLUB.tripStart(LIVE);
   else if(C && store.get(TB_K)) tripBoatEnd();   // la sortida es va acabar sense connexió: torna-la a la varada ara
   if(C) ensureBoats().then(tripBoatUI);
@@ -1286,6 +1293,6 @@ const OV_CLUB = window.OV_CLUB = {
   }
 };
 ctaUpdate();
-ctx().then(() => { tabBtn(); ctaUpdate(); loadAlerts(); loadEvents(); autoTick(true);
+ctx().then(() => { loadBrand(); tabBtn(); ctaUpdate(); loadAlerts(); loadEvents(); autoTick(true);
   if(C) fetchK("planol").catch(() => {}); });   // orientació del mar (terral) definida pel club
 })();

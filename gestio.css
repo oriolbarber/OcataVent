@@ -59,3 +59,14 @@ body.g-lock{overflow:hidden}
 
 .g-wide .g-main{max-width:none}
 .g-plan{width:100%;height:calc(100dvh - 190px);min-height:520px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:block}
+
+/* identitat del club: vista prèvia de la capçalera de l'app */
+.g-brand{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.g-brand .g-row{flex:1 1 220px}
+.g-prev{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);flex:1 1 240px;min-width:0}
+.g-prev img{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;background:var(--surface)}
+.g-prev .t{display:flex;flex-direction:column;min-width:0}
+.g-prev .t b{font-family:var(--f-head);font-size:1.35rem;line-height:1;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-prev .t span{font-size:.8rem;color:var(--muted);font-weight:600}
+.g-up{text-transform:uppercase;font-family:var(--f-head);font-weight:700;letter-spacing:.04em}
+.g-top img{object-fit:cover;border-radius:50%}

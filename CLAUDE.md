@@ -99,7 +99,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 
 ## Web de gestió (`gestio.html`, `admin.html`, `gestio.js`, `gestio.css`)
 - Pàgines a banda, mateix Firebase i mateixa sessió que l'app (mateix origen). S'hi arriba des de ⋮ ▸ Administració Club (enllaç només per a administració i premium) o directament per URL.
-- `gestio.html`: el club propi (l'administració pot passar `?club=id`). Pestanyes Socis · Rols · Comissions · **Plànol** (l'editor `planol.html?embed=1` dins un iframe del mateix origen; la Junta i Manteniment sense premium hi entren directament per `planol.html`). Socis (comptadors, cerca, filtres per estat i comissió, aprovar/rebutjar, fitxa amb nom, comissions, responsable, permisos, treure l'accés lliscant; CSV) i Comissions (nom del club; crear, reanomenar, eliminar; la Junta és fixa).
+- `gestio.html`: el club propi (l'administració pot passar `?club=id`). Pestanyes Socis · Rols · Club (identitat i comissions) · **Plànol** (l'editor `planol.html?embed=1` dins un iframe del mateix origen; la Junta i Manteniment sense premium hi entren directament per `planol.html`). Socis (comptadors, cerca, filtres per estat i comissió, aprovar/rebutjar, fitxa amb nom, comissions, responsable, permisos, treure l'accés lliscant; CSV) i Club (identitat: logo, títol de la capçalera i nom complet; comissions: crear, reanomenar, eliminar; la Junta és fixa).
 - `admin.html`: només administració. Tots els clubs (crear-ne), tots els usuaris, i a la fitxa: Premium i canviar de club (abans treu comissions i responsable).
 - **Rols** (paquets de permisos amb nom): plantilles globals a `config/global.plantilles` (admin.html; per defecte Secretaria, Comunicació, Coordinació, Monitoratge) → es copien a `clubs/{id}.rols` en crear un club; cada club els edita a gestio.html ▸ Rols (amb la taula «Qui pot fer què»). Al soci: `rolsClub` (ids) i `permisosExtra` (excepcions); la web recalcula `permisos` (efectius) en assignar un rol o canviar-ne els permisos (`setPerms`, `recalc`). Les regles només miren `permisos`. Ningú no es recalcula a si mateix. A l'app, la fitxa del soci només mostra els permisos i enllaça a la web.
 - admin.html també gestiona l'administració global (`admins/{uid}`, només l'administració inicial n'afegeix o en treu) i mostra el catàleg de permisos.
@@ -165,7 +165,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
   - Carta nàutica: OpenSeaMap.
 
 ## Decisions preses
-- V3: el logo del club ha de ser editable per a cada club (ara és fix a `icons/logo.svg`).
+- **Marca del club** (decisió de l'Oriol, 19-10-2026): logo i títol de la capçalera editables a gestio.html ▸ Club ▸ Identitat del club (`clubs/{id}.logo` = data URL ≤ 150 kB, SVG ≤ 60 kB tal qual o imatge retallada quadrada a 256 px; `.titol` ≤ 24 caràcters, es mostra en majúscules; buits = logo `icons/logo.svg` i «Ocata Vent»). A sota del títol continua el club on navegues (`#clock`). L'app la llegeix en entrar amb compte aprovat (`loadBrand` a `club.js`) i la desa al mòbil (`ov2_brand`); l'aplica `window.OV_BRAND` (script en línia d'`index.html`, després de la capçalera) abans de carregar res. En tancar la sessió torna la d'Ocata Vent; sense connexió, la desada. La web de gestió posa el logo del club a la seva capçalera. La icona de l'app i del widget no canvien.
 - La V3 serà oberta a qualsevol club de Catalunya i les Balears.
 - No hi haurà menors d'edat com a usuaris.
 - Text de consentiment RGPD i botó per esborrar el compte.
