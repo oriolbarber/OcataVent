@@ -1169,8 +1169,7 @@ function go(v){
 document.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if(b) go(b.dataset.go); });
 
 const DAYS_S = ["dg.","dl.","dt.","dc.","dj.","dv.","ds."];
-function tick(){ const d = new Date(); $("clock").textContent = LOC.name + " · " + DAYS_S[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]+" · "+pad(d.getHours())+":"+pad(d.getMinutes()); }
-tick(); setInterval(tick, 20000);
+$("clock").textContent = LOC.name;
 
 /* ---------- events ---------- */
 $("actSeg").addEventListener("click", e => { const b = e.target.closest("button[data-act]"); if(!b) return; setAct(b.dataset.act); });
