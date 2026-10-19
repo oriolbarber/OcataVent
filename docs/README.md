@@ -25,3 +25,6 @@ L'original de tota la documentació és aquesta carpeta. L'historial de versions
 4. Codi: AAB, clau definitiva, nom del manifest web, pàgines legals a l'arrel i botó de denúncia de contingut.
 5. Captures de pantalla reals.
 6. Prova tancada amb 12 socis durant 14 dies (si el compte és personal).
+
+## Per a la versió següent
+- **Mode daltònic** (⋮ ▸ Aspecte): revisar tota l'app (indicador, rosa, taula horària, setmana, mapes, plànol de la base) perquè no depengui només de verd/taronja/vermell (p. ex. ratllat al vermell o una paleta alternativa).

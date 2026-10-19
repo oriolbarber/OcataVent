@@ -512,16 +512,20 @@ function gaugeSvg(s0, v){
 }
 
 /* ---------- rosa dels vents ---------- */
-// Rosa dels vents amb histograma del dia: barres cada 10°, llargada = temps que ha bufat d'aquella direcció,
-// apilades per força del vent (verd fluix → vermell fort). El con blanc marca la direcció d'ara.
-// Histograma: minuts de vent per direcció (sectors de 10°). Capa 0 = registrat a l'estació (ambre);
-// capes 1–3 = previsió de la resta del dia, pel codi de colors de l'embarcació (verd, taronja, vermell).
-const ROSE_LAYERS = ["reg","fc"];
-function roseHist(recs, fc){
-  const sec = Array.from({length:36}, () => [0,0]), add = (dir, layer, min) => { if(dir==null) return; sec[Math.round(norm(dir)/10) % 36][layer] += min; };
+// Rosa dels vents amb histograma del dia: barres cada 10°, llargada = temps que ha bufat d'aquella direcció.
+// Cada barra s'apila per idoneïtat per a l'embarcació triada (verd → taronja → vermell, del centre enfora).
+// Lectura i previsió no es distingeixen: les hores ja passades vénen de l'estació, les que falten de la previsió.
+const ROSE_LAYERS = ["ideal","marg","no"];
+function roseHist(recs, fc, c){
+  c = c || crit[act];
+  const sec = Array.from({length:36}, () => [0,0,0]);
+  const add = (p, min) => { if(p.dir==null) return; const k = kOf(scoreHour(p, c).score); sec[Math.round(norm(p.dir)/10) % 36][ROSE_LAYERS.indexOf(k)] += min; };
   const R = (recs || []).filter(o => o.dir!=null && o.wind!=null && o.wind >= 0.5);
-  R.forEach((o, i) => { const nx = R[i+1] || R[i-1]; const step = nx ? Math.min(30, Math.max(1, Math.abs(nx.t - o.t)/60000)) : 10; add(o.dir, 0, step); });
-  (fc || []).forEach(h => { if(h.wind!=null && h.wind >= 0.5) add(h.dir, 1, 60); });
+  // la lectura només porta vent: l'onada, la pluja i la llum de la mateixa hora surten de la previsió
+  R.forEach((o, i) => { const nx = R[i+1] || R[i-1]; const step = nx ? Math.min(30, Math.max(1, Math.abs(nx.t - o.t)/60000)) : 10;
+    const fh = DATA?.hours?.[localKey(new Date(o.t))] || {};
+    add(Object.assign({}, fh, {wind:o.wind, gust:o.gust ?? null, dir:o.dir}), step); });
+  (fc || []).forEach(h => { if(h.wind!=null && h.wind >= 0.5) add(h, 60); });
   return sec;
 }
 // Hores de previsió d'avui que queden (de la propera hora fins a la posta)
@@ -546,7 +550,7 @@ function roseSvg(o){
   // histograma
   const H = o.hist, tot = H ? H.map(b => b.reduce((x,y)=>x+y,0)) : [], mx = Math.max(1, ...tot), L = R - 10 - ri;
   if(H) H.forEach((bins, i) => { if(!tot[i]) return; let ra = ri + 1; const a0 = i*10 - 4, a1 = i*10 + 4;
-    let cum = 0; bins.forEach((n, b) => { if(!n) return; cum += n; const rb = ri + 1 + Math.sqrt(cum/mx)*L; g += b ? wedge(a0, a1, ra, rb, "var(--ink)", ' fill-opacity=".14" stroke="var(--ink)" stroke-width=".9" stroke-opacity=".75"') : wedge(a0, a1, ra, rb, "var(--ink)", ' fill-opacity=".85"'); ra = rb; }); });   // escala d'arrel: les direccions amb poca estona també es veuen
+    let cum = 0; bins.forEach((n, b) => { if(!n) return; cum += n; const rb = ri + 1 + Math.sqrt(cum/mx)*L; g += wedge(a0, a1, ra, rb, `var(--${ROSE_LAYERS[b]})`, ' stroke="var(--surface-2)" stroke-width=".6"'); ra = rb; }); });   // escala d'arrel: les direccions amb poca estona també es veuen
   // escala exterior
   for(let a=0; a<360; a+=10){ const big = a%45===0, [x0,y0] = P(a, R), [x1,y1] = P(a, R-(big?9:4));
     g += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="${big?"var(--ink)":"var(--muted)"}" stroke-width="${big?2:1}"/>`; }
@@ -558,9 +562,11 @@ function roseSvg(o){
     if(Math.abs(dw) < 24) a += dw > 0 ? dw - 24 : dw + 24;   // l'onada hi cau a sobre: la lletra es desplaça una mica al costat
     const [x,y] = P(a, R+48);
     g += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><text class="upr" y="7" text-anchor="middle" font-size="21" font-weight="800" fill="var(--ink)" font-family="Rajdhani,sans-serif">${t}</text></g>`; });
-  // con de la direcció del vent actual (l'onada es dibuixa al final, per fora de la circumferència)
-  if(o.dir!=null){ const [x0,y0] = P(o.dir-11, R), [x1,y1] = P(o.dir+11, R), [xc,yc] = P(o.dir, ri-6);
-    g += `<g class="needle"><path d="M${xc.toFixed(1)} ${yc.toFixed(1)} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z" fill="${o.k ? `var(--${o.k})` : "var(--ink)"}" fill-opacity=".38" stroke="${o.k ? `var(--${o.k})` : "var(--ink)"}" stroke-width="2"/></g>`; }
+  // fletxa del vent actual: de la vora fins a sota del número central (el cercle del centre la tapa).
+  // Vora del color del text (negra en clar, blanca en fosc), interior segons la idoneïtat i ombra perquè floti sobre les barres
+  if(o.dir!=null){ const yt = -(R+8), yh = -(ri+14), yb = -(ri-10), w = 6, hw = 14;
+    const pts = `-${w},${yt} ${w},${yt} ${w},${yh} ${hw},${yh} 0,${yb} -${hw},${yh} -${w},${yh}`;
+    g += `<g class="needle" transform="rotate(${o.dir})"><polygon points="${pts}" fill="${o.k ? `var(--${o.k})` : "var(--surface-2)"}" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/></g>`; }
   // pantalla de ruta: rumb del GPS (agulla blava) i direcció cap a la base (punt verd)
   if(o.cog!=null){ const y0 = -(ri-2), yh = -(R-22), y1 = -(R+4);   // fletxa de cartell: tija gruixuda i punta ampla
     g += `<polygon transform="rotate(${o.cog})" points="-6,${y0} 6,${y0} 6,${yh} 15,${yh} 0,${y1} -15,${yh} -6,${yh}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke"/>`; }
@@ -920,7 +926,7 @@ function renderNow(){
   if(STATIONS[stKey]) $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+(live && ST.key !== stKey ? ", sense vent ara; dades de "+STATIONS[ST.key].name : "")+". Canvia d'estació");
   $("gauge").innerHTML = gaugeSvg(s, v) + `<div class="grow"><div class="gflag" id="gflag"></div><span class="g-why k-${v.k}">${esc(v.sub || "")}</span></div>`; renderFlag();
   const kind = isOffshore(n.dir) ? "terral" : isOnshore(n.dir) ? "de mar" : "lateral";
-  $("rose").innerHTML = `<button type="button" class="cmp-btn" id="cmpBtn" aria-pressed="${cmpOn}" aria-label="Orienta la rosa amb la brúixola del mòbil" title="Orienta amb la brúixola"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 15 12h-6z" fill="currentColor"/><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35"/></svg></button>` + roseSvg({k: lvWind(n.wind, c), dir:n.dir, wind:n.wind, fcDir:fc.dir, wdir:fc.wdir, wave:fc.wave, live, hist: roseHist(OBS.key === stKey ? OBS.recs : [], roseForecast())}); cmpApply();
+  $("rose").innerHTML = `<button type="button" class="cmp-btn" id="cmpBtn" aria-pressed="${cmpOn}" aria-label="Orienta la rosa amb la brúixola del mòbil" title="Orienta amb la brúixola"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 15 12h-6z" fill="currentColor"/><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35"/></svg></button>` + roseSvg({k: kOf(s.score), dir:n.dir, wind:n.wind, fcDir:fc.dir, wdir:fc.wdir, wave:fc.wave, live, hist: roseHist(OBS.key === stKey ? OBS.recs : [], roseForecast(), c)}); cmpApply();
   // sense repetir el que ja diu el motiu de sota l'indicador
   // Els avisos (vermells) van com a text al motiu de sota l'indicador; només la informació (mar de fons, aigua freda) va en etiqueta grisa
   const FW = {"Ràfagues":"vent a ràfagues","Probable pluja":"pluja probable","Terral":"terral"}, why = (s.why || []).filter(w => !INFO_FLAGS.some(f => f.toLowerCase() === w));

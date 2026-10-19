@@ -68,7 +68,7 @@ h2,h3{font-family:var(--f-head);font-weight:700;margin:0;letter-spacing:.03em}
 .gauge svg,.rose svg{width:100%;max-width:230px;height:auto;display:block}
 .rose svg{max-width:262px}
 .gauge .arc{filter:var(--glow)}
-.rose .needle{filter:var(--glow);color:var(--accent)}
+.rose .needle,.ride-rose .needle{filter:drop-shadow(2px 3px 2px #0008)}
 .cap{font-size:.76rem;color:var(--muted);font-weight:600;text-align:center;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .cap span{display:inline-flex;align-items:center;gap:4px}
 .src{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;color:var(--muted)}
