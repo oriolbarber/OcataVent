@@ -502,7 +502,7 @@ details.vp-sec[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .vp-more .vp-info{align-self:stretch}
 .now .card-h{flex-wrap:nowrap}
 .now .card-h .lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.now .card-h .src{margin-left:auto;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;display:block;line-height:30px}
+.now .card-h .src{margin-right:auto;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;display:block;line-height:30px}
 .now .card-h .ib-i{flex:none}
 .now > .vp-info{margin:4px 0 6px}
 .sl{position:relative}

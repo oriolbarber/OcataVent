@@ -893,7 +893,6 @@ const BOAT_IC = {
 const boatIcon = (k, z) => `<svg width="${z||22}" height="${z||22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BOAT_IC[k]}</svg>`;
 function renderSeg(){
   $("actSeg").innerHTML = Object.keys(DEFAULTS).map(k => `<button type="button" data-act="${k}" aria-pressed="${k===act}" aria-label="${esc(DEFAULTS[k].name)}" title="${esc(DEFAULTS[k].name)}">${boatIcon(k)}</button>`).join("");
-  const n = $("actName"); if(n) n.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;color:var(--ink)">${boatIcon(act,18)}${esc(DEFAULTS[act].name)}</span>`;
 }
 function stat(ic, label, v, unit, x){ return `<div class="stat"><div class="k"><span class="chip-ic">${icon(ic)}</span><span class="lbl">${label}</span></div><div class="v">${v}${unit?`<small>${unit}</small>`:""}</div><div class="x">${x||"&nbsp;"}</div></div>`; }
 // Widget d'Android (APK): l'app hi passa el veredicte d'ara i la previsió de les 48 h següents; Android el refresca cada 30 min
