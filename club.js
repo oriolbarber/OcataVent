@@ -1116,6 +1116,9 @@ setInterval(async () => {
   try{ await Promise.all(NEED[tab].map(fetchK)); }catch(e){ return; }
   if(snap() !== before && visible() && !$("clSheet")) render();
 }, 20000);
+// Estirar per actualitzar (app.js): rellegeix la secció oberta del Club.
+document.addEventListener("ov-pull", async () => { if(!C || !visible() || $("clSheet")) return;
+  try{ await Promise.all(NEED[tab].map(fetchK)); }catch(e){ return; } if(visible() && !$("clSheet")) render(); });
 
 /* ---------- avisos de seguretat (els detecta avisos.js al mòbil de qui navega) ---------- */
 const ALERT_T = {"sense-vent":"Sense vent i lluny", "vent-fort":"Vent massa fort", "onades":"Onades perilloses", "ajuda":"Demana ajuda"};

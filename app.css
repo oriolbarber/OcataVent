@@ -31,6 +31,11 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
+html{overscroll-behavior-y:contain}
+.ptr{height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.ptr svg{flex:none;opacity:.85;transform:rotate(var(--ptr-r,0deg))}
+.ptr.go svg{color:var(--accent);opacity:1}
+.ptr.spin svg{color:var(--accent);animation:spin 1s linear infinite}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.4;padding:0 12px;padding-block:0 calc(84px + env(safe-area-inset-bottom,0px))}
 .app{max-width:1120px;margin:0 auto}
 button{font:inherit;color:inherit}

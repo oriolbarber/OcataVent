@@ -113,6 +113,9 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - L'app crida `window.renderPrep()` quan arriben dades noves.
 - L'efecte de vent i onades (canvas + màscara del mar) és a `fx.js` (`OV_FX(map, tiles, {get, active, onMask})`) i el fan servir «Nova sortida» i el mapa maximitzat de la Previsió.
 
+## Estirar per actualitzar (`app.js`, `#ptr`)
+- No hi ha botó de recarregar a la capçalera (decisió de l'Oriol). A dalt de tot de la pàgina, estirar avall obre un espai sota la capçalera amb la fletxa circular (gira amb l'estirada, es pinta d'accent en passar el llindar de 64 px); en deixar anar, `refreshAll()` (previsió, estació, observacions, info i boia) i emet `ov-pull` (club.js rellegeix la secció oberta). No s'activa sobre mapes, gràfics/taules amb scroll horitzontal, pantalles de configuració, fulls ni amb la ruta o webcams obertes. `html{overscroll-behavior-y:contain}` evita el recarregar natiu de Chrome.
+
 ## Previsió: pantalla completa (`windmap.js`)
 - Botó de maximitzar al gràfic per hores i al mapa (`data-wmfull="chart|map"`): la targeta `#windMap` passa a `.full` (fixa, a tota la pantalla). El botó enrere d'Android la tanca (`history.pushState` + `popstate`).
 - Gràfic: es redibuixa amb l'amplada i l'alçada lliures (`hourChart(…, Wpx, Hpx)`).

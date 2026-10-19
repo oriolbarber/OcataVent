@@ -355,7 +355,6 @@ function modelErrors(){
 }
 function showMsg(text, err){ const m = $("msg"); m.hidden = !text; m.textContent = text || ""; m.className = "msg"+(err?" err":""); }
 async function load(){
-  $("refresh").setAttribute("aria-busy","true");
   try{
     const [fc, ma, alt] = await Promise.all([getJSON(URL_FC), getJSON(URL_MA).catch(() => getJSON(URL_MA.replace("forecast_days=16", "forecast_days=8"))).catch(()=>null), getJSON(URL_ALT).catch(()=>null)]);
     DATA = build(fc, ma); DATA.alt = parseAlt(alt); applyModel();
@@ -364,9 +363,8 @@ async function load(){
   }catch(e){
     const cached = store.get("ov2_cache_" + locKey) || (locKey === "masnou" ? store.get("ov2_cache") : null);
     if(cached){ DATA = cached; if(!DATA.base){ DATA.base = DATA.hours; DATA.nowBase = DATA.now; } applyModel(); showMsg("Sense connexió. Mostro la previsió desada el "+stamp(cached.fetchedAt)+".", true); }
-    else { showMsg("No s'ha pogut carregar la previsió. Comprova la connexió i torna-ho a provar.", true); $("refresh").removeAttribute("aria-busy"); return; }
+    else { showMsg("No s'ha pogut carregar la previsió. Comprova la connexió i torna-ho a provar.", true); return; }
   }
-  $("refresh").removeAttribute("aria-busy");
   render();
 }
 // Si l'estació triada no envia vent (sensor aturat: el fitxer només porta pressió, pluja…), es fa servir la
@@ -1179,7 +1177,31 @@ function calClose(){ const el = document.getElementById("calPop"); if(el) el.rem
 document.addEventListener("keydown", e => { if(e.key === "Escape") calClose(); });
 let rsT = null, rsW = innerWidth;
 addEventListener("resize", () => { if(innerWidth === rsW) return; rsW = innerWidth; clearTimeout(rsT); rsT = setTimeout(() => { if(DATA){ renderNow(); renderWeek(); } }, 200); });
-$("refresh").addEventListener("click", () => { load(); loadStation(); loadObs(); loadInfo(); loadBuoy(); });
+// Estirar per actualitzar: a dalt de tot de la pàgina, estirar avall obre un espai sota la capçalera amb la icona.
+function refreshAll(){ document.dispatchEvent(new Event("ov-pull")); return Promise.allSettled([load(), loadStation(), loadObs(), loadInfo(), loadBuoy()]); }
+(() => {
+  const P = $("ptr"), MAX = 96, GO = 64, SKIP = ".leaflet-container,.view-panel,.cfg-menu,.cfg-scrim,#clSheet,.full,[data-sw],.chart.wide,.tbl,input,textarea,select,iframe,[role=dialog]";
+  let y0 = null, x0 = 0, d = 0, pull = false, busy = false;
+  const set = (h, anim) => { P.style.transition = anim ? "height .25s ease" : "none"; P.style.height = h + "px";
+    P.style.setProperty("--ptr-r", (h * 4) + "deg"); P.classList.toggle("go", h >= GO); };
+  const blocked = t => busy || scrollY > 0 || /riding|cam-open|wm-open/.test(document.body.className)
+    || getComputedStyle(document.body).overflow === "hidden" || (t.closest && t.closest(SKIP));
+  addEventListener("touchstart", e => { y0 = null; pull = false;
+    if(e.touches.length !== 1 || blocked(e.target)) return;
+    y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; }, {passive:true});
+  addEventListener("touchmove", e => { if(y0 == null) return;
+    const dy = e.touches[0].clientY - y0, dx = e.touches[0].clientX - x0;
+    if(!pull){ if(Math.abs(dx) > 10 && Math.abs(dx) > dy){ y0 = null; return; }
+      if(dy < 8 || scrollY > 0){ if(dy < 0) y0 = null; return; } pull = true; }
+    d = Math.min(MAX, Math.max(0, (dy - 8) * .5)); set(d);
+    if(e.cancelable) e.preventDefault(); }, {passive:false});
+  const end = async () => { if(!pull){ y0 = null; return; } y0 = null; pull = false;
+    if(d < GO){ set(0, true); return; }
+    busy = true; set(44, true); P.classList.add("spin"); try{ navigator.vibrate && navigator.vibrate(10); }catch(e){}
+    const t = Date.now(); await refreshAll(); await new Promise(r => setTimeout(r, Math.max(0, 600 - (Date.now() - t))));
+    P.classList.remove("spin"); set(0, true); busy = false; };
+  addEventListener("touchend", end); addEventListener("touchcancel", end);
+})();
 $("src").addEventListener("click", () => { const L = LOC.stations; if(L.length < 2) return; stKey = L[(L.indexOf(stKey) + 1) % L.length]; store.set("ov2_station_v3", stKey); ST = null; renderNow(); loadStation(); loadObs(); });
 $("crit").addEventListener("change", e => { const k = e.target.dataset.k; if(!k) return; const v = parseFloat(String(e.target.value).replace(",", ".")); if(isNaN(v) || v < 0){ renderCrit(); return; }
   crit[critK][k] = v; store.set("ov2_crit", crit); renderCrit(); renderCritList(); if(DATA && critK === act){ applyModel(); renderNow(); renderHours(); renderWeek(); } });
