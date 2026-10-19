@@ -503,7 +503,13 @@ details.vp-sec[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .vp-more .vp-info{align-self:stretch}
 .now .card-h{flex-wrap:nowrap}
 .now .card-h .lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.now .card-h .src{margin-right:auto;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;display:block;line-height:30px}
+.now .card-h .src{margin-right:auto;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;display:block;min-height:24px;line-height:22px;padding:0 8px;font-size:.74rem}
+.now .card-h .src .dot{width:7px;height:7px;margin-right:5px;vertical-align:1px}
+.now .card-h .src svg{margin-left:4px;width:12px;height:12px;vertical-align:-1px}
+:root[data-size="big"] .now .card-h .src{font-size:.82rem}
+.now .card-h .ib-i{width:24px;height:24px;font-size:.85rem}
+.now{padding-top:8px}
+.now .card-h{margin-bottom:0}
 .now .card-h .ib-i{flex:none}
 .now > .vp-info{margin:4px 0 6px}
 .sl{position:relative}
