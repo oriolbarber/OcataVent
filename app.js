@@ -929,8 +929,13 @@ function widgetPush(n, s, v, live, c){
     for(let i = 0; i < 48; i++){ const d = new Date(d0.getTime() + i*3600e3), p = DATA.hours[localKey(d)]; if(!p || p.wind == null) continue;
       const r = scoreHour(p, c), vh = verdict(r);
       hrs.push({t:d.getTime(), s:r.score, k:vh.k, v:vh.t, why:vh.sub, w:p.wind, g:p.gust, dn:windName(p.dir), h:p.wave}); }
+    // Resum de 7 dies (8, perquè l'endemà el widget encara en tingui 7 sense obrir l'app): matí, migdia i tarda com a la previsió setmanal
+    const days = DATA.daily.time.slice(0, 8).map(date => ({t: new Date(date + "T12:00:00").getTime(),
+      sl: SLOTS.map(sl => { const a = slotAgg(date, sl, c); if(!a || a.score == null) return null;
+        return {s:a.score, k:verdict(a).k, e:new Date(date + "T" + pad(sl.hours[sl.hours.length-1] + 1) + ":00:00").getTime(), w:a.wind, dn:windAbbr(a.dir)}; })}))
+      .filter(d => d.sl.some(Boolean));
     const snap = {act:DEFAULTS[act].short, loc:LOC.name, st: live ? STATIONS[ST.key].name : "",
-      now:{s:s.score, k:v.k, v:v.t, why:v.sub, w:n.wind, g:n.gust, dn:windName(n.dir), h:DATA.now.wave}, hrs};
+      now:{s:s.score, k:v.k, v:v.t, why:v.sub, w:n.wind, g:n.gust, dn:windName(n.dir), h:DATA.now.wave}, hrs, days};
     const key = JSON.stringify(snap);
     if(key === wgKey && Date.now() - wgAt < 10*60e3) return;   // sense canvis: com a molt cada 10 min
     wgKey = key; wgAt = Date.now();

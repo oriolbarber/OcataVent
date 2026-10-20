@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget d'Ocata Vent: nota i veredicte a l'esquerra; embarcació, vent, onada i d'on surten les dades a la dreta -->
+<!-- Widget d'Ocata Vent: a dalt, nota i veredicte d'ara a l'esquerra; embarcació, vent, onada i d'on surten les dades a la dreta.
+     A sota, el resum de 7 dies (wWeek, cel·les widget_day.xml), que s'amaga si el widget és massa baix. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/wRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:gravity="center_vertical"
-    android:padding="12dp"
+    android:padding="10dp"
     android:background="@drawable/widget_bg_none">
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical">
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -21,7 +28,7 @@
             android:layout_height="wrap_content"
             android:text="–"
             android:textColor="#FFFFFF"
-            android:textSize="42sp"
+            android:textSize="38sp"
             android:textStyle="bold"
             android:includeFontPadding="false"
             android:maxLines="1" />
@@ -79,4 +86,13 @@
             android:maxLines="1"
             android:ellipsize="end" />
     </LinearLayout>
+  </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/wWeek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:visibility="gone" />
 </LinearLayout>
