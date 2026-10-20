@@ -490,8 +490,8 @@ async function renderCard(){
   let loose = 0; try{ loose = ((await DB.all()) || []).filter(t => !t.owner).length; }catch(e){}
   const st = syncing ? "Sincronitzant…" : syncErr ? syncErr : lastSync ? "Al dia · " + pad(new Date(lastSync).getHours()) + ":" + pad(new Date(lastSync).getMinutes()) : "";
   el.innerHTML = `<article class="card"><div class="card-h"><span class="lbl">Sortides al núvol</span>
-      <span class="src ${!syncing && !syncErr && lastSync ? "live" : ""}"><span class="dot"></span>${esc(st)}</span></div>
-    <p class="note">Privades, al compte de ${esc(member.nom || user.email || "")}. Les recuperes en qualsevol mòbil on entris.</p>
+      <span class="prep-hr"><span class="src ${!syncing && !syncErr && lastSync ? "live" : ""}"><span class="dot"></span>${esc(st)}</span><button class="ib-i" type="button" data-info="iCloud" aria-label="Què vol dir" aria-expanded="false">i</button></span></div>
+    <div class="vp-info" id="iCloud" hidden><p>Privades, al compte de ${esc(member.nom || user.email || "")}. Les recuperes en qualsevol mòbil on entris.</p></div>
     ${loose ? `<p class="note" style="margin-top:8px"><b>${loose === 1 ? "Hi ha 1 sortida" : "Hi ha " + loose + " sortides"} d'aquest mòbil fora del teu compte.</b></p>
       <button class="btn acc-wide" type="button" id="cloudAdopt" style="margin-top:8px">${loose === 1 ? "Puja-la al meu compte" : "Puja-les al meu compte"}</button>` : ""}
     ${syncErr && !syncing ? `<button class="btn" type="button" id="cloudSync" style="margin-top:8px">Torna-ho a provar</button>` : ""}</article>`;

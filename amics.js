@@ -84,7 +84,7 @@ function render(){
 /* ---------- amics: botó flotant del Club i full ---------- */
 function renderFab(){
   let b = $("friendFab");
-  const show = !!C && !$("view-club").hidden;
+  const show = !!C && !$("view-club").hidden && (window.OV_CLUB?.tab?.() || "mur") === "mur";   // només al Mur: a les altres pestanyes tapava contingut (també a ⋮ ▸ Privadesa ▸ Amistats)
   if(!b){ if(!C) return; b = document.createElement("button"); b.type = "button"; b.id = "friendFab"; b.className = "friend-fab"; b.setAttribute("aria-label", "Afegeix amistats"); b.innerHTML = ADD_IC; document.body.appendChild(b); b.onclick = openFriends; }
   b.hidden = !show;
   const n = C ? amistats.filter(a => a.estat === "pendent" && a.a === uid()).length : 0;
@@ -140,6 +140,7 @@ document.addEventListener("change", e => { const k = e.target.dataset && e.targe
     setPref("autoBase", on); } });
 document.addEventListener("input", e => { if(e.target.id !== "privCerca") return; cerca = e.target.value; const pos = e.target.selectionStart; renderFriends(); const i = $("privCerca"); if(i){ i.focus(); try{ i.setSelectionRange(pos, pos); }catch(err){} } });
 window.addEventListener("mm-view", renderFab);
+window.addEventListener("ov-ctab", renderFab);
 document.addEventListener("click", e => {
   const t = e.target.closest && e.target.closest("#friendsBody button"); if(!t || !C || t.classList.contains("ib-i")) return;
   const d = t.dataset;

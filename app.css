@@ -1610,3 +1610,29 @@ a.cfg-row:hover{background:var(--surface-2)}
 .ck b{letter-spacing:.02em}
 .ck .pm-ic{width:20px;height:20px;font-size:12px}
 :root[data-size="big"] .ck b{font-size:.98rem}
+
+/* ---------- Club, versió neta (21-10-2026) ---------- */
+.cl-line{margin:2px 0 0;font-size:.98rem;line-height:1.45;color:var(--muted)}
+.cl-line b{font-family:var(--f-mono);font-size:1.15rem;color:var(--ink)}
+:root[data-size="big"] .cl-line{font-size:1.1rem}
+:root[data-size="big"] .cl-line b{font-size:1.3rem}
+.cl-card>.cl-head{padding-top:0;border-top:0}
+.friend-fab{width:54px;height:54px}
+:root[data-size="big"] .friend-fab{width:60px;height:60px}
+.cl-bname{min-width:96px}
+.cl-bname b span{font-weight:600;color:var(--muted);font-size:.9em}
+.cl-bst .cl-chip{flex:0 1 auto;min-height:36px;font-size:.76rem;padding:0 9px}
+
+/* ---------- Historial: importar i còpia, plegats ---------- */
+.log-more summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none;min-height:32px}
+.log-more summary::-webkit-details-marker{display:none}
+.log-more summary::after{content:"";width:9px;height:9px;border-right:2.5px solid var(--muted);border-bottom:2.5px solid var(--muted);transform:rotate(45deg);margin:0 6px 4px auto}
+.log-more[open] summary::after{transform:rotate(-135deg);margin-bottom:-4px}
+.log-more[open] summary{margin-bottom:10px}
+.log-more .src{margin-left:auto}
+.log-bak{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.log-bak .btn{flex:1 1 140px;min-height:46px}
+
+/* ---------- Mapes: font en una línia i ajuda a la (i) ---------- */
+.map-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.map-foot .note{margin:0}

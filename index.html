@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=174">
+<link rel="stylesheet" href="app.css?v=175">
 </head>
 <body>
 <div class="app">
@@ -342,12 +342,11 @@
     <button type="button" data-map="cam" aria-pressed="false"><b>Webcam</b><small>Nàutic</small></button>
   </div>
   <article class="card" id="mapMb">
-    <div class="card-h"><span class="lbl">Vent · meteoblue</span></div>
     <div class="frame"><iframe id="mbFrame" title="Mapes animats de meteoblue" sandbox="allow-scripts allow-same-origin"></iframe></div>
-    <p class="note">Tria la capa al menú del mapa: animació del vent, ratxes, núvols i pluja, satèl·lit o temperatura. El botó ▶ anima la previsió. Font: meteoblue.</p>
+    <div class="map-foot"><span class="note">Font: meteoblue</span><button class="ib-i" type="button" data-info="iMb" aria-label="Com es fa servir aquest mapa" aria-expanded="false">i</button></div>
+    <div class="vp-info" id="iMb" hidden><p>Tria la capa al menú del mapa (☰): animació del vent, ratxes, núvols i pluja, satèl·lit o temperatura. El botó ▶ anima la previsió.</p></div>
   </article>
   <article class="card" id="mapWindy" hidden>
-    <div class="card-h"><span class="lbl">Onades · Windy</span></div>
     <div class="seg" role="group" aria-label="Capa" id="windySeg">
       <button type="button" data-ov="waves" aria-pressed="true">Onades</button>
       <button type="button" data-ov="wind" aria-pressed="false">Vent</button>
@@ -355,7 +354,8 @@
       <button type="button" data-ov="rain" aria-pressed="false">Pluja</button>
     </div>
     <div class="frame"><iframe id="windyFrame" title="Mapa animat de Windy" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
-    <p class="note">Mou la línia de temps a sota del mapa per veure les properes hores i dies. Toca el mapa per veure els valors d'un punt. Font: Windy.com.</p>
+    <div class="map-foot"><span class="note">Font: Windy.com</span><button class="ib-i" type="button" data-info="iWindy" aria-label="Com es fa servir aquest mapa" aria-expanded="false">i</button></div>
+    <div class="vp-info" id="iWindy" hidden><p>Mou la línia de temps a sota del mapa per veure les properes hores i dies. Toca el mapa per veure els valors d'un punt.</p></div>
   </article>
   <article class="card" id="mapRadar" hidden>
     <div class="card-h"><span class="lbl" id="radarTitle">Radar de pluja · últimes 2 h</span><span class="src" id="radarTime">–</span></div>
@@ -369,6 +369,7 @@
   <article class="card" id="mapCam" hidden>
     <div class="card-h"><span class="lbl">Webcam · Nàutic Masnou</span><button class="ib-i" type="button" data-info="iCam" aria-label="Informació de la webcam" aria-expanded="false">i</button></div>
     <div class="vp-info" id="iCam" hidden>
+      <p>Imatge en directe de la platja i la rampa del Nàutic Masnou. Font: Nàutic Masnou, a través de meteoelmasnou.cat.</p>
       <p>El zoom de la pantalla completa es desa en aquest mòbil i també s'aplica aquí. Per tornar a veure-la sencera, toca dues vegades el vídeo a pantalla completa.</p>
     </div>
     <div class="frame cam cam-box" id="camBox"><iframe id="camFrame" class="cam-if" title="Webcam en directe del Nàutic Masnou" sandbox="allow-scripts allow-same-origin" allow="autoplay"></iframe>
@@ -377,11 +378,11 @@
       <div class="cam-ui"><button type="button" class="cam-ub" id="camZoomOut" aria-label="Allunya">−</button><button type="button" class="cam-ub" id="camZoomIn" aria-label="Apropa">+</button><button type="button" class="cam-ub" id="camClose" aria-label="Tanca la pantalla completa">✕</button></div>
       <div class="cam-hint" id="camHint">Gira el mòbil · pessiga o toca dues vegades per fer zoom</div></div>
     <div class="cam-bar"><button type="button" class="btn cam-max-b" id="camMax" aria-label="Webcam a pantalla completa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Pantalla completa i zoom</button></div>
-    <p class="note">Imatge en directe de la platja i la rampa del Nàutic Masnou. Font: Nàutic Masnou, a través de meteoelmasnou.cat.</p>
   </article>
   <article class="card" id="mapCam2" hidden>
     <div class="card-h"><span class="lbl">Webcam · Club Natació Badalona</span><button class="ib-i" type="button" data-info="iCam2" aria-label="Informació de la webcam de Badalona" aria-expanded="false">i</button></div>
     <div class="vp-info" id="iCam2" hidden>
+      <p>Platja de Badalona en directe. Font: Windy Webcams, a través de meteoelmasnou.cat.</p>
       <p>El zoom de la pantalla completa es desa en aquest mòbil i també s'aplica aquí. Per tornar a veure-la sencera, toca dues vegades el vídeo a pantalla completa.</p>
     </div>
     <div class="frame cam cam-box" id="camBox2"><iframe id="camFrame2" class="cam-if" title="Webcam del Club Natació Badalona" sandbox="allow-scripts allow-same-origin" referrerpolicy="origin" allow="autoplay"></iframe>
@@ -390,7 +391,6 @@
       <div class="cam-ui"><button type="button" class="cam-ub" id="camZoomOut2" aria-label="Allunya">−</button><button type="button" class="cam-ub" id="camZoomIn2" aria-label="Apropa">+</button><button type="button" class="cam-ub" id="camClose2" aria-label="Tanca la pantalla completa">✕</button></div>
       <div class="cam-hint" id="camHint2">Gira el mòbil · pessiga o toca dues vegades per fer zoom</div></div>
     <div class="cam-bar"><button type="button" class="btn cam-max-b" id="camMax2" aria-label="Webcam de Badalona a pantalla completa"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Pantalla completa i zoom</button></div>
-    <p class="note">Platja de Badalona en directe. Font: Windy Webcams, a través de meteoelmasnou.cat.</p>
   </article>
 </section>
 
@@ -429,16 +429,16 @@
 <script src="app.js?v=137"></script>
 <script src="cfg.js?v=5"></script>
 <script src="ajuda.js?v=1"></script>
-<script src="trip.js?v=124"></script>
+<script src="trip.js?v=125"></script>
 <script src="maps.js?v=105"></script>
 <script src="llocs.js?v=7"></script>
 <script src="fx.js?v=1"></script>
 <script src="windmap.js?v=110"></script>
 <script src="prep.js?v=104"></script>
-<script src="cloud.js?v=123"></script>
-<script src="amics.js?v=115"></script>
+<script src="cloud.js?v=124"></script>
+<script src="amics.js?v=116"></script>
 <script src="planol-core.js?v=6"></script>
-<script src="club.js?v=145"></script>
+<script src="club.js?v=146"></script>
 <script src="admin.js?v=114"></script>
 <script src="avisos.js?v=208"></script>
 <script src="sos.js?v=2"></script>

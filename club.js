@@ -263,24 +263,24 @@ function intentsCard(){
     <button type="button" class="btn cl-dash" id="clNewIntent">+ Anuncia sortida</button></section>`;
 }
 function card(p){
-  const mine = p.userId === uid(), rc = p.reaccions || {}, my = rc[uid()], cnt = k => Object.values(rc).filter(x => x === k).length;
-  const st = (l, val, u, sub, hot) => `<div class="stat cl-st"><span class="lbl">${l}</span><span class="v"${hot ? ' style="color:var(--accent-2)"' : ""}>${val}<small> ${u}</small></span><span class="cl-sub">${esc(sub)}</span></div>`;
-  const durM = Math.round((p.durS || 0)/60);
+  // Ordre: qui · què ha dit · dades en una línia · ruta (si l'ha publicada) · reaccions
+  const durM = Math.round((p.durS || 0)/60), V = p.vent || {};
+  const dur = durM >= 60 ? Math.floor(durM/60) + " h " + (durM % 60) + " min" : durM + " min";
+  const d = [`<b>${(p.distNm || 0).toFixed(1).replace(".", ",")}</b> nm`, dur, `màx <b>${r1(p.maxKn)}</b> kn`];
+  if(V.avg != null && (V.avg > 0 || V.dir != null)) d.push(`vent <b>${r0(V.avg)}</b> kn${V.dir != null ? " " + esc(windAbbr(V.dir)) : ""}${V.gust ? " · R" + r0(V.gust) : ""}`);
+  if(p.onada != null) d.push(`onada <b>${r1(p.onada)}</b> m`);
   return `<article class="card cl-card" aria-label="Sortida publicada: ${esc(p.titol || "")}">
-    <div class="cl-stats">
-      ${st("Distància", (p.distNm || 0).toFixed(1).replace(".", ","), "nm", durM >= 60 ? Math.floor(durM/60) + " h " + (durM % 60) + " min" : durM + " min")}
-      ${st("Vel. màx.", r1(p.maxKn), "kn", "Mitjana " + r1(p.avgKn))}
-      ${st("Vent", r0(p.vent?.avg), "kn", p.vent && p.vent.avg != null ? windName(p.vent.dir) + " · ratxa " + r0(p.vent.gust) : "Sense dades", true)}</div>
-    ${p.onada != null ? `<div class="cl-sub">Onada màxima: ${r1(p.onada)} m</div>` : ""}
-    ${p.ruta ? routeSvg(p.ruta) : `<div class="cl-noroute">${LOCK}Ruta no publicada</div>`}
-    ${p.comentari ? `<p class="cl-text">${esc(p.comentari)}</p>` : ""}
-    <div class="cl-head cl-foot"><span class="cl-av" aria-hidden="true">${esc(initials(p.nom))}</span>
+    <div class="cl-head"><span class="cl-av" aria-hidden="true">${esc(initials(p.nom))}</span>
       <div class="cl-who"><b>${esc(p.nom)}</b><span>${esc(boatShort(p.act))} · ${esc(dayStr(p.inici))}</span></div>
       <span class="cl-boat">${typeof boatIcon === "function" ? boatIcon(p.act) : ""}</span></div>
+    ${p.comentari ? `<p class="cl-text">${esc(p.comentari)}</p>` : ""}
+    <p class="cl-line">${d.join(" · ")}</p>
+    ${p.ruta ? routeSvg(p.ruta) : ""}
     <div class="cl-reacts" role="group" aria-label="Reaccions" data-rpub="${esc(p.id)}">${reactsHtml(p)}</div>
-    ${!mine && canMod() ? modBtn("publicacions", p) + `<div data-delbox="${esc(p.id)}"></div>` : ""}
+    ${!mineOk(p) && canMod() ? modBtn("publicacions", p) + `<div data-delbox="${esc(p.id)}"></div>` : ""}
   </article>`;
 }
+const mineOk = p => p.userId === uid();
 const NO_ROUTE = "Aquesta sortida no té prou recorregut GPS per mostrar-ne la ruta (cal haver-se allunyat almenys 100 m). Treu «Inclou la ruta» per publicar-la sense.";
 function routePts(s){ return String(s).split(";").map(x => x.split(",").map(Number)).filter(a => a.length === 2 && isFinite(a[0]) && isFinite(a[1])); }
 function routeSvg(s){
@@ -355,7 +355,7 @@ function renderAvisos(){
     + (P.length || ui.avisCom === "base" ? `<section class="card bs-fets"><div class="card-h"><span class="lbl">Base nàutica</span><button type="button" class="btn sm cl-pri" id="clFetNew">+ Nou</button></div>${P.map(fetRow).join("") || `<p class="note">Res pendent a la base.</p>`}</section>` : "")
     + `${ui.avisCom === "base" ? "" : L.map(avisCard).join("")
       || (P.length || ui.avisCom === "base" ? "" : `<article class="card empty">${D.at.avisos ? "No hi ha cap avís." : "Carregant…"}</article>`)}
-    ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button><p class="note">Hi publiquen les comissions amb permís per fer avisos${mine.length ? ". Tu hi publiques com a: " + esc(mine.map(k => COMSm()[k]).join(", ")) : ""}.</p>` : ""}`;
+    ${coms.length ? `<button type="button" class="btn cl-pri cl-wide" id="clNewAvis">+ Nou avís</button>` : ""}`;
 }
 
 /* ---------- ANUNCIS ---------- */
@@ -364,8 +364,7 @@ function renderAnuncis(){
   return foldFilters("an", ui.anCat === "tots" ? "" : CATS[ui.anCat], ui.anOpen, [["tots", "Tots"]].concat(Object.entries(CATS)).map(([k, t]) => chip("data-acat", k, ui.anCat === k, t)).join(""))
     + `${L.map(anCard).join("")
       || `<article class="card empty">${D.at.anuncis ? "No hi ha cap anunci." : "Carregant…"}</article>`}
-    <button type="button" class="btn cl-pri cl-wide" id="clNewAn">+ Publica un anunci</button>
-    <p class="note">Qui s'hi interessa prem «M'interessa»; només tu veus qui és, per contactar-hi pel teu compte.</p>`;
+    <button type="button" class="btn cl-pri cl-wide" id="clNewAn">+ Publica un anunci</button>`;
 }
 
 /* ---------- BASE ---------- */
@@ -495,10 +494,9 @@ function renderBoats(){
     ${(P => canBoatsE() && P.length ? `<section class="card cl-pend"><div class="card-h"><span class="lbl">Pendents de validar · ${P.length}</span></div>${P.map(b => { const pl = placeById(b.place);
       return `<div class="cl-brow"><button type="button" class="cl-bname" data-boat="${esc(b.id)}"><b>${esc(b.label || PL().BOATS[b.t]?.n || "Embarcació")}</b><span>${esc(b.prop || "")} · ${pl ? "plaça " + esc(pl.label || "") : "sense plaça"}</span></button><button type="button" class="btn sm cl-pri" data-bvalid="${esc(b.id)}">Valida</button></div>`; }).join("")}</section>` : "")(D.boats.filter(b => b.pendent))}
     <section class="card"><div class="card-h"><span class="lbl">${M.length > 1 ? "Les meves embarcacions" : "La meva embarcació"}</span></div>${M.map(b => { const pl = placeById(b.place);
-      return `<div class="cl-brow"><button type="button" class="cl-bname" data-boat="${esc(b.id)}"><b>${esc(b.label || PL().BOATS[b.t]?.n || "Embarcació")}${b.pendent ? ` <i class="cl-ptag">pendent de validar</i>` : ""}</b><span>${pl ? "Plaça " + esc(pl.label || "") : "Sense plaça"}</span></button>
+      return `<div class="cl-brow"><button type="button" class="cl-bname" data-boat="${esc(b.id)}"><b>${esc(b.label || PL().BOATS[b.t]?.n || "Embarcació")}<span> · ${pl ? esc(pl.label || "") : "sense plaça"}</span>${b.pendent ? ` <i class="cl-ptag">pendent</i>` : ""}</b></button>
         <div class="cl-bst">${Object.entries(E).map(([k, T]) => `<button type="button" class="cl-chip" data-bstate="${k}" data-id="${esc(b.id)}" aria-pressed="${(b.estat || "lloc") === k}" style="--c:${T.s}">${T.c || T.n}</button>`).join("")}</div></div>`; }).join("")}
-      <button type="button" class="btn cl-dash" id="clBoatNew">+ ${M.length ? "Afegeix-ne una altra" : "Afegeix la meva embarcació"}</button>
-      <p class="note">Les dades que hi posis (tipus, nom, vela, plaça) les valida Manteniment. També pots tocar una plaça lliure del plànol.</p></section>
+      <button type="button" class="btn cl-dash" id="clBoatNew">+ ${M.length ? "Afegeix-ne una altra" : "Afegeix la meva embarcació"}</button></section>
     ${fetsCard()}`;
 }
 // Vista del plànol: fixa, enquadrada pels responsables a l'editor (vista = {x, y, w, h} en metres); sense enquadrament, tot el plànol. Tocar una plaça obre la fitxa.
@@ -535,7 +533,7 @@ function dataForm(b, pl){
 }
 const formVals = () => ({t:$("bfT").value, place:$("bfP").value || null, label:$("bfN").value.trim().slice(0, 40), vela:$("bfV").value.trim().slice(0, 20), coprop:$("bfC").value.trim().slice(0, 120)});
 function newBoatSheet(pl){
-  sheet("La meva embarcació", `${dataForm(null, pl)}<p class="note">${canBoatsE() ? "Com que gestiones les embarcacions, queda validada directament." : "Queda pendent fins que la validi Manteniment. Mentrestant ja surt al plànol, amb la vora taronja."}</p>
+  sheet("La meva embarcació", `${dataForm(null, pl)}<p class="note">${canBoatsE() ? "Com que gestiones les embarcacions, queda validada directament." : "Les dades (tipus, nom, vela, plaça) les valida Manteniment. Mentrestant ja surt al plànol, amb la vora taronja. També pots tocar una plaça lliure del plànol."}</p>
     <button type="button" class="btn cl-pri cl-wide" id="shSave">Desa-la</button>`, () => {
     $("shSave").onclick = e => busy(e.currentTarget, async () => {
       const v = formVals(), o = v.place && placeById(v.place);
@@ -850,6 +848,7 @@ function anunciSheet(a){
     ${field("shCat", "Categoria", `<select class="field" id="shCat">${Object.entries(CATS).map(([k, t]) => `<option value="${k}"${a && a.cat === k ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`)}
     ${field("shTitle", "Títol", `<input class="field" id="shTitle" type="text" maxlength="80" value="${esc(a ? a.titol : "")}" style="font-family:var(--f-body)">`)}
     ${field("shText", "Text", `<textarea class="field cl-ta" id="shText" rows="4" maxlength="400">${esc(a ? a.text : "")}</textarea>`)}
+    <p class="note" style="margin:0">Qui s'hi interessa prem «M'interessa»: només tu veus qui és, per contactar-hi pel teu compte.</p>
     ${field("shCad", "Caduca el dia", `<input class="field" id="shCad" type="date" value="${cad0}" min="${ymd(new Date())}" max="${ymd(new Date(now() + AN_MAX*DAY))}">`)}
     ${visSelect("anuncis", a ? a.visibilitat : prefOf("anuncis"))}
     <button type="button" class="btn cl-pri cl-wide" id="shSave">${a ? "Desa els canvis" : "Publica l'anunci"}</button>`, () => {
@@ -1007,7 +1006,7 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 document.addEventListener("click", async e => {
   const t = e.target.closest && e.target.closest("#clubView button, #clubView [data-ctab]"); if(!t || !C) return;
   const ds = t.dataset;
-  if(ds.ctab){ tab = ds.ctab; store.set("ov2_club_tab", tab); load(); window.scrollTo({top:0}); return; }
+  if(ds.ctab){ tab = ds.ctab; store.set("ov2_club_tab", tab); load(); window.scrollTo({top:0}); window.dispatchEvent(new Event("ov-ctab")); return; }
   const saveF = () => { store.set("ov2_club_filt", Object.assign({}, filt, {open:false})); render(); };
   if(t.id === "clFilt" || t.id === "clFiltDone"){ filt.open = !filt.open; saveF(); return; }
   if(t.id === "clReset"){ filt = Object.assign({}, F0, {open:true}); saveF(); return; }
@@ -1212,6 +1211,7 @@ function boatRow(b){
   return {id:b.id, title:b.label || tn, sub:[b.label ? tn : "", b.vela ? "Vela " + b.vela : "", pl ? "Plaça " + (pl.label || "") : "Sense plaça", b.pendent ? "pendent de validar" : ESTAT_T(b.estat || "lloc").toLowerCase(), b.propUid !== uid() && b.prop ? b.prop : ""].filter(Boolean).join(" · ")};
 }
 const OV_CLUB = window.OV_CLUB = {
+  tab: () => tab,   // pestanya del Club oberta (amics.js: el botó d'amistats només surt al Mur)
   sheet, closeSheet, autoTick, loadAlerts, cta: ctaUpdate,
   async myBoats(){ if(!(await boatsReady())) return []; return myBoats().map(boatRow); },
   async openBoat(id){ if(await boatsReady().catch(() => false)) boatSheet(null, id); },

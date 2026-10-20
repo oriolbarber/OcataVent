@@ -546,19 +546,19 @@ async function renderList(){
   if(detailMap){ detailMap.remove(); detailMap = null; }
   let trips = []; try{ trips = (await DB.all()) || []; }catch(e){}
   trips.sort((a,b) => b.start - a.start);
-  const imp = `<article class="card"><div class="import-row"><label class="btn imp-btn" for="gpxIn">Importa una sortida (GPX)</label>
-    <button class="ib-i" type="button" data-info="iImp" aria-label="Què és importar una sortida" aria-expanded="false">i</button></div>
-    <div class="vp-info" id="iImp" hidden><p>Una ruta en format GPX gravada amb una altra app o un rellotge. L'app hi afegeix el vent que marcava l'estació.</p></div>
-    <input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden><div class="msg" id="importMsg" hidden style="margin-top:8px"></div></article>`;
-  const persisted = await storagePersisted();
-  const bak = `<article class="card"><div class="card-h"><span class="lbl">Còpia de seguretat</span>
-      <span class="src ${persisted ? "live" : ""}"><span class="dot"></span>${persisted ? "Dades protegides al mòbil" : "El navegador pot esborrar-les si falta espai"}</span></div>
-    <p class="note">${window.OV_CLOUD?.approved() ? "Les sortides del teu compte també es desen al núvol. Si vols, en pots guardar una còpia en un fitxer." : "Les sortides només es desen en aquest mòbil. Guarda'n una còpia de tant en tant (per exemple, al Drive) per no perdre-les si canvies de mòbil o esborres l'app."}</p>
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" type="button" id="backupOut">Fes una còpia de seguretat</button>
-      <label class="btn" for="backupIn" style="display:inline-flex;align-items:center">Recupera una còpia</label>
+  // Importar i còpia de seguretat: plegat en una sola targeta (es fa servir poc). Sense compte, avisa al títol.
+  const persisted = await storagePersisted(), inCloud = !!window.OV_CLOUD?.approved();
+  const more = `<details class="card log-more"${!trips.length ? " open" : ""}><summary><span class="lbl">Importa · còpia de seguretat</span>${!inCloud && !persisted ? `<span class="src bad"><span class="dot"></span>Només en aquest mòbil</span>` : ""}</summary>
+    <div class="import-row"><label class="btn imp-btn" for="gpxIn">Importa una sortida (GPX)</label>
+      <button class="ib-i" type="button" data-info="iImp" aria-label="Què és importar una sortida i la còpia de seguretat" aria-expanded="false">i</button></div>
+    <div class="vp-info" id="iImp" hidden><p><b>Importa:</b> una ruta GPX gravada amb una altra app o un rellotge. L'app hi afegeix el vent que marcava l'estació.</p>
+      <p><b>Còpia de seguretat:</b> ${inCloud ? "les sortides del teu compte ja es desen al núvol; la còpia en fitxer és opcional." : "les sortides només es desen en aquest mòbil. Guarda'n una còpia de tant en tant (per exemple, al Drive) per no perdre-les si canvies de mòbil o esborres l'app."} ${persisted ? "El mòbil té les dades protegides." : "El navegador les pot esborrar si falta espai."}</p></div>
+    <input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden><div class="msg" id="importMsg" hidden style="margin-top:8px"></div>
+    <div class="g-row log-bak"><button class="btn" type="button" id="backupOut">Fes una còpia</button>
+      <label class="btn" for="backupIn" style="display:inline-flex;align-items:center;justify-content:center">Recupera una còpia</label>
       <input type="file" id="backupIn" accept=".json,application/json" hidden></div>
-    <div class="msg" id="backupMsg" hidden style="margin-top:8px"></div></article>`;
+    <div class="msg" id="backupMsg" hidden style="margin-top:8px"></div></details>`;
+  const imp = "", bak = more;
   const cloud = `<div id="cloudCard"></div>`;
   if(!trips.length){ $("logList").innerHTML = `<article class="card empty">Encara no hi ha cap sortida desada.<br>Prem «Sortida» per gravar la primera.</article>` + cloud + imp + bak; window.OV_CLOUD?.renderCard(); return; }
   $("logList").innerHTML = `<div class="card-h" style="margin:0"><h2 style="font-size:1.3rem;text-transform:uppercase">Sortides</h2><span class="lbl">${trips.length}</span></div><div class="trips">` + trips.map(t => {
