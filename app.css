@@ -1649,34 +1649,38 @@ a.cfg-row:hover{background:var(--surface-2)}
 .wm:not(.full) .wm-cap{display:none}
 .wm:not(.full-chart) .hc-read .rd-v{display:none}
 
-/* ---------- Hores d'…: llista visual (21-10-2026) ---------- */
-.hl-leg{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:.78rem;font-weight:700;color:var(--muted);margin:2px 2px 8px}
-.hl-leg>span{display:inline-flex;align-items:center;gap:5px}
-.hl-leg i{width:10px;height:10px;border-radius:3px;background:var(--k)}
-.hl-leg-u{margin-left:auto;font-weight:600}
-.hl{display:flex;flex-direction:column;gap:4px}
-.hl-row{display:grid;grid-template-columns:42px minmax(0,1fr) 54px 54px;align-items:center;gap:8px;padding:7px 10px 7px 8px;border-radius:10px;
-  background:color-mix(in srgb, var(--k) 10%, var(--surface));border-left:4px solid var(--k);cursor:pointer;-webkit-tap-highlight-color:transparent}
-.hl-row.obs{opacity:.78}
-.hl-row.now-row{box-shadow:inset 0 0 0 1.5px var(--line)}
-.hl-row.sel{box-shadow:inset 0 0 0 2px var(--sel, var(--accent))}
-.hl-h{font-family:var(--f-mono);font-weight:700;font-size:1.15rem;line-height:1}
-.hl-h small{font-size:.7rem;color:var(--muted);margin-left:1px}
-.hl-bar{position:relative;height:24px;border-radius:6px;background:var(--surface-2);overflow:hidden}
-.hl-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
-.hl-bar i.g{background:color-mix(in srgb, var(--muted) 30%, transparent)}
-.hl-bar i.w{background:var(--k)}
-.hl-bar b{position:absolute;left:6px;top:50%;transform:translateY(-50%);font-family:var(--f-mono);font-size:.95rem;color:var(--ink);text-shadow:0 0 3px var(--surface),0 0 3px var(--surface)}
-.hl-bar b small{font-size:.72rem;color:var(--ink);opacity:.8}
-.hl-dir{display:inline-flex;align-items:center;gap:3px;font-family:var(--f-head);font-weight:700;font-size:.9rem}
-.hl-wv{display:inline-flex;align-items:center;gap:3px;font-family:var(--f-mono);font-weight:700;font-size:.95rem;justify-content:flex-end;color:var(--k, var(--ink))}
-.hl-wv .wave-ic{color:var(--sea)}
-.hl-det{display:none;grid-column:1 / -1;flex-wrap:wrap;gap:2px 12px;font-size:.85rem;color:var(--muted);padding-top:4px}
-.hl-det b{color:var(--ink)}
-.hl-row.sel .hl-det{display:flex}
-:root[data-size="big"] .hl-row{grid-template-columns:48px minmax(0,1fr) 60px 62px;padding:9px 10px 9px 8px}
-:root[data-size="big"] .hl-h{font-size:1.35rem}
-:root[data-size="big"] .hl-bar{height:30px}
-:root[data-size="big"] .hl-bar b,:root[data-size="big"] .hl-wv{font-size:1.1rem}
-:root[data-size="big"] .hl-dir{font-size:1.05rem}
-:root[data-size="big"] .hl-det{font-size:1rem}
+/* ---------- Hores d'…: taula compacta (21-10-2026) ---------- */
+.ht-leg{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:.78rem;font-weight:700;color:var(--muted);margin:2px 2px 8px}
+.ht-leg>span{display:inline-flex;align-items:center;gap:5px}
+.ht-leg i{width:10px;height:10px;border-radius:3px;background:var(--k)}
+.ht-leg-u{margin-left:auto;font-weight:600}
+.ht{border-collapse:separate;border-spacing:0 3px;width:100%;font-size:.9rem}
+.ht thead th{font-family:var(--f-head);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0 4px 2px;text-align:right;white-space:nowrap}
+.ht thead th small{text-transform:none;font-weight:600}
+.ht thead th:first-child,.ht thead th:nth-child(2),.ht thead th:nth-child(3){text-align:left}
+.ht-wrap .ht td,.ht-wrap .ht tbody th{padding:5px 4px;background:color-mix(in srgb, var(--k) 10%, var(--surface));text-align:right;white-space:nowrap;font-family:var(--f-mono);font-weight:600;line-height:1.1}
+.ht-wrap .ht tbody th{font-weight:700;font-size:1rem;text-align:left;border-left:4px solid var(--k);border-radius:8px 0 0 8px;padding-left:6px;min-width:30px}
+.ht tbody th small{color:var(--muted);margin-left:1px}
+.ht td:last-child{border-radius:0 8px 8px 0;padding-right:8px}
+.ht-wrap .ht td.m{color:var(--muted);font-weight:500}
+.ht-w{text-align:left!important;min-width:58px}
+.ht-w b{font-size:1rem}
+.ht-w small{font-size:.75rem;color:var(--muted)}
+.ht-bar{display:block;position:relative;height:4px;margin-top:3px;border-radius:2px;background:var(--surface-2);overflow:hidden}
+.ht-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+.ht-bar i.g{background:color-mix(in srgb, var(--muted) 45%, transparent)}
+.ht-bar i.w{background:var(--k)}
+.ht-d{text-align:left!important;font-family:var(--f-head)!important;font-weight:700!important}
+.ht-d svg{vertical-align:-1px;margin-right:2px}
+.ht tr.obs td,.ht tr.obs th{opacity:.8}
+.ht tr[data-k]{cursor:pointer}
+.ht-wrap .ht tr.sel td,.ht-wrap .ht tr.sel th{background:color-mix(in srgb, var(--sel) 22%, var(--surface))}
+.ht tr.now-row th{box-shadow:none}
+.ht-wrap .ht tbody th{position:sticky;left:0;z-index:2}
+.tbl.ht-wrap th:first-child,.tbl.ht-wrap td:first-child{box-shadow:none}
+:root[data-size="big"] .ht{font-size:1rem}
+:root[data-size="big"] .ht tbody th,:root[data-size="big"] .ht-w b{font-size:1.15rem}
+.ht-wrap .ht tbody th{color:var(--ink)}
+.ht-wrap .ht td,.ht-wrap .ht tbody th{padding:5px 3px}
+.ht thead th{padding:0 3px 2px}
+.ht-w{min-width:52px}
