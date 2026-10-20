@@ -757,7 +757,7 @@ function applySel(){
     if(j < 0){ g.style.display = "none"; return; }
     g.setAttribute("transform", `translate(${(+d.l) + (+d.dx)*j} 0)`); g.style.display = ""; });
   document.querySelectorAll(".hc-read").forEach(el => { el.innerHTML = readout(k); });
-  document.querySelectorAll("tr[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === k));
+  document.querySelectorAll("tr[data-k], .hl-row[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === k));
 }
 // src: "chart" | "table" | "wm" (el mapa ja s'ha mogut tot sol)
 function selectHour(k, src){
@@ -795,18 +795,30 @@ document.addEventListener("pointermove", e => {
 });
 document.addEventListener("pointerup", e => { if(hcT) hcPick(hcT.svg, e.clientX); hcT = null; hcDrag = null; });
 document.addEventListener("pointercancel", () => { hcT = null; hcDrag = null; });
-document.addEventListener("click", e => { const tr = e.target.closest && e.target.closest("tr[data-k]"); if(tr) selectHour(tr.dataset.k, "table"); });
+document.addEventListener("click", e => { const tr = e.target.closest && e.target.closest("tr[data-k], .hl-row[data-k]"); if(tr) selectHour(tr.dataset.k, "table"); });
+document.addEventListener("keydown", e => { if((e.key === "Enter" || e.key === " ") && e.target.classList?.contains("hl-row")){ e.preventDefault(); selectHour(e.target.dataset.k, "table"); } });
 const chartLegend = wide => `<details class="legend-d"><summary>Què és cada línia?</summary><div class="legend"><span><span class="sw" style="background:var(--accent-2)"></span>Vent mesurat</span><span><span class="sw" style="background:var(--ink)"></span>Vent previst (kn)</span><span><span class="sw" style="background:var(--muted)"></span>Ratxa</span>${wide?`<span><span class="sw" style="background:var(--wave-l)"></span>Onada (m)</span>`:""}<span><span class="sw" style="background:var(--ideal-t);height:10px"></span>Vent ideal ${esc(DEFAULTS[act].short)}</span></div>
   <div class="legend lv-legend"><span><span class="vd" style="background:var(--ideal)"></span>Bo</span><span><span class="vd" style="background:var(--marg)"></span>Limitat</span><span><span class="vd" style="background:var(--no)"></span>No recomanat</span></div>
   <p class="note">Toca o arrossega el gràfic per veure una hora a la targeta de dalt.</p></details>`;
+// «Hores d'…»: llista visual, una fila per hora i sense lliscar de costat.
+// Fila: hora · barra de vent (llargada = vent, part clara = ratxa; color segons els llindars) · direcció · onada.
+// Fons i vora esquerra = veredicte. Tocar una fila la tria (gràfic i mapa) i la desplega amb la resta de dades.
 function hourTable(date, h0, h1){
-  const c = crit[act], nk = nowKey(); let rows = "";
-  for(let h=h0; h<=h1; h++){ const p = hourAt(date,h); if(!p) continue; const s = scoreHour(p,c), v = verdict(s);
-    rows += `<tr data-k="${p.t}" class="${p.t===nk?"now-row":""}"><td class="l">${h}:00${p.obs ? `<small class="obs">mesurat</small>` : ""}</td><td class="l"><span class="tag k-${v.k}"><span class="vd"></span>${v.t}</span></td>
-      <td class="l"><span style="display:inline-flex;align-items:center;gap:4px">${arrow(p.dir,14)}${windAbbr(p.dir)}</span></td>
-      <td><b>${lvTxt(lvWind(p.wind,c), r0(p.wind))}</b></td><td>${lvTxt(lvGust(p.gust,c), r0(p.gust))}</td><td>${lvTxt(lvWave(p.wave,c), r1(p.wave))}${p.wobs ? `<small class="obs">boia</small>` : ""}</td><td>${p.hmax!=null ? (p.hmaxE?"≈":"")+r1(p.hmax) : "–"}</td><td>${r0(p.tp ?? p.per)}</td><td>${r0(p.temp)}°</td><td>${r1(p.sst)}°</td><td>${p.pp ?? "–"}%</td>
-      <td class="warn">${s.flags.map(esc).join(" · ")}</td></tr>`; }
-  return `<div class="tbl"><table><thead><tr><th class="l">Hora</th><th class="l">Estat</th><th class="l">Dir.</th><th>Vent</th><th>Ratxa</th><th>Onada</th><th>Màx.</th><th>Per. s</th><th>Aire</th><th>Aigua</th><th>Pluja</th><th class="l">Avisos</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const c = crit[act], nk = nowKey(), P = [];
+  for(let h=h0; h<=h1; h++){ const p = hourAt(date,h); if(p) P.push([h, p]); }
+  const top = Math.max(c.max || 20, ...P.map(([, p]) => p.gust ?? p.wind ?? 0)), pc = x => Math.max(0, Math.min(100, (x || 0) / top * 100));
+  const rows = P.map(([h, p]) => { const s = scoreHour(p,c), v = verdict(s), kw = lvWind(p.wind,c) || "no", kv = lvWave(p.wave,c);
+    const det = [`<span><b>${esc(v.t)}</b>${v.sub ? " · " + esc(v.sub) : ""}</span>`, `<span>Ratxa <b>${r0(p.gust)}</b> kn</span>`,
+      p.hmax != null ? `<span>Onada màx. <b>${p.hmaxE ? "≈" : ""}${r1(p.hmax)}</b> m</span>` : "", (p.tp ?? p.per) != null ? `<span>Període <b>${r0(p.tp ?? p.per)}</b> s</span>` : "",
+      p.temp != null ? `<span>Aire <b>${r0(p.temp)}°</b></span>` : "", p.sst != null ? `<span>Aigua <b>${r1(p.sst)}°</b></span>` : "", p.pp != null ? `<span>Pluja <b>${p.pp}%</b></span>` : "",
+      p.obs ? `<span>Mesurat · ${esc(STATIONS[stKey]?.name || "")}</span>` : "", p.wobs ? `<span>Onada de la boia</span>` : ""].filter(Boolean).join("");
+    return `<div class="hl-row k-${v.k}${p.t===nk?" now-row":""}${p.obs?" obs":""}" data-k="${p.t}" role="button" tabindex="0" aria-label="${h} h · ${esc(v.t)} · vent ${r0(p.wind)} nusos, ratxa ${r0(p.gust)}, ${windName(p.dir)} · onada ${r1(p.wave)} m">
+      <span class="hl-h">${h}<small>h</small></span>
+      <span class="hl-bar"><i class="g" style="width:${pc(p.gust).toFixed(1)}%"></i><i class="w k-${kw}" style="width:${pc(p.wind).toFixed(1)}%"></i><b>${r0(p.wind)}<small>/${r0(p.gust)}</small></b></span>
+      <span class="hl-dir">${arrow(p.dir,14)}${windAbbr(p.dir)}</span>
+      <span class="hl-wv${kv ? " k-" + kv : ""}">${waveIc(13)}${r1(p.wave)}</span>
+      <span class="hl-det">${det}</span></div>`; }).join("");
+  return `<div class="hl-leg" aria-hidden="true"><span class="k-ideal"><i></i>Bo</span><span class="k-marg"><i></i>Limitat</span><span class="k-no"><i></i>No recomanat</span><span class="hl-leg-u">vent/ratxa kn · onada m</span></div><div class="hl">${rows}</div>`;
 }
 
 /* ---------- informació oficial: bandera de bany (Gencat) i avisos (Meteocat) ---------- */
@@ -1013,7 +1025,7 @@ function renderHoursDay(){
   const tdI = DATA.daily.time.indexOf(todayDate()), hx = new Date(td + "T12:00:00");
   $("hoursTitle").textContent = td === todayDate() ? "Hores d'avui" : td === DATA.daily.time[tdI+1] ? "Hores de demà" : `Hores ${DAYS_L[hx.getDay()].toLowerCase()} ${hx.getDate()}`;
   const wf = DATA.wf;
-  $("iHours").innerHTML = `<p>Una fila per hora, de 7 a 21 h. Les hores passades diuen <b>mesurat</b> i són dades de l'estació ${esc(STATIONS[stKey]?.name || "")}; la resta, previsió del model ${esc(MODELS[model].label)}. Llisca la taula cap als costats per veure totes les columnes.</p>` +
+  $("iHours").innerHTML = `<p>Una fila per hora, de 7 a 21 h. Les hores passades diuen <b>mesurat</b> i són dades de l'estació ${esc(STATIONS[stKey]?.name || "")}; la resta, previsió del model ${esc(MODELS[model].label)}.</p><p><b>Com es llegeix:</b> el color de la fila és el veredicte per a l'embarcació triada. La barra és el vent: com més llarga, més vent; la part clara és la ratxa. El color de la barra diu si el vent és dins els teus llindars (verd), just (taronja) o fora (vermell). A la dreta, d'on ve el vent i l'onada en metres. <b>Toca una hora</b> per veure-la al gràfic i al mapa i desplegar la resta de dades (ratxa, període, aire, aigua, pluja).</p>` +
     (wf && Math.abs(wf.f-1) > 0.05
       ? `<p><b>Onada corregida ×${r1(wf.f)}.</b> Hi ha mar de fons (onada de 7 s o més) i la ${esc(BUOY.name)} mesura ${wf.f > 1 ? "més" : "menys"} onada que el model: a les hores de mar de fons, la previsió d'onada es multiplica per aquest factor.</p>`
       : `<p>L'onada és la del model. Només es corregeix amb la ${esc(BUOY.name)} quan hi ha mar de fons (onada de 7 s o més).</p>`);
