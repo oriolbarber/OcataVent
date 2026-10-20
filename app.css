@@ -1636,3 +1636,4 @@ a.cfg-row:hover{background:var(--surface-2)}
 /* ---------- Mapes: font en una línia i ajuda a la (i) ---------- */
 .map-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
 .map-foot .note{margin:0}
+.log-more summary .lbl,.log-more .src,.log-bak .btn{white-space:nowrap}

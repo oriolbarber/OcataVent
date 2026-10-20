@@ -125,7 +125,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - No hi ha botó de recarregar a la capçalera (decisió de l'Oriol). A dalt de tot de la pàgina, estirar avall obre un espai sota la capçalera amb la fletxa circular (gira amb l'estirada, es pinta d'accent en passar el llindar de 64 px); en deixar anar, `refreshAll()` (previsió, estació, observacions, info i boia) i emet `ov-pull` (club.js rellegeix la secció oberta). No s'activa sobre mapes, gràfics/taules amb scroll horitzontal, pantalles de configuració, fulls ni amb la ruta o webcams obertes. `html{overscroll-behavior-y:contain}` evita el recarregar natiu de Chrome.
 
 ## Historial i Mapes (versió neta, 21-10-2026)
-- Historial: «Sortides al núvol» només amb l'estat; l'explicació a la (i) `#iCloud`. Importar GPX i còpia de seguretat en una sola targeta plegada (`.log-more`; oberta si no hi ha sortides; avís «Només en aquest mòbil» si no hi ha compte ni dades protegides).
+- Historial: «Sortides al núvol» només amb l'estat; l'explicació a la (i) `#iCloud`. Importar GPX i còpia de seguretat en una sola targeta plegada (`.log-more`; oberta si no hi ha sortides; avís «Només al mòbil» si no hi ha compte ni dades protegides).
 - Mapes: sense títol repetit de la pestanya (meteoblue, Windy); la font en una línia (`.map-foot`) i l'ajuda a la (i). Webcams: el text de la font és dins la seva (i).
 
 ## Previsió: pantalla completa (`windmap.js`)

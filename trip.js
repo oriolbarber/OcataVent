@@ -548,14 +548,14 @@ async function renderList(){
   trips.sort((a,b) => b.start - a.start);
   // Importar i còpia de seguretat: plegat en una sola targeta (es fa servir poc). Sense compte, avisa al títol.
   const persisted = await storagePersisted(), inCloud = !!window.OV_CLOUD?.approved();
-  const more = `<details class="card log-more"${!trips.length ? " open" : ""}><summary><span class="lbl">Importa · còpia de seguretat</span>${!inCloud && !persisted ? `<span class="src bad"><span class="dot"></span>Només en aquest mòbil</span>` : ""}</summary>
+  const more = `<details class="card log-more"${!trips.length ? " open" : ""}><summary><span class="lbl">Importa i còpies</span>${!inCloud && !persisted ? `<span class="src bad"><span class="dot"></span>Només al mòbil</span>` : ""}</summary>
     <div class="import-row"><label class="btn imp-btn" for="gpxIn">Importa una sortida (GPX)</label>
       <button class="ib-i" type="button" data-info="iImp" aria-label="Què és importar una sortida i la còpia de seguretat" aria-expanded="false">i</button></div>
     <div class="vp-info" id="iImp" hidden><p><b>Importa:</b> una ruta GPX gravada amb una altra app o un rellotge. L'app hi afegeix el vent que marcava l'estació.</p>
       <p><b>Còpia de seguretat:</b> ${inCloud ? "les sortides del teu compte ja es desen al núvol; la còpia en fitxer és opcional." : "les sortides només es desen en aquest mòbil. Guarda'n una còpia de tant en tant (per exemple, al Drive) per no perdre-les si canvies de mòbil o esborres l'app."} ${persisted ? "El mòbil té les dades protegides." : "El navegador les pot esborrar si falta espai."}</p></div>
     <input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden><div class="msg" id="importMsg" hidden style="margin-top:8px"></div>
-    <div class="g-row log-bak"><button class="btn" type="button" id="backupOut">Fes una còpia</button>
-      <label class="btn" for="backupIn" style="display:inline-flex;align-items:center;justify-content:center">Recupera una còpia</label>
+    <div class="g-row log-bak"><button class="btn" type="button" id="backupOut">Fes còpia</button>
+      <label class="btn" for="backupIn" style="display:inline-flex;align-items:center;justify-content:center">Recupera còpia</label>
       <input type="file" id="backupIn" accept=".json,application/json" hidden></div>
     <div class="msg" id="backupMsg" hidden style="margin-top:8px"></div></details>`;
   const imp = "", bak = more;
