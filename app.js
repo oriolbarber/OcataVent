@@ -705,7 +705,7 @@ function hourChart(date, h0, h1, wide, Wpx, Hpx){
     if(wide){ g += `<g transform="translate(${px-7} ${Hh-B+4})" style="color:var(--ink)">${arrow(x.p.dir,14)}</g>`; if(!thin || j%2===0) g += `<text x="${px}" y="${Hh-4}" text-anchor="middle" font-size="${fs}" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${x.h}</text>`; }
     else if(j%2===0) g += `<text x="${px}" y="${Hh-4}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${x.h}h</text>`;
   });
-  return `<svg class="hc" viewBox="0 0 ${W} ${Hh}" data-date="${date}" data-hs="${hrs.map(x=>x.h).join(",")}" data-l="${L}" data-dx="${dx}" data-w="${W}" role="img" aria-label="Vent per hores: toca o arrossega per triar una hora">${g}</svg>`;
+  return `<svg class="hc" viewBox="0 0 ${W} ${Hh}" data-date="${date}" data-hs="${hrs.map(x=>x.h).join(",")}" data-l="${L}" data-dx="${dx}" data-w="${W}" role="img" aria-label="Previsió horària: toca o arrossega per triar una hora">${g}</svg>`;
 }
 /* ---------- hora seleccionada, compartida pel gràfic, el mapa de vent i les taules ---------- */
 let SEL = null;

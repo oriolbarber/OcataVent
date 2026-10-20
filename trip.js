@@ -381,7 +381,7 @@ function showRide(on){
   if(!rideVisible){ if(liveMapEl === "rideMap") destroyLiveMap(); window.rideCmpOn = false; cmpListen(); fcSlot(false); return; }
   setEco(); rideShowPage(ridePage); rideConfirm(false); renderLive();
 }
-// «Previsió» dins la pantalla de ruta: s'hi porta la targeta «Vent per hores» (gràfic interactiu + mapa) de la portada, i en sortir es torna al seu lloc
+// «Previsió» dins la pantalla de ruta: s'hi porta la targeta «Previsió horària» (gràfic interactiu + mapa) de la portada, i en sortir es torna al seu lloc
 let fcHome = null;
 function fcSlot(on){
   const card = $("windMap"); if(!card) return;

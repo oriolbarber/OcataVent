@@ -1,7 +1,7 @@
 "use strict";
 /* ============ Mar del Masnou · mapes en directe ============ */
 const RV_API = "https://api.rainviewer.com/public/weather-maps.json";
-const WINDY_PRODUCT = {wind:"ecmwf", gust:"ecmwf", waves:"ecmwfWaves", rain:"ecmwf", clouds:"ecmwf"};
+const WINDY_PRODUCT = {wind:"ecmwf", gust:"ecmwf", waves:"ecmwfWaves", rain:"ecmwf"};
 // autoplay/muted: molts reproductors els accepten per URL; si aquest no, no fan res (i cal tocar ▶ dins el vídeo)
 // Badalona: webcam del Club Natació Badalona (la mateixa que mostra badalona.meteoelmasnou.cat), reproductor de Windy
 const CAM2_URL = "https://webcams.windy.com/webcams/public/embed/player?webcamId=1625826131&playerType=live&loop=0&autoPlay=1&interactive=1";
@@ -73,7 +73,7 @@ function showMapKind(k){
 $("mapSeg").addEventListener("click", e => { const b = e.target.closest("button[data-map]"); if(b) showMapKind(b.dataset.map); });
 $("windySeg").addEventListener("click", e => { const b = e.target.closest("button[data-ov]"); if(!b) return; windyOv = b.dataset.ov;
   document.querySelectorAll("#windySeg button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); $("windyFrame").src = windyUrl(windyOv);
-  const t = {waves:"Onades", wind:"Vent", gust:"Ratxes", rain:"Pluja", clouds:"Núvols"}[windyOv]; document.querySelector("#mapWindy .lbl").textContent = t + " · Windy"; });
+  const t = {waves:"Onades", wind:"Vent", gust:"Ratxes", rain:"Pluja"}[windyOv]; document.querySelector("#mapWindy .lbl").textContent = t + " · Windy"; });
 $("radarPlay").addEventListener("click", () => rvPlay(!rvTimer));
 $("radarSlider").addEventListener("input", e => { rvPlay(false); rvShow(+e.target.value); });
 $("radarPlay").innerHTML = PLAY_IC;

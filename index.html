@@ -167,7 +167,7 @@
   </div>
 
   <article class="card wm" id="windMap" hidden>
-    <div class="card-h"><span class="lbl">Vent per hores</span><span class="wm-cap" id="wmCap"></span><button type="button" class="wm-x" data-wmclose aria-label="Tanca la pantalla completa">✕</button></div>
+    <div class="card-h"><span class="lbl">Previsió horària</span><span class="wm-cap" id="wmCap"></span><button type="button" class="wm-x" data-wmclose aria-label="Tanca la pantalla completa">✕</button></div>
     <div class="wm-cwrap"><div class="chart" id="dayChart"></div><button type="button" class="wm-maxb" data-wmfull="chart" aria-label="Gràfic a pantalla completa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
     <div id="dayLegend"></div>
     <div class="hc-read"></div>
@@ -341,7 +341,6 @@
       <button type="button" data-ov="wind" aria-pressed="false">Vent</button>
       <button type="button" data-ov="gust" aria-pressed="false">Ratxes</button>
       <button type="button" data-ov="rain" aria-pressed="false">Pluja</button>
-      <button type="button" data-ov="clouds" aria-pressed="false">Núvols</button>
     </div>
     <div class="frame"><iframe id="windyFrame" title="Mapa animat de Windy" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
     <p class="note">Mou la línia de temps a sota del mapa per veure les properes hores i dies. Toca el mapa per veure els valors d'un punt. Font: Windy.com.</p>
