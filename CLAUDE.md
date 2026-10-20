@@ -129,6 +129,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - Mapes: sense títol repetit de la pestanya (meteoblue, Windy); la font en una línia (`.map-foot`) i l'ajuda a la (i). Webcams: el text de la font és dins la seva (i).
 
 ## Previsió: pantalla completa (`windmap.js`)
+- **Versió neta** (decisió de l'Oriol, 21-10-2026): `scoreWindow` ajunta els motius de 3 hores i el fort amaga el suau (poc vent > vent fluix, massa vent > vent fort, ratxes fortes > ràfagues, onada alta > onada, terral fort > terral, pluja > pluja probable/plugim). Caselles de dades amb text de sota curt que hi cap sencer (el llarg al `title`, 6è paràmetre de `stat`; `suitS` = vestit curt); la ratxa només diu «+N kn de cop» si és més alta que la mitjana. Matí/Migdia/Tarda: veredicte en una línia i onada amb icona en lloc de la direcció (la fletxa ja la diu). Targeta horària: sense la data (`#wmCap`) ni la línia de valors (`.rd-v`) fora de la pantalla completa del gràfic, perquè ja ho diuen els xips de dia i les etiquetes del mapa.
 - Botó de maximitzar al gràfic per hores i al mapa (`data-wmfull="chart|map"`): la targeta `#windMap` passa a `.full` (fixa, a tota la pantalla). El botó enrere d'Android la tanca (`history.pushState` + `popstate`).
 - Gràfic: es redibuixa amb l'amplada i l'alçada lliures (`hourChart(…, Wpx, Hpx)`).
 - S'obre en horitzontal: a l'APK amb `@capacitor/screen-orientation`; al navegador, Fullscreen API + `screen.orientation.lock` (a l'iPhone es queda vertical).

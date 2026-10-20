@@ -1637,3 +1637,14 @@ a.cfg-row:hover{background:var(--surface-2)}
 .map-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
 .map-foot .note{margin:0}
 .log-more summary .lbl,.log-more .src,.log-bak .btn{white-space:nowrap}
+
+/* ---------- Previsió, versió neta (21-10-2026) ---------- */
+/* Matí / Migdia / Tarda: el veredicte en una línia */
+.sl .tag{white-space:nowrap;font-size:.7rem;letter-spacing:.02em}
+:root[data-size="big"] .sl .tag{font-size:.78rem}
+.sl .o{display:flex;align-items:center;gap:4px}
+.sl .o .wave-ic{color:var(--sea);flex:none}
+/* targeta horària: sense la data repetida (ja la diuen els xips de dia) ni els valors repetits (ja els diuen les etiquetes del mapa);
+   a pantalla completa del gràfic, on no hi ha mapa, sí que hi són */
+.wm:not(.full) .wm-cap{display:none}
+.wm:not(.full-chart) .hc-read .rd-v{display:none}

@@ -89,6 +89,7 @@ const IC = {
   clock:`<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`
 };
 const icon = (k, z) => `<svg width="${z||14}" height="${z||14}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
+const suitS = t => t==null ? "" : t>=22 ? "Lycra o bany" : t>=19 ? "Neoprè curt" : t>=16 ? "Neoprè 3/2" : "Neoprè 4/3";   // curt, per a la casella
 const suit = t => t==null ? "" : t>=22 ? "Lycra o banyador" : t>=19 ? "Neoprè curt 2–3 mm" : t>=16 ? "Neoprè 3/2 mm" : "Neoprè 4/3 + escarpins";
 
 /* ---------- puntuació ---------- */
@@ -497,7 +498,10 @@ function scoreWindow(n, c){
   if(!all.length) return scoreHour(n, c);
   const avg = f => { const v = all.map(f).filter(x => x != null); return v.length ? Math.round(v.reduce((a,b)=>a+b,0)/v.length) : null; };
   const PRI = ["poca llum","tempesta","pluja","terral fort","ratxes fortes","massa vent","onada alta","poc vent"];
-  const why = [...new Set(all.flatMap(r => r.why))].sort((x, y) => (PRI.includes(x) ? PRI.indexOf(x) : 99) - (PRI.includes(y) ? PRI.indexOf(y) : 99));
+  const W = new Set(all.flatMap(r => r.why));
+  // en ajuntar 3 hores, el motiu fort amaga el seu grau suau: «poc vent» i «vent fluix» no surten tots dos
+  [["poc vent","vent fluix"],["massa vent","vent fort"],["ratxes fortes","vent a ràfagues"],["onada alta","onada"],["terral fort","terral"],["pluja","pluja probable"],["pluja","plugim"]].forEach(([a, b]) => { if(W.has(a)) W.delete(b); });
+  const why = [...W].sort((x, y) => (PRI.includes(x) ? PRI.indexOf(x) : 99) - (PRI.includes(y) ? PRI.indexOf(y) : 99));
   return {score: avg(r => r.score), wind: avg(r => r.wind), wave: avg(r => r.wave), flags: [...new Set(all.flatMap(r => r.flags))], why, n: all.length};
 }
 // Indicador circular: anell exterior = idoneïtat global (per trams de color), anells interiors = vent (blanc/negre) i onades (blau)
@@ -901,7 +905,8 @@ function renderSeg(){
   $("actSeg").classList.toggle("n4", barActs().length > 3);
   $("actSeg").innerHTML = barActs().map(k => `<button type="button" data-act="${k}" aria-pressed="${k===act}" aria-label="${esc(DEFAULTS[k].name)}" title="${esc(DEFAULTS[k].name)}">${boatIcon(k)}</button>`).join("");
 }
-function stat(ic, label, v, unit, x){ return `<div class="stat"><div class="k"><span class="chip-ic">${icon(ic)}</span><span class="lbl">${label}</span></div><div class="v">${v}${unit?`<small>${unit}</small>`:""}</div><div class="x">${x||"&nbsp;"}</div></div>`; }
+// x = text curt de sota (ha de cabre sencer); full = el text llarg, en passar-hi el dit o el ratolí
+function stat(ic, label, v, unit, x, full){ return `<div class="stat"${full && full !== x ? ` title="${esc(full)}"` : ""}><div class="k"><span class="chip-ic">${icon(ic)}</span><span class="lbl">${label}</span></div><div class="v">${v}${unit?`<small>${unit}</small>`:""}</div><div class="x">${x||"&nbsp;"}</div></div>`; }
 // Widget d'Android (APK): l'app hi passa el veredicte d'ara i la previsió de les 48 h següents; Android el refresca cada 30 min
 // i, quan les dades d'ara són velles, mostra la previsió de l'hora en curs (VentWidget.java). Al navegador no fa res.
 let wgKey = "", wgAt = 0;
@@ -948,16 +953,16 @@ function renderNow(){
   // sense repetir el que ja diu el motiu de sota l'indicador
   // Els avisos (vermells) van com a text al motiu de sota l'indicador; només la informació (mar de fons, aigua freda) va en etiqueta grisa
   const FW = {"Ràfagues":"vent a ràfagues","Probable pluja":"pluja probable","Terral":"terral"}, why = (s.why || []).filter(w => !INFO_FLAGS.some(f => f.toLowerCase() === w));
-  s.flags.filter(f => !INFO_FLAGS.includes(f)).forEach(f => { const w = FW[f] || f.toLowerCase(); if(!why.includes(w) && !(f === "Terral" && why.includes("terral fort"))) why.push(w); });
+  s.flags.filter(f => !INFO_FLAGS.includes(f)).forEach(f => { const w = FW[f] || f.toLowerCase(); if(!why.includes(w) && !(f === "Terral" && why.includes("terral fort")) && !(f === "Ràfagues" && why.includes("ratxes fortes")) && !(f === "Probable pluja" && why.includes("pluja"))) why.push(w); });
   const gw = document.querySelector("#gauge .g-why"); if(gw && why.length) gw.textContent = why.join(" · ");
   $("flags").innerHTML = s.flags.filter(f => INFO_FLAGS.includes(f)).map(f => `<span class="flag info">${esc(f)}</span>`).join("");
   const i = DATA.daily.time.indexOf(todayDate());
   $("stats").innerHTML =
-    stat("gust", "Ratxa", lvTxt(lvGust(n.gust,c), r0(n.gust)), "kn", n.gust!=null&&n.wind!=null ? "+"+r0(n.gust-n.wind)+" sobre la mitjana" : "") +
-    stat("wave", "Onada", lvTxt(lvWave(fc.wave,c), r1(fc.wave)), "m", (fc.hmax!=null ? `màx ${fc.hmaxE?"≈":""}${r1(fc.hmax)} m · ` : "") + waveSrc(fc)) +
-    stat("per", "Període", r1(tpOf(fc)), "s", tpOf(fc)!=null ? (tpOf(fc)<5 ? "mar de vent, curta" : tpOf(fc)<7 ? "mar mixta" : "mar de fons: a la platja creix") + (fc.wdir!=null ? " · de "+windAbbr(fc.wdir) : "") : "") +
-    stat("air", "Aire", r0(n.temp), "°C", live ? `Hum. ${r0(ST.hum)}% · ${r0(ST.pres)} hPa` : "") +
-    stat("water", "Aigua", r1(fc.sst), "°C", suit(fc.sst)) +
+    stat("gust", "Ratxa", lvTxt(lvGust(n.gust,c), r0(n.gust)), "kn", n.gust!=null&&n.wind!=null&&Math.round(n.gust-n.wind) > 0 ? "+"+r0(n.gust-n.wind)+" kn de cop" : "") +
+    stat("wave", "Onada", lvTxt(lvWave(fc.wave,c), r1(fc.wave)), "m", fc.hmax!=null ? `màx ${fc.hmaxE?"≈":""}${r1(fc.hmax)} m` : waveSrc(fc), waveSrc(fc)) +
+    stat("per", "Període", r1(tpOf(fc)), "s", tpOf(fc)!=null ? (tpOf(fc)<5 ? "curta" : tpOf(fc)<7 ? "mixta" : "llarga") + (fc.wdir!=null ? " · de "+windAbbr(fc.wdir) : "") : "") +
+    stat("air", "Aire", r0(n.temp), "°C", live && ST.hum != null ? `Humitat ${r0(ST.hum)}%` : "", live ? `Humitat ${r0(ST.hum)}% · ${r0(ST.pres)} hPa` : "") +
+    stat("water", "Aigua", r1(fc.sst), "°C", suitS(fc.sst), suit(fc.sst)) +
     stat("sun", "Posta", DATA.daily.sunset[i]?.slice(11,16) || "–", "", "Sortida "+(DATA.daily.sunrise[i]?.slice(11,16)||"–"));
   const td = todayDate();
   // Vista de lletra gran: només xifres i paraules, sense indicadors gràfics
@@ -980,7 +985,7 @@ function renderNow(){
   const slots = SLOTS.map(sl => { const a = slotAgg(vd, sl, c); if(!a) return "";
     const vv = verdict(a);
     return `<div class="sl k-${vv.k}${a.past?" past":""}"><div class="h">${sl.label}<span class="tag"><span class="vd"></span>${vv.t}</span></div>
-      <div class="w">${arrow(a.dir,13)}${r0(a.wind)}<small>/${r0(a.gust)} kn</small></div><div class="o">${windAbbr(a.dir)} · ${r1(a.wave)} m</div>${a.code != null ? `<span class="sl-wx">${wxIcon(a.code, 18)}</span>` : ""}</div>`; }).join("");
+      <div class="w">${arrow(a.dir,13)}${r0(a.wind)}<small>/${r0(a.gust)} kn</small></div><div class="o">${waveIc(12)} ${r1(a.wave)} m</div>${a.code != null ? `<span class="sl-wx">${wxIcon(a.code, 18)}</span>` : ""}</div>`; }).join("");
   const ol = $("outlook");
   const dd = new Date(vd + "T12:00:00");
   ol.innerHTML = `<div class="card-h" style="margin-bottom:6px">${daySeg("day-seg", false)}
