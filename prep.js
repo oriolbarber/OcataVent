@@ -36,7 +36,7 @@ function render(){
   hrs.forEach(x => { if(x.v.k === "ideal"){ run = run && run.to === x.h - 1 ? {from: run.from, to: x.h} : {from: x.h, to: x.h}; if(!best || run.to - run.from > best.to - best.from) best = {...run}; } else run = null; });
   const why = (v.sub || "").trim();
   const light = left == null ? "" : left > 0 ? `Llum fins a les ${hm(dark)} · queden <b>${durTxt(left)}</b>`
-    : `Ja hi ha poca llum${rise1 ? ` · demà, a partir de les ${hm(new Date(rise1.getTime() - 30 * 60e3))}` : ""}`;
+    : rise1 ? `Demà, a partir de les <b>${hm(new Date(rise1.getTime() - 30 * 60e3))}</b>` : "";
   const plan = !hrs.length ? "" : best ? (best.from === h0 && best.to === h1 ? "Bo fins a la posta" : `Millor franja: <b>${best.from}–${best.to + 1} h</b>`)
     : hrs.some(x => x.v.k === "marg") ? "Avui, com a molt, condicions limitades" : "No es preveu cap hora recomanada fins a la posta";
   // avisos de Meteocat d'avui i bandera
@@ -46,7 +46,7 @@ function render(){
   el.innerHTML = `
     <div class="pn-top k-${v.k}">
       <div class="pn-score"><b>${s.score == null ? "–" : Math.round(s.score / 10)}</b><small>/10</small></div>
-      <div class="pn-v"><span class="pn-boat">${boatIcon(act, 18)}${esc(DEFAULTS[act].name)} · ara</span><b class="pn-t">${esc(v.t)}</b>${why ? `<span class="pn-why">${esc(why)}</span>` : ""}</div>
+      <div class="pn-v"><b class="pn-t">${esc(v.t)}</b>${why ? `<span class="pn-why">${esc(why)}</span>` : ""}</div>
     </div>
     ${hrs.length ? `<div class="pn-hrs" aria-label="Hores fins a la posta">${hrs.map(x => `<button type="button" class="pn-h k-${x.v.k}" data-ph="${x.h}" aria-pressed="${x.h === (selH ?? h0)}" aria-label="${x.h} h · ${esc(x.v.t)} · ${r0(x.p.wind)} kn"><span>${x.h} h</span><i></i><b>${r0(x.p.wind)}</b>${wmArrow(x.p.dir, 14)}</button>`).join("")}</div>` : ""}
     <div class="pn-lines">
@@ -130,9 +130,9 @@ function drawWind(){
   const c = crit[act], kw = lvWind(w.wind, c), kwv = lvWave(w.wave, c);
   let dw = LY.vent ? w.dir : null, dv = LY.onades && w.wave != null ? w.wdir : null, oW = 0, oV = 0;
   if(dw != null && dv != null){ const d = ((dv - dw + 540) % 360) - 180; if(Math.abs(d) < 40){ dw = dv = dw + d / 2; oW = -15; oV = 14; } }
-  setFlag("w", dw, `<b>${r1(w.wind)}</b> kn<small>${windAbbr(w.dir)} · R${r0(w.gust)}</small>`, kw ? `var(--${kw})` : "var(--muted)", oW);
+  setFlag("w", dw, `<b>${r1(w.wind)}</b> kn<small>${windAbbr(w.dir)} · R${r0(w.gust)}${w.h != null ? ` · ${w.h} h` : ""}</small>`, kw ? `var(--${kw})` : "var(--muted)", oW);
   setFlag("v", dv, `<b>${r1(w.wave)}</b> m<small>${r0(w.per)} s</small>`, kwv ? `var(--${kwv})` : "var(--muted)", oV);
-  $("prepWindT").innerHTML = w.wind == null ? "" : `${w.h != null ? `<b>A les ${w.h} h</b> · vent previst` : `Vent ${w.live ? "mesurat" : "previst"}`}: <b>${windName(w.dir)}</b> (${windAbbr(w.dir)}) ${r1(w.wind)} kn, ratxa ${r0(w.gust)}${w.wave != null ? ` · onada ${r1(w.wave)} m de ${windAbbr(w.wdir)}` : ""}`;
+  // (el vent i l'onada ja surten a les etiquetes del mapa: sense frase repetida a sota)
   fx.kick();
 }
 /* ---------- GPS (només per comprovar-lo i situar-te; la gravació té el seu) ---------- */
@@ -140,9 +140,11 @@ function gpsTxt(t, k){ const e = $("prepGps"); if(!e) return; e.className = "src
 async function startGps(){
   if(watchId != null || recording() || !visible()) return;
   if(!("geolocation" in navigator)){ gpsTxt("Sense GPS"); return; }
-  let st = "prompt"; try{ st = (await navigator.permissions.query({name:"geolocation"})).state; }catch(e){ if(window.OV_NATIVE) st = "granted"; }
+  // A l'app, la WebView diu sempre «prompt» encara que Android hagi donat el permís: s'hi prova directament
+  let st = "prompt"; try{ st = (await navigator.permissions.query({name:"geolocation"})).state; }catch(e){}
+  if(window.OV_NATIVE && st !== "denied") st = "granted";
   if(st === "denied"){ gpsTxt("Ubicació denegada", "bad"); return; }
-  if(st !== "granted"){ gpsTxt("Toca «Permet» a GPS, a sota"); return; }
+  if(st !== "granted"){ gpsTxt("GPS sense permís"); return; }
   if(watchId != null || !visible()) return;
   gpsTxt("Buscant el GPS…");
   watchId = navigator.geolocation.watchPosition(onFix, e => gpsTxt(e.code === 1 ? "Ubicació denegada" : "Sense senyal GPS", "bad"), {enableHighAccuracy:true, maximumAge:5000, timeout:30000});

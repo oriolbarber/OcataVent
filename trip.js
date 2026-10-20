@@ -183,7 +183,7 @@ function startTrip(){
   $("tripErr").hidden = true;
   const eco = false;   // sempre comença en mode normal; l'estalvi es tria dins la pantalla de ruta
   const t0 = Date.now();
-  LIVE = {id: t0, name: $("tripName").value.trim(), act, start: t0, pts: [], wind: [], eco, station: stKey};
+  LIVE = {id: t0, name: "", act, start: t0, pts: [], wind: [], eco, station: stKey};
   if(!startWatch()){ LIVE = null; return; }
   saveLive(); setRecUI(); showRide(true);
   window.OV_CLUB?.tripStart(LIVE);   // presència «a l'aigua» (només si el soci ho té activat)
@@ -233,9 +233,9 @@ async function finishTrip(){
   trip.summary = summarize(trip);
   try{ await DB.put(trip); }catch(e){}
   window.OV_CLOUD?.saved(trip);
-  LIVE = null; store.del("ov2_live"); $("tripName").value = ""; window.OV_CLUB?.tripEnd();
+  LIVE = null; store.del("ov2_live"); window.OV_CLUB?.tripEnd();
   destroyLiveMap(); setRecUI();
-  go("log"); showTrip(trip.id);
+  go("log"); showTrip(trip.id, true);   // acabada de desar: demana el nom
 }
 function discardTrip(){
   if(Date.now() - confirmDiscard > 4000){ confirmDiscard = Date.now(); $("discardTrip").textContent = "Toca de nou: s'esborrarà la ruta"; setTimeout(() => $("discardTrip").textContent = "Descarta la sortida", 4000); return; }
@@ -600,7 +600,7 @@ function seriesChart(trip){
   return `<div class="chart wide"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Velocitat del vaixell i vent durant la sortida">${g}</svg></div>
     <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>Velocitat vaixell (kn)</span><span><span class="sw" style="background:var(--accent-2)"></span>Vent ${winds.some(w=>w.src==="estació")?"estació":"model"} (kn)</span><span><span class="sw" style="background:var(--accent-2);opacity:.6"></span>Ratxa</span></div>`;
 }
-async function showTrip(id){
+async function showTrip(id, ask){
   const t = await DB.get(id); if(!t){ renderList(); return; }
   const s = t.summary || summarize(t), d = new Date(t.start);
   $("logList").hidden = true; $("logDetail").hidden = false;
@@ -611,7 +611,8 @@ async function showTrip(id){
   $("logDetail").innerHTML = `
     <div style="display:flex;gap:8px;align-items:center"><button class="btn" type="button" id="backList">← Sortides</button></div>
     <article class="card"><span class="lbl">${esc(DEFAULTS[t.act]?.name||"")} · ${d.toLocaleDateString("ca",{weekday:"long",day:"numeric",month:"long"})}</span>
-      <h2 style="font-size:1.6rem;text-transform:uppercase;margin-top:2px">${esc(t.name || "Sortida de les "+pad(d.getHours())+":"+pad(d.getMinutes()))}</h2>
+      ${ask && !t.name ? `<div class="tr-name"><input class="field" id="trName" type="text" maxlength="60" placeholder="Posa-li nom (opcional) · p. ex. Regata de dissabte" autocomplete="off" aria-label="Nom de la sortida"><button class="btn" type="button" id="trNameOk" data-tid="${t.id}">Desa</button></div>`
+        : `<div class="tr-title"><h2 style="font-size:1.6rem;text-transform:uppercase;margin-top:2px">${esc(t.name || "Sortida de les "+pad(d.getHours())+":"+pad(d.getMinutes()))}</h2><button class="ib" type="button" id="trRename" data-tid="${t.id}" aria-label="Canvia el nom de la sortida" title="Canvia el nom"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg></button></div>`}
       <div class="muted" style="font-weight:600;font-size:.85rem">${pad(d.getHours())}:${pad(d.getMinutes())} – ${t.end?new Date(t.end).toTimeString().slice(0,5):"–"} · ${s.points} punts GPS</div></article>
     ${s.gapN ? `<div class="warnbox">⚠ Aquesta sortida té ${s.gapN} ${s.gapN === 1 ? "tram" : "trams"} sense GPS (${fmtDurShort(s.gapS*1000)} en total), segurament amb la pantalla apagada. Al mapa surten amb línia discontínua: la distància hi és en línia recta i la velocitat no s'hi pot calcular.</div>` : ""}
     <div class="big-stats">
@@ -674,6 +675,19 @@ $("logList").addEventListener("click", e => { if(e.target.closest("#backupOut"))
 storagePersisted();
 $("stopTrip").addEventListener("click", stopTrip);
 $("logList").addEventListener("click", e => { const b = e.target.closest("[data-trip]"); if(b) showTrip(+b.dataset.trip); });
+// Nom de la sortida: es posa en acabar (camp a dalt de la fitxa) o després amb el llapis
+async function nameTrip(id, v){
+  const t = await DB.get(id); if(!t) return; t.name = String(v || "").trim().slice(0, 60);
+  try{ await DB.put(t); }catch(e){} window.OV_CLOUD?.saved(t); showTrip(id);
+}
+$("logDetail").addEventListener("click", async e => {
+  const b = e.target.closest && e.target.closest("#trNameOk, #trRename"); if(!b) return;
+  const id = +b.dataset.tid;
+  if(b.id === "trNameOk"){ nameTrip(id, $("trName").value); return; }
+  const t = await DB.get(id); if(!t) return; await showTrip(id, true);
+  const i = $("trName"); if(i){ i.value = t.name || ""; i.focus(); }
+});
+$("logDetail").addEventListener("keydown", e => { if(e.key === "Enter" && e.target.id === "trName") $("trNameOk")?.click(); });
 window.addEventListener("mm-view", e => {
   if(e.detail === "trip" && LIVE) showRide(true);
   if(e.detail === "log") renderList();
@@ -756,6 +770,8 @@ function ckShow(k){
   document.querySelectorAll("#ckRow .ck").forEach(b => b.setAttribute("aria-expanded", String(b.dataset.ck === k)));
   const b = k && document.querySelector(`#ckRow .ck[data-ck="${k}"]`);
   d.hidden = !b; if(b) d.innerHTML = b.querySelector("small").innerHTML;
+  // el botó de la bateria (Obre els ajustos / Ja ho he fet) només surt amb el detall de la bateria obert
+  const bb = $("pmBatBtn"); if(bb) bb.classList.toggle("ck-off", k !== "bat");   // «Permet la ubicació» sí que es veu sempre: sense GPS no es pot gravar
 }
 $("ckRow").addEventListener("click", e => { const b = e.target.closest(".ck"); if(b) ckShow(ckOpen === b.dataset.ck ? null : b.dataset.ck); });
 document.addEventListener("click", e => { if(e.target.id === "pmGeoBtn"){

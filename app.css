@@ -1584,3 +1584,29 @@ a.cfg-row:hover{background:var(--surface-2)}
 #iRose ul{margin:4px 0 8px;padding-left:20px}
 #iRose li{margin:3px 0}
 #iRose b[class^="k-"]{color:var(--k)}
+
+/* ---------- Nova sortida, versió neta (21-10-2026) ---------- */
+/* capes del mapa: icones a dalt a la dreta, dins el mapa (el zoom és a l'esquerra) */
+.prep-mw{position:relative}
+.prep-ly{position:absolute;top:10px;right:10px;z-index:800;display:flex;flex-direction:column;gap:6px;grid-template-columns:none}
+.prep-ly button{width:44px;height:44px;min-height:0;padding:0;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;box-shadow:0 1px 4px #0005;cursor:pointer}
+.prep-ly button[aria-pressed="true"]{border-color:var(--accent);color:var(--on-accent);background:var(--accent)}
+:root[data-size="big"] .prep-ly button{width:48px;height:48px;min-height:0}
+/* comprovacions: una fila de xips (icona + nom); el detall, en tocar-ne un */
+.prep-checks{padding:10px 12px}
+.ck-row{display:flex;gap:8px;grid-template-columns:none}
+.ck{flex:1 1 0;flex-direction:row;gap:6px;min-height:46px;padding:4px 8px;border-radius:12px}
+.ck em{display:none}
+.ck.pm-info em,.ck.bad em,.ck.wait em{display:none}
+.ck .pm-ic{width:22px;height:22px;flex:none}
+.ck b{font-size:.95rem}
+:root[data-size="big"] .ck b{font-size:1.05rem}
+.ck-off{display:none!important}
+/* nom de la sortida, en acabar */
+.tr-name{display:flex;gap:8px;margin-top:6px}
+.tr-name .field{flex:1;min-width:0;min-height:48px;font-family:var(--f-body)}
+.tr-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ck{gap:5px;padding:4px 4px}
+.ck b{letter-spacing:.02em}
+.ck .pm-ic{width:20px;height:20px;font-size:12px}
+:root[data-size="big"] .ck b{font-size:.98rem}
