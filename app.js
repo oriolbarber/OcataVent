@@ -938,8 +938,8 @@ function renderNow(){
   if(!DATA) return;
   const fc = DATA.now, c = crit[act], live = stFresh();
   const n = live ? Object.assign({}, fc, {wind:ST.wind, gust:ST.gust, dir:ST.dir, temp:ST.temp}) : fc;
-  if(n.wind==null){ $("hero").hidden = true; return; }
-  $("hero").hidden = false;
+  if(n.wind==null){ $("hero").hidden = true; $("outlook").hidden = true; return; }
+  $("hero").hidden = false; $("outlook").hidden = false;   // Avui/Demà + franges: sota el mapa, just a sobre d'«Hores d'avui» (decisió de l'Oriol)
   const s = scoreWindow(n, c), v = verdict(s);
   widgetPush(n, s, v, live, c);
   const mins = live ? Math.max(0, Math.round((Date.now()-ST.at)/60000)) : null;
