@@ -83,7 +83,7 @@ h2,h3{font-family:var(--f-head);font-weight:700;margin:0;letter-spacing:.03em}
 .flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .flag{font-size:.78rem;font-weight:700;color:var(--no);background:var(--no-t);border-radius:8px;padding:3px 8px}
 
-.hero-sep{border:0;border-top:1px solid var(--muted);opacity:.35;margin:0 6px}
+.hero-sep{border:0;height:2px;border-radius:2px;background:var(--muted);opacity:.6;margin:0}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:9px 10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px;min-width:0}
 .stat .k{display:flex;align-items:center;gap:6px}
