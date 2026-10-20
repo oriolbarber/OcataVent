@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=172">
+<link rel="stylesheet" href="app.css?v=173">
 </head>
 <body>
 <div class="app">
@@ -152,11 +152,25 @@
       </div>
       <div class="vp-info" id="iInd" hidden>
         <p><b>Idoneïtat</b>: nota de 0 a 10 per a l'embarcació triada, amb la mitjana de l'última hora mesurada i les 2 hores següents de previsió. L'anell exterior va del vermell (0) al taronja (5) i al verd (10); els de dins i els mini indicadors són el vent (blanc o negre) i les onades (blau). A sota, la bandera de bany i el motiu.</p>
-        <p><b>Rosa dels vents</b>: d'on ha bufat i d'on bufarà avui. Barres <b>plenes</b>: vent mesurat a l'estació; <b>buides</b>: previsió fins a la posta. Com més llarga, més estona de vent d'aquella direcció. El con és el vent d'ara i el número del centre, la força. La icona blava de fora indica d'on ve l'onada i l'alçada. El botó rodó de dalt a la dreta orienta la rosa amb la brúixola del mòbil: el nord apunta al nord real i el triangle blau marca cap on mires.</p>
+        <p>La <b>rosa dels vents</b> té la seva pròpia (i), a sota a l'esquerra.</p>
       </div>
       <div class="now-grid">
         <div class="gauge" id="gauge"></div>
         <div class="rose" id="rose"></div>
+      </div>
+      <div class="vp-info" id="iRose" hidden>
+        <p><b>Què és:</b> un resum del vent d'avui. Cada barra és una direcció (cada 10°) i diu quanta estona hi ha bufat o hi bufarà avui: les hores ja passades, de l'estació; les que queden fins a la posta, de la previsió. Com més llarga, més estona. Les direccions amb poca estona també es veuen.</p>
+        <p><b>Colors de cada barra</b> (del centre enfora): quina part d'aquella estona és bona per a l'embarcació triada a dalt. <b class="k-ideal">Verd</b> = bo, <b class="k-marg">taronja</b> = just, <b class="k-no">vermell</b> = no (massa fluix, massa fort, ràfagues, onada…). Si canvies d'embarcació, la rosa canvia.</p>
+        <p><b>Con:</b> d'on bufa ara, pintat amb la idoneïtat d'ara. Al centre, la força en nusos.</p>
+        <p><b>Lletres:</b> els vents (TRA tramuntana, GRE gregal, LLE llevant, XAL xaloc, MIG migjorn, GAR garbí, PON ponent, MES mestral). En <b class="k-marg">taronja</b>, els de terra (terral: t'allunyen de la costa); en blau, els de mar. La icona blava de fora és d'on ve l'onada.</p>
+        <p><b>Com treure'n profit:</b></p>
+        <ul>
+          <li><b>On és el verd?</b> La barra verda més llarga és la direcció que avui et dona més bones hores.</li>
+          <li><b>El con, és al verd?</b> Si ara bufa d'una direcció vermella però hi ha barres verdes llargues en una altra, el vent hi pot girar més tard (la típica marinada de migdia). Mira a quina hora a «Hores d'avui».</li>
+          <li><b>Barres llargues cap a lletres taronges (terral):</b> dia de vent de terra. Navega a prop i vigila: si fluixeja o rola, costa tornar.</li>
+          <li><b>Moltes direccions curtes:</b> vent variable, sense un règim clar.</li>
+        </ul>
+        <p>El botó rodó de baix a la dreta orienta la rosa amb la brúixola del mòbil: el nord apunta al nord real i el triangle blau marca cap on mires.</p>
       </div>
       <div class="flags" id="flags"></div>
       <div class="info" id="info" aria-live="polite"></div>
@@ -415,7 +429,7 @@
 <script src="native.js?v=114"></script>
 <script src="clubs.js?v=1"></script>
 <script src="boats.js?v=2"></script>
-<script src="app.js?v=136"></script>
+<script src="app.js?v=137"></script>
 <script src="cfg.js?v=5"></script>
 <script src="ajuda.js?v=1"></script>
 <script src="trip.js?v=123"></script>
