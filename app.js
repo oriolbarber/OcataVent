@@ -818,8 +818,7 @@ function hourTable(date, h0, h1){
       <td class="m">${p.sst != null ? r0(p.sst) + "°" : "–"}</td>
       <td class="m">${p.temp != null ? r0(p.temp) + "°" : "–"}</td>
       <td class="m">${p.pp != null ? p.pp + "%" : "–"}</td></tr>`; }).join("");
-  return `<div class="ht-leg" aria-hidden="true"><span class="k-ideal"><i></i>Bo</span><span class="k-marg"><i></i>Limitat</span><span class="k-no"><i></i>No recomanat</span><span class="ht-leg-u">kn · m · s · • mesurat</span></div>
-    <div class="tbl ht-wrap"><table class="ht"><thead><tr><th>h</th><th>Vent <small>kn</small></th><th>Dir.</th><th>Onada</th><th>Màx.</th><th>Per.</th><th>Aigua</th><th>Aire</th><th>Pluja</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="tbl ht-wrap"><table class="ht"><thead><tr><th>Hora</th><th>Vent<small>kn</small></th><th>Dir.</th><th>Onada<small>m</small></th><th>Màx.<small>m</small></th><th>Per.<small>s</small></th><th>Aigua<small>°C</small></th><th>Aire<small>°C</small></th><th>Pluja<small>%</small></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 /* ---------- informació oficial: bandera de bany (Gencat) i avisos (Meteocat) ---------- */
@@ -1026,7 +1025,7 @@ function renderHoursDay(){
   const tdI = DATA.daily.time.indexOf(todayDate()), hx = new Date(td + "T12:00:00");
   $("hoursTitle").textContent = td === todayDate() ? "Hores d'avui" : td === DATA.daily.time[tdI+1] ? "Hores de demà" : `Hores ${DAYS_L[hx.getDay()].toLowerCase()} ${hx.getDate()}`;
   const wf = DATA.wf;
-  $("iHours").innerHTML = `<p>Una fila per hora, de 7 a 21 h. Les hores passades diuen <b>mesurat</b> i són dades de l'estació ${esc(STATIONS[stKey]?.name || "")}; la resta, previsió del model ${esc(MODELS[model].label)}.</p><p><b>Com es llegeix:</b> el color de la fila és el veredicte per a l'embarcació triada. Vent: mitjana/ratxa en nusos, amb una barra fina (com més llarga, més vent; la part clara és la ratxa). El color del número del vent i de l'onada diu si és dins els teus llindars (verd), just (taronja) o fora (vermell). Després: direcció, onada, onada màxima, període, temperatura de l'aigua i de l'aire i probabilitat de pluja. <b>Toca una hora</b> per veure-la al gràfic i al mapa, amb els motius del veredicte. El punt • vol dir mesurat (estació o boia).</p>` +
+  $("iHours").innerHTML = `<p>Una fila per hora, de 7 a 21 h. Les hores passades diuen <b>mesurat</b> i són dades de l'estació ${esc(STATIONS[stKey]?.name || "")}; la resta, previsió del model ${esc(MODELS[model].label)}.</p><p><b>Com es llegeix:</b> el color de la fila és el veredicte per a l'embarcació triada: <b class="lv k-ideal">verd</b> bo, <b class="lv k-marg">taronja</b> limitat, <b class="lv k-no">vermell</b> no recomanat. Vent: mitjana/ratxa en nusos, amb una barra fina (com més llarga, més vent; la part clara és la ratxa). El color del número del vent i de l'onada diu si és dins els teus llindars (verd), just (taronja) o fora (vermell). Després: direcció, onada, onada màxima, període, temperatura de l'aigua i de l'aire i probabilitat de pluja. <b>Toca una hora</b> per veure-la al gràfic i al mapa, amb els motius del veredicte. El punt • vol dir mesurat (estació o boia).</p>` +
     (wf && Math.abs(wf.f-1) > 0.05
       ? `<p><b>Onada corregida ×${r1(wf.f)}.</b> Hi ha mar de fons (onada de 7 s o més) i la ${esc(BUOY.name)} mesura ${wf.f > 1 ? "més" : "menys"} onada que el model: a les hores de mar de fons, la previsió d'onada es multiplica per aquest factor.</p>`
       : `<p>L'onada és la del model. Només es corregeix amb la ${esc(BUOY.name)} quan hi ha mar de fons (onada de 7 s o més).</p>`);
