@@ -665,7 +665,6 @@ function download(t, kind){
 $("startTrip").addEventListener("click", startTrip);
 $("ecoMode").checked = false;
 if(window.OV_NATIVE){ const rt = $("rideTip"); if(rt) rt.textContent = "Si no la toques es posa negra: dos tocs per tornar-la a veure."; }
-if(window.OV_NATIVE){ const tt = $("tnTipT"); if(tt) tt.textContent = "Si no la toques, la pantalla es posa negra: dos tocs per tornar-la a veure"; }
 $("ecoOn").addEventListener("click", () => showRide(true));
 $("logList").addEventListener("change", e => {
   if(e.target.id === "gpxIn" && e.target.files[0]) importGpx(e.target.files[0]);

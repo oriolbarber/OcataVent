@@ -396,8 +396,7 @@ function tripBoatUI(){
   el.hidden = false;
   el.innerHTML = `<span class="lbl">Embarcació del club</span><div class="cl-chips">${M.map(b => { const rep = (b.estat || "lloc") === "reparacio";
       return `<button type="button" class="cl-chip" data-tboat="${esc(b.id)}" aria-pressed="${cur === b.id}"${rep ? " disabled" : ""}>${esc(b.label || B[b.t]?.n || "Embarcació")}${rep ? " · en reparació" : ""}</button>`; }).join("")}
-    <button type="button" class="cl-chip" data-tboat="cap" aria-pressed="${cur === null}">Cap</button></div>
-    <p class="note">${cur ? "Mentre duri la sortida sortirà com a «navegant» al plànol del club." : "No es marcarà cap embarcació com a navegant."}</p>`;
+    <button type="button" class="cl-chip" data-tboat="cap" aria-pressed="${cur === null}">Cap</button></div>`;
 }
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("#tripBoat [data-tboat]"); if(!b) return; store.set("ov2_trip_pick", b.dataset.tboat); tripBoatUI(); });
 async function tripBoatStart(){
