@@ -1685,5 +1685,5 @@ a.cfg-row:hover{background:var(--surface-2)}
 .ht thead th{padding:0 3px 2px}
 .ht-w{min-width:52px}
 /* capçalera de la taula d'hores: la unitat a sota del nom (sense llegenda a part) */
-.ht thead th{vertical-align:bottom;line-height:1.05}
+.ht thead th{vertical-align:top;line-height:1.05}
 .ht thead th small{display:block;font-size:.66rem;font-weight:600;letter-spacing:0;text-transform:none;opacity:.85}
