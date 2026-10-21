@@ -2,6 +2,8 @@ name: tmp comparar estacions
 on:
   push:
     branches: [tmp-estacions]
+permissions:
+  contents: write
 jobs:
   c:
     runs-on: ubuntu-latest
@@ -10,4 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: TZ=Europe/Madrid node tmp/compara.mjs
+      - run: TZ=Europe/Madrid node tmp/compara.mjs > tmp/out.txt 2>&1 || true
+      - run: |
+          git config user.name bot; git config user.email bot@users.noreply.github.com
+          git add tmp/out.txt; git commit -m "tmp out [skip ci]"; git push
