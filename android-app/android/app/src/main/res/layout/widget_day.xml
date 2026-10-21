@@ -34,9 +34,9 @@
         android:layout_height="5dp"
         android:layout_marginTop="3dp"
         android:orientation="horizontal">
-        <View android:id="@+id/dS0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@drawable/seg_none" />
-        <View android:id="@+id/dS1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="2dp" android:background="@drawable/seg_none" />
-        <View android:id="@+id/dS2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="2dp" android:background="@drawable/seg_none" />
+        <FrameLayout android:id="@+id/dS0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@drawable/seg_none" />
+        <FrameLayout android:id="@+id/dS1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="2dp" android:background="@drawable/seg_none" />
+        <FrameLayout android:id="@+id/dS2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="2dp" android:background="@drawable/seg_none" />
     </LinearLayout>
     <TextView
         android:id="@+id/dWind"
