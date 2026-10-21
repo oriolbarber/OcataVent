@@ -17,6 +17,7 @@ public class WidgetPlugin extends Plugin {
         Context c = getContext();
         c.getSharedPreferences(VentWidget.PREFS, Context.MODE_PRIVATE).edit().putString(VentWidget.KEY, d).apply();
         VentWidget.updateAll(c);
+        WeekWidget.updateAll(c);
         call.resolve();
     }
 }

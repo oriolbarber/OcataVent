@@ -45,6 +45,19 @@
                 android:resource="@xml/widget_vent_info" />
         </receiver>
 
+        <!-- Widget compacte (4 × 1): avui i els 7 dies següents (WeekWidget, mateixes dades) -->
+        <receiver
+            android:name=".WeekWidget"
+            android:label="@string/widget_week_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_week_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

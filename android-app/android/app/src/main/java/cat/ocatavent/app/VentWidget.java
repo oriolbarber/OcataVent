@@ -29,7 +29,7 @@ public class VentWidget extends AppWidgetProvider {
     static final String PREFS = "ov_widget", KEY = "snap";
     static final long NOW_MAX = 45 * 60 * 1000L, HOUR = 3600 * 1000L;
     static final Locale CA = new Locale("ca", "ES");
-    static final int WEEK_MIN = 140;   // dp: per sota, només el veredicte d'ara
+    static final int WEEK_MIN = 120;   // dp: per sota, només el veredicte d'ara
     static final String[] DOW = {"Dg", "Dl", "Dt", "Dc", "Dj", "Dv", "Ds"};
     static final int[] SEG = {R.id.dS0, R.id.dS1, R.id.dS2};
 
@@ -98,7 +98,7 @@ public class VentWidget extends AppWidgetProvider {
             String why = e.optString("why", "");
             v.setTextViewText(R.id.wWave, wave + (!wave.isEmpty() && !why.isEmpty() ? " · " : "") + why);
             v.setTextViewText(R.id.wSrc, src);
-            fillWeek(c, v, o, showWeek);
+            fillWeek(c, v, o, showWeek, 7);
         } catch (Exception ex) {
             empty(v, "Ocata Vent", "Obre l'app per veure les condicions");
         }
@@ -108,16 +108,16 @@ public class VentWidget extends AppWidgetProvider {
     static int bgDay(String k) { return "ideal".equals(k) ? R.drawable.day_ideal : "marg".equals(k) ? R.drawable.day_marg : "no".equals(k) ? R.drawable.day_no : R.drawable.day_none; }
     static int bgSeg(String k) { return "ideal".equals(k) ? R.drawable.seg_ideal : "marg".equals(k) ? R.drawable.seg_marg : "no".equals(k) ? R.drawable.seg_no : R.drawable.seg_none; }
 
-    // Resum de 7 dies a partir d'avui (la llista en porta 8: si el paquet és d'ahir, en continuen quedant 7)
-    static void fillWeek(Context c, RemoteViews v, JSONObject o, boolean show) throws Exception {
+    // Resum de `max` dies a partir d'avui (la llista en porta 9: si el paquet és d'ahir, en continuen quedant prou). Torna quants n'ha posat.
+    static int fillWeek(Context c, RemoteViews v, JSONObject o, boolean show, int max) throws Exception {
         v.removeAllViews(R.id.wWeek);
         JSONArray days = o.optJSONArray("days");
-        if (!show || days == null || days.length() == 0) { v.setViewVisibility(R.id.wWeek, android.view.View.GONE); return; }
+        if (!show || days == null || days.length() == 0) { v.setViewVisibility(R.id.wWeek, android.view.View.GONE); return 0; }
         long now = System.currentTimeMillis();
         Calendar cal = Calendar.getInstance(); cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0);
         long today = cal.getTimeInMillis();
         int n = 0;
-        for (int i = 0; i < days.length() && n < 7; i++) {
+        for (int i = 0; i < days.length() && n < max; i++) {
             JSONObject d = days.getJSONObject(i); long t = d.optLong("t", 0);
             if (t < today) continue;
             Calendar dc = Calendar.getInstance(); dc.setTimeInMillis(t);
@@ -146,6 +146,7 @@ public class VentWidget extends AppWidgetProvider {
             v.addView(R.id.wWeek, cell); n++;
         }
         v.setViewVisibility(R.id.wWeek, n > 0 ? android.view.View.VISIBLE : android.view.View.GONE);
+        return n;
     }
 
     static String title(JSONObject o) {

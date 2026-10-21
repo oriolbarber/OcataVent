@@ -6,4 +6,6 @@
     <string name="custom_url_scheme">cat.ocatavent.app</string>
     <string name="widget_label">Ocata Vent: idoneïtat</string>
     <string name="widget_desc">Si fa bo per navegar ara, per a la teva embarcació</string>
+    <string name="widget_week_label">Ocata Vent: 7 dies</string>
+    <string name="widget_week_desc">Avui i els 7 dies següents per a la teva embarcació</string>
 </resources>
