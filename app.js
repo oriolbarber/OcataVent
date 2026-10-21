@@ -595,8 +595,8 @@ function roseSvg(o){
   if(o.dir!=null){ const [x0,y0] = P(o.dir-11, R), [x1,y1] = P(o.dir+11, R), [xc,yc] = P(o.dir, ri-6);
     g += `<g class="needle"><path d="M${xc.toFixed(1)} ${yc.toFixed(1)} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z" fill="${o.k ? `var(--${o.k})` : "var(--surface-2)"}" fill-opacity=".6" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/></g>`; }
   // pantalla de ruta: rumb del GPS (agulla blava) i direcció cap a la base (punt verd)
-  if(o.cog!=null){ const y0 = -(ri-2), yh = -(R-22), y1 = -(R+4);   // fletxa de cartell: tija gruixuda i punta ampla
-    g += `<polygon transform="rotate(${o.cog})" points="-6,${y0} 6,${y0} 6,${yh} 15,${yh} 0,${y1} -15,${yh} -6,${yh}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke"/>`; }
+  if(o.cog!=null){ const yb = -(R-30), y1 = -(R+10);   // rumb: només la punta, gran, a la vora (decisió de l'Oriol)
+    g += `<polygon transform="rotate(${o.cog})" points="-19,${yb} 0,${y1} 19,${yb} 0,${yb+7}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke"/>`; }
   if(o.home!=null){ const [x,y] = P(o.home, R-14*Z); g += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${Z})"><g class="upr"><circle r="11" fill="var(--ideal)" stroke="var(--surface)" stroke-width="2"/><path d="M-5 1 0-4 5 1M-3.5 0v4.5h7V0" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></g></g>`; }
   let fx = `<circle r="${ri-4}" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>`;
   if(o.cv != null) fx += `<text y="-15" text-anchor="middle" font-size="10" font-weight="700" fill="var(--muted)" font-family="Rajdhani,sans-serif" letter-spacing="1">${o.cl || ""}</text><text y="17" text-anchor="middle" font-size="34" font-weight="700" fill="var(--ink)" font-family="Rajdhani,sans-serif">${o.cv}<tspan font-size="11" fill="var(--muted)" dx="2">${o.cu || ""}</tspan></text>`;

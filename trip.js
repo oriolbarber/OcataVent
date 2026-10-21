@@ -311,12 +311,20 @@ function svgTrack(el, pts, colored){
     <circle cx="${X(pts[0])}" cy="${Y(pts[0])}" r="5" fill="var(--ideal)"/><circle cx="${X(pts[pts.length-1])}" cy="${Y(pts[pts.length-1])}" r="5" fill="var(--no)"/></svg>`;
 }
 let liveMapEl = null;   // on és el mapa en directe: "liveMap" (vista Sortida) o "rideMap" (pantalla de ruta)
+// Mapa a mitges (rajoles grises): el mapa es crea mentre la pantalla de ruta encara canvia de mida (pantalla completa, pestanyes).
+// Cada cop que el contenidor canvia de mida es torna a calcular, i també un moment després de crear-lo.
+let mapRO = null;
+function mapFix(el){
+  if(mapRO) mapRO.disconnect();
+  if(window.ResizeObserver){ mapRO = new ResizeObserver(() => { if(liveMap && el.offsetWidth) liveMap.invalidateSize(false); }); mapRO.observe(el); }
+  [150, 600, 1500].forEach(t => setTimeout(() => { if(liveMap && el.offsetWidth) liveMap.invalidateSize(false); }, t));
+}
 function destroyLiveMap(){ if(liveMap){ liveMap.remove(); liveMap = null; liveLine = null; liveDot = null; } liveMapEl = null; }
 function updateLiveMap(){
   const id = rideVisible ? "rideMap" : "liveMap"; if(liveMapEl && liveMapEl !== id) destroyLiveMap();
   const el = $(id), P = LIVE.pts; liveMapEl = id;
   if(!window.L){ svgTrack(el, P); return; }
-  if(!liveMap){ liveMap = baseMap(el, true); liveLine = L.polyline([], {color: cssVar("--accent"), weight:4}).addTo(liveMap); }
+  if(!liveMap){ liveMap = baseMap(el, true); liveLine = L.polyline([], {color: cssVar("--accent"), weight:4}).addTo(liveMap); mapFix(el); }
   if(!P.length) return;
   const ll = P.map(p => [p.lat, p.lon]); liveLine.setLatLngs(ll);
   const cur = ll[ll.length-1];
@@ -428,7 +436,11 @@ function renderRide(d){
     rcell("Angle vent", twa != null ? r0(twa) + "°" : "–", "", twa != null ? posOf(twa).t : "navega per calcular-lo"),
     rcell("En moviment", fmtDurShort(s.movingS*1000).replace(" min", "").replace(" h ", ":"), s.movingS >= 3600 ? "h" : "min", P.length + " punts GPS"));
   $("rideGrid").innerHTML = cells.join("");
-  if(ridePage === "map") $("rideMini").innerHTML = `<b>${sog != null ? r1(sog) : "–"}</b> kn · <b>${s.distNm.toFixed(1).replace(".", ",")}</b> nm${home ? ` · base ${home.d.toFixed(1).replace(".", ",")} nm ${dirArrow(home.b, 14)}` : ""}`;
+  if(ridePage === "map"){
+    // velocitat en gran; la resta igual
+    $("rideMini").innerHTML = `<b class="rm-sog">${sog != null ? r1(sog) : "–"}<small>kn</small></b><span class="rm-rest"><b>${s.distNm.toFixed(1).replace(".", ",")}</b> nm${home ? ` · base ${home.d.toFixed(1).replace(".", ",")} nm ${dirArrow(home.b, 14)}` : ""}</span>`;
+    $("rideWmini").innerHTML = windMini(w);
+  }
   if(ridePage === "cmp"){
     window.rideCogH = sog != null && sog > 1 && cog != null ? cog : null;   // sense brúixola: la rosa s'orienta amb el rumb
     const c = crit[act];
@@ -436,11 +448,20 @@ function renderRide(d){
       hist: roseHist(OBS.key === stKey ? OBS.recs : [], []), cog, home: home ? home.b : null, cv: sog != null ? r1(sog) : "–", cu: "kn", cl: "VEL."});
     cmpApply();
     $("rideCgrid").innerHTML =
-      rcell(`<i class="lg lg-cog" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 .5 15 8h-4.2v7.5H5.2V8H1z" fill="var(--accent)"/></svg></i>Rumb`, cog != null ? r0(cog) + "°" : "–", "", cog != null ? cogName(cog) : "&nbsp;") +
+      rcell(`<i class="lg lg-cog" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 1 14.5 14 8 11 1.5 14z" fill="var(--accent)"/></svg></i>Rumb`, cog != null ? r0(cog) + "°" : "–", "", cog != null ? cogName(cog) : "&nbsp;") +
       rcell(`<i class="lg" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 14L3 2.5A12 12 0 0 1 13 2.5Z" fill="var(--${w ? lvWind(w.wind, c) : "ink"})" fill-opacity=".38" stroke="var(--${w ? lvWind(w.wind, c) : "ink"})" stroke-width="1.6" stroke-linejoin="round"/></svg></i>Vent`, w ? r0(w.wind) : "–", "kn", w ? windAbbr(w.dir) + " · ratxa " + r0(w.gust) : "&nbsp;") +
       rcell(`<i class="lg" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="var(--ideal)"/><path d="M4.5 8.5 8 5l3.5 3.5M5.5 7.6v3.6h5V7.6" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg></i>Base`, home ? home.d.toFixed(1).replace(".", ",") : "–", "nm", home ? cogName(home.b) : "&nbsp;");
   }
   const g = $("liveGap"); $("rideGap").hidden = g.hidden; $("rideGap").innerHTML = g.innerHTML;
+}
+// Rosa petita del mapa: d'on ve el vent (fletxa cap al centre, color dels llindars) i la força. El mapa té el nord a dalt.
+function windMini(w){
+  if(!w || w.wind == null) return `<svg viewBox="-34 -34 68 68" aria-hidden="true"><circle r="30" class="wm-bg"/><text y="6" text-anchor="middle" class="wm-n">–</text></svg>`;
+  const k = lvWind(w.wind, crit[act]) || "ink", d = w.dir ?? 0;
+  const ticks = [0, 90, 180, 270].map(a => `<line x1="0" y1="-30" x2="0" y2="-25" transform="rotate(${a})" class="wm-t"/>`).join("");
+  return `<svg viewBox="-34 -34 68 68" role="img" aria-label="Vent ${r0(w.wind)} nusos de ${windName(d)}"><circle r="30" class="wm-bg"/>${ticks}<text y="-17" text-anchor="middle" class="wm-c">N</text>
+    <g transform="rotate(${d})"><path d="M0 -13 L10 -31 L0 -26 L-10 -31 Z" fill="var(--${k})" stroke="var(--surface)" stroke-width="1.5" stroke-linejoin="round"/></g>
+    <text y="7" text-anchor="middle" class="wm-n">${r0(w.wind)}</text><text y="18" text-anchor="middle" class="wm-u">${esc(windAbbr(d))}</text></svg>`;
 }
 function rideTime(){ if(!LIVE) return; const m = Math.floor((Date.now() - LIVE.start)/60000); $("rideTime").textContent = Math.floor(m/60) + ":" + pad(m%60); }
 // canvi de mode en marxa: reinicia la lectura del GPS amb el nou ritme
@@ -665,6 +686,25 @@ function download(t, kind){
 $("startTrip").addEventListener("click", startTrip);
 $("ecoMode").checked = false;
 if(window.OV_NATIVE){ const rt = $("rideTip"); if(rt) rt.textContent = "Si no la toques es posa negra: dos tocs per tornar-la a veure."; }
+/* ---------- «Pantalla sempre encesa»: no s'enfosqueix mentre la bateria és per sobre del 20 % (o carrega) ---------- */
+const AWAKE_K = "ov2_ride_awake";
+let BAT = null;   // {level, charging} si el navegador ho sap
+(async () => { try{ if(navigator.getBattery){ const b = await navigator.getBattery(); const up = () => { BAT = {level:b.level, charging:b.charging}; awakeUI(); };
+  up(); b.addEventListener("levelchange", up); b.addEventListener("chargingchange", up); } }catch(e){} })();
+const awakePref = () => store.get(AWAKE_K) === true;
+const batOk = () => !BAT || BAT.charging || BAT.level > 0.2;
+const awakeOn = () => awakePref() && batOk();
+function awakeUI(){
+  const i = $("rideAwake"), t = $("rideAwakeT"), tip = $("rideTip"); if(!i) return;
+  i.checked = awakePref();
+  const pc = BAT ? Math.round(BAT.level * 100) + " %" : "";
+  t.textContent = !awakePref() ? "Pantalla sempre encesa" : batOk() ? `Pantalla sempre encesa${pc ? " · bateria " + pc : ""}` : `Bateria ${pc}: s'enfosqueix igualment`;
+  t.classList.toggle("low", awakePref() && !batOk());
+  if(tip) tip.hidden = awakeOn();
+  if(awakeOn() && sleeping) sleepSet(false);
+}
+$("rideAwake").addEventListener("change", e => { store.set(AWAKE_K, !!e.target.checked); lastTouch = Date.now(); awakeUI(); });
+setTimeout(awakeUI, 0);
 $("ecoOn").addEventListener("click", () => showRide(true));
 $("logList").addEventListener("change", e => {
   if(e.target.id === "gpxIn" && e.target.files[0]) importGpx(e.target.files[0]);
@@ -812,5 +852,6 @@ setInterval(() => {
   if(!LIVE || !rideVisible || document.visibilityState !== "visible"){ sleepSet(false); return; }
   const al = $("liveAlert"), sm = $("sosMap"); if((al && !al.hidden) || (sm && !sm.hidden)){ sleepSet(false); return; }   // un avís de seguretat sempre es veu
   if(document.querySelector(".gear")){ lastTouch = Date.now(); return; }
+  if(awakeOn()){ lastTouch = Date.now(); return; }   // interruptor «Pantalla sempre encesa» amb prou bateria
   if(!sleeping && Date.now() - lastTouch > SLEEP_S * 1000) sleepSet(true);
 }, 1000);
