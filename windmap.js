@@ -150,14 +150,15 @@ document.addEventListener("click", e => {
   const keys = wmKeys().filter(x => x.date === d.dataset.tld), hh = wmSel ? +wmSel.slice(11, 13) : 12;
   const x = keys.find(y => y.h === hh) || keys.find(y => y.h === 12) || keys[0]; if(x) wmShow(x.k, true);
 });
-// En horitzontal: a l'APK, connector natiu ScreenOrientation; al navegador, pantalla completa + bloqueig d'orientació. Si no es pot (iPhone), es queda vertical.
-async function wmLand(on){
+// Gràfic: en horitzontal (APK: connector natiu ScreenOrientation; navegador: pantalla completa + bloqueig d'orientació; a l'iPhone es queda vertical).
+// Mapa: pantalla completa sense bloquejar l'orientació, segueix el gir del mòbil (decisió de l'Oriol: el vol poder veure en vertical).
+async function wmLand(on, land = true){
   const SO = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.ScreenOrientation;
   try{
-    if(SO){ await (on ? SO.lock({orientation:"landscape"}) : SO.unlock()); return; }
+    if(SO){ await (on && land ? SO.lock({orientation:"landscape"}) : SO.unlock()); return; }
     if(on){
       if(!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({navigationUI:"hide"});
-      if(screen.orientation && screen.orientation.lock) await screen.orientation.lock("landscape");
+      if(land && screen.orientation && screen.orientation.lock) await screen.orientation.lock("landscape");
     } else {
       try{ screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); }catch(e){}
       if(document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
@@ -170,7 +171,7 @@ function wmOpen(kind){
   const c = wmCard(); if(!c || wmFull()) return;
   c.classList.add("full", "full-" + kind); document.body.classList.add("wm-open");
   try{ history.pushState({wmFull:1}, ""); }catch(e){}
-  wmLand(true); tlRender();
+  wmLand(true, kind === "chart"); tlRender();
   if(kind === "chart"){ setTimeout(() => { renderDayChart(); applySel(); }, 0); }
   else if(wmEnsureMap()){
     // a pantalla completa el mapa es pot moure i ampliar amb els dits
@@ -204,6 +205,7 @@ document.addEventListener("visibilitychange", () => { if(wmFx && document.visibi
 // en girar el mòbil o canviar la mida, el gràfic es torna a dibuixar a la mida nova
 window.addEventListener("resize", () => { if(!wmFull()) return; clearTimeout(wmOpen.t); wmOpen.t = setTimeout(() => {
   if(wmCard().classList.contains("full-chart")){ renderDayChart(); applySel(); }
+  if(wmCard().classList.contains("full-map") && wmMap){ wmMap.invalidateSize(false); if(wmFx){ wmFx.size(); wmFx.buildMask(); } }
   if(wmSel) tlSync(wmSel, true); }, 200); });
 window.addEventListener("mm-theme", () => { if(wmFx) wmFx.reset(); });
 // el gràfic maximitzat es torna a dibuixar quan canvia l'espai lliure (la lectura s'omple després, el mòbil gira…)
