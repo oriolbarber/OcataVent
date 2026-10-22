@@ -14,6 +14,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BatteryPlugin.class);
         registerPlugin(WidgetPlugin.class);
         super.onCreate(savedInstanceState);
+        // La mida de lletra del sistema no amplia la web: la controla l'app amb «Petita / Gran»
+        if (getBridge() != null) getBridge().getWebView().getSettings().setTextZoom(100);
         hideNavBar();
     }
 

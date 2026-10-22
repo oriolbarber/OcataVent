@@ -1080,7 +1080,7 @@ function renderWeek(){
   const end = DATA.modelEnd && model !== "auto" ? (() => { const d = new Date(DATA.modelEnd); return `Previsió ${MODELS[model].label} fins ${DAYS_L[d.getDay()].toLowerCase()} a les ${pad(d.getHours())} h; després, Open-Meteo.`; })() : "";
   $("week").innerHTML = (end ? `<p class="note" style="margin-bottom:6px">${esc(end)}</p>` : "") + html;
   applySel();
-  $("peekWeek").textContent = good ? good+" franges bones o ideals" : "Cap franja bona";
+  $("peekWeek").textContent = good ? (good === 1 ? "1 franja bona o ideal" : good+" franges bones o ideals") : "Cap franja bona";
 }
 // Llindars navegació: llista dels tipus d'embarcació (Configuració) i detall del tipus triat (critK)
 let critK = act;

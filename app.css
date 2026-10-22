@@ -31,7 +31,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
-html{overscroll-behavior-y:contain}
+html{overscroll-behavior-y:contain;-webkit-text-size-adjust:100%;text-size-adjust:100%} /* la mida de lletra del mòbil no amplia l'app: la controla «Petita / Gran» */
 .ptr{height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted)}
 .ptr svg{flex:none;opacity:.85;transform:rotate(var(--ptr-r,0deg))}
 .ptr.go svg{color:var(--accent);opacity:1}
@@ -313,7 +313,8 @@ button.src{border:1px solid var(--line);background:var(--surface-2);border-radiu
 /* la resta de l'app, més gran */
 :root[data-size="big"] .lbl{font-size:1rem}
 :root[data-size="big"] .src{font-size:.95rem}
-:root[data-size="big"] .tabs button{font-size:1rem;min-height:60px}
+:root[data-size="big"] .tabs button{font-size:.92rem;letter-spacing:.02em;min-height:60px}
+@media (max-width:400px){:root[data-size="big"] .tabs button{font-size:.78rem;letter-spacing:0}}
 :root[data-size="big"] .tabs svg{width:26px;height:26px}
 :root[data-size="big"] body{padding-block:0 calc(96px + env(safe-area-inset-bottom,0px))}
 :root[data-size="big"] details.sec>summary h2{font-size:1.5rem}
