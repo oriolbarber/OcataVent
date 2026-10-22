@@ -19,7 +19,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - **Aprofita l'espai (a cada millora):** text en línia i no apilat; dades curtes a la mateixa fila; accions secundàries com a icones a la fila del peu; res en columnes estretes que obliguin a partir paraules. Comprova-ho a 400 px d'amplada.
 - **Esborrar o descartar:** sempre amb confirmació lliscant (`slideConfirm`).
 - **Explicacions llargues:** dins un botó (i), no a la vista.
-- **Mida de lletra:** «Petita / Gran» (mai «Normal»). La mida de lletra del sistema del mòbil s'ignora (decisió de l'Oriol, 22-10-2026): `text-size-adjust:100%` a `html` (web/PWA) i `setTextZoom(100)` a `MainActivity` (APK). Comprova la barra inferior en «Gran» a 360 px.
+- **Mida de lletra:** «Petita / Gran» (mai «Normal»). La mida de lletra del sistema del mòbil s'ignora (decisió de l'Oriol, 22-10-2026): `text-size-adjust:100%` a `html` (web/PWA) i `setTextZoom(100)` a `MainActivity` (APK). Comprova la barra inferior en «Gran» a 360 px. Amb la mida de visualització ampliada el mòbil pot quedar a ≤ 350 px d'amplada: la capçalera no amaga mai el nom del club (el fa més petit) i la barra inferior hi ha de cabre (comprova-ho a 320 px). La capçalera és `sticky; top:0` amb el marge de la barra d'estat a dins (`padding-top` amb `env(safe-area-inset-top)`), i `body::before` tapa sempre la franja de la barra d'estat.
 - **Atribució de dades:** el peu de pàgina diu d'on vénen les dades.
 - **Correu de l'usuari:** només per identificar-lo, mai s'envia a serveis externs.
 

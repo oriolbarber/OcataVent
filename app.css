@@ -46,7 +46,9 @@ button:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{o
 h2,h3{font-family:var(--f-head);font-weight:700;margin:0;letter-spacing:.03em}
 
 /* barra superior */
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:1000;background:var(--bg);display:flex;align-items:center;gap:10px;padding-block:10px}
+.top{position:sticky;top:0;z-index:1000;background:var(--bg);display:flex;align-items:center;gap:10px;padding-block:calc(10px + env(safe-area-inset-top,0px)) 10px}
+/* franja de la barra d'estat: sempre tapada, perquè no s'hi vegi el contingut que passa per sota */
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:1001;pointer-events:none}
 .top img{width:36px;height:36px;border-radius:50%;flex:none;object-fit:cover}
 .top .t{display:flex;flex-direction:column;margin-right:auto;min-width:0}
 .top .t b{font-family:var(--f-head);font-size:1.25rem;line-height:1;letter-spacing:.04em;text-transform:uppercase}
@@ -269,7 +271,7 @@ button.src{border:1px solid var(--line);background:var(--surface-2);border-radiu
   .act-seg button{width:36px;min-height:36px}
   .ib{width:38px;height:38px}
 }
-@media (max-width:350px){ .top .t{display:none} .act-seg{margin-left:auto} }
+
 @media (max-width:380px){
   .top{gap:6px}
   .top img{width:28px;height:28px}
@@ -277,6 +279,16 @@ button.src{border:1px solid var(--line);background:var(--surface-2);border-radiu
   .act-seg svg{width:19px;height:19px}
   .ib{width:34px;height:34px;border-radius:10px}
   .ib svg{width:17px;height:17px}
+}
+/* mòbils estrets (o amb la mida de visualització ampliada): el nom del club no s'amaga, es fa més petit */
+@media (max-width:350px){
+  .top{gap:5px}
+  .top .t b{font-size:.92rem}
+  .top .t span{font-size:.66rem}
+  .top .t span svg{display:none}
+  .act-seg button{width:30px}
+  .tabs{padding-inline:4px}
+  .tabs button,:root[data-size="big"] .tabs button{font-size:.7rem;letter-spacing:0}
 }
 
 /* panell de visualització */
@@ -835,7 +847,7 @@ body.cam-open{overflow:hidden}
 .flag.info{border-color:var(--line);background:var(--surface-2);color:var(--muted)}
 /* capçalera que s'amaga en baixar i torna a sortir en pujar */
 .top{transition:transform .25s ease, box-shadow .25s ease;will-change:transform}
-.top.hide{transform:translateY(calc(-100% - env(safe-area-inset-top,0px) - 4px))}
+.top.hide{transform:translateY(calc(-100% - 4px))}
 .top.lift{box-shadow:0 2px 10px rgba(0,0,0,.08)}
 
 footer .src-line{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:nowrap}
@@ -1708,3 +1720,6 @@ a.cfg-row:hover{background:var(--surface-2)}
 .ride-wmini .wm-c{font:700 9px var(--f-head);fill:var(--muted)}
 .ride-wmini .wm-n{font:700 17px var(--f-mono);fill:var(--ink)}
 .ride-wmini .wm-u{font:700 8px var(--f-head);fill:var(--muted)}
+
+/* barra inferior en mòbils molt estrets (també en «Gran»): que «Historial» hi càpiga */
+@media (max-width:350px){ :root .tabs button,:root[data-size="big"] .tabs button{font-size:.68rem;letter-spacing:0} }
