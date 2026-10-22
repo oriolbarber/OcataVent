@@ -85,11 +85,23 @@ const visible = () => !$("view-club").hidden;
 /* ---------- avisos amb data: es mostren a la previsió de 7 dies (app.js, renderWeek) ---------- */
 // Puntet vermell a la pestanya «Club» del menú principal si hi ha avisos sense llegir
 const unreadN = () => C ? D.avisos.filter(a => alive(a) && !(a.vist || {})[uid()]).length + D.fets.filter(f => f.public && fetIsNew(f)).length : 0;
+// Embarcacions per validar (les compta admin.js en directe; només per a qui les gestiona)
+const boatsPendN = () => canBoatsE() ? (window.OV_BOATS_PEND || 0) : 0;
+const baseDotN = () => fetsUnread() + boatsPendN();
 function navDot(){
   const d = $("clubDot"); if(!d) return;
-  const n = unreadN(); d.hidden = !n;
-  $("tabClub")?.setAttribute("aria-label", n ? `Club, ${n} avisos sense llegir` : "Club");
+  const n = unreadN() + boatsPendN(); d.hidden = !n;
+  $("tabClub")?.setAttribute("aria-label", n ? `Club, ${n} pendents` : "Club");
 }
+// en canviar les embarcacions pendents: puntet de «Club» i de la pestanya Base, sense redibuixar res més
+window.addEventListener("ov-boats-pend", () => {
+  navDot();
+  const b = document.querySelector('#clubView [data-ctab="base"]'); if(!b) return;
+  let dot = b.querySelector(".cl-dot"); const n = baseDotN();
+  if(!n){ dot && dot.remove(); return; }
+  if(!dot){ dot = document.createElement("span"); dot.className = "cl-dot"; b.appendChild(dot); }
+  dot.textContent = n; dot.setAttribute("aria-label", n + " pendents a la base");
+});
 function publishEvents(){
   navDot();
   window.OV_EVENTS = D.avisos.filter(a => a.data && alive(a)).map(a => ({data:a.data, titol:a.titol, text:a.text, comissio:COMSm()[a.comissio] || a.comissio}));
@@ -183,7 +195,7 @@ function render(){
   clearRouteMaps();
   const unread = unreadN(); navDot();
   const tabs = [["base", "Base"], ["mur", "Mur"], ["avisos", "Avisos"], ["anuncis", "Anuncis"]];
-  el.innerHTML = `<nav class="cl-tabs" aria-label="Seccions del club">${tabs.map(([k, t]) => `<button type="button" data-ctab="${k}"${k === tab ? ' aria-current="page"' : ""}>${t}${k === "base" && fetsUnread() ? `<span class="cl-dot" aria-label="${fetsUnread()} avisos de la base nous">${fetsUnread()}</span>` : ""}${k === "avisos" && unread ? `<span class="cl-dot" aria-label="${unread} sense llegir">${unread}</span>` : ""}</button>`).join("")}</nav>
+  el.innerHTML = `<nav class="cl-tabs" aria-label="Seccions del club">${tabs.map(([k, t]) => `<button type="button" data-ctab="${k}"${k === tab ? ' aria-current="page"' : ""}>${t}${k === "base" && baseDotN() ? `<span class="cl-dot" aria-label="${baseDotN()} pendents a la base">${baseDotN()}</span>` : ""}${k === "avisos" && unread ? `<span class="cl-dot" aria-label="${unread} sense llegir">${unread}</span>` : ""}</button>`).join("")}</nav>
     <div class="msg err" id="clubMsg" hidden></div>
     ${alertBanner()}
     ${({mur:renderMur, avisos:renderAvisos, anuncis:renderAnuncis, base:renderBaseTab})[tab]()}`;

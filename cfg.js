@@ -106,9 +106,9 @@ menu.addEventListener("keydown", e => {
 });
 
 /* ---------- punts vermells ---------- */
-// Cada mòdul diu què té pendent: adm = altes pendents (número), priv = sol·licituds d'amistat (número),
+// Cada mòdul diu què té pendent: adm = altes + embarcacions per validar (número), priv = sol·licituds d'amistat (número),
 // acc = sense registrar (true = punt). El botó ⋮ porta el punt si algun apartat visible en té.
-const badges = {}, BADGE_T = {adm:n => n + (n === 1 ? " alta pendent" : " altes pendents"), priv:n => n + (n === 1 ? " sol·licitud d'amistat" : " sol·licituds d'amistat"), acc:() => "sense registrar"};
+const badges = {}, BADGE_T = {adm:n => n + (n === 1 ? " cosa per revisar a Administració" : " coses per revisar a Administració"), priv:n => n + (n === 1 ? " sol·licitud d'amistat" : " sol·licituds d'amistat"), acc:() => "sense registrar"};
 function badge(k, v){ badges[k] = v || 0; paintBadges(); }
 function paintBadges(){
   const on = [];

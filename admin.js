@@ -55,9 +55,31 @@ async function load(force){
   badge(); render();
 }
 // Puntet vermell (engranatge de la configuració i capçalera «Administració») si hi ha altes pendents i tens el permís «altes»
+// + embarcacions pendents de validar si gestiones les embarcacions (Manteniment o permís «embarcacions»)
+const canBoatsA = () => !!C && (C.isAdm || C.isPremium || has("embarcacions") || (C.member.comissions || []).includes("manteniment"));
+let boatsPend = 0;
+const altesN = () => C && has("altes") ? members.filter(m => m.estat === "pendent").length : 0;
 function badge(){
-  const n = C && has("altes") ? members.filter(m => m.estat === "pendent").length : 0;
-  window.OV_CFG?.badge("adm", n);
+  window.OV_CFG?.badge("adm", altesN() + boatsPend);
+}
+// Escolta en directe les embarcacions pendents de validar del club (el puntet surt sense obrir res)
+let unsubB = null, watchKeyB = "";
+function watchBoats(){
+  const key = canBoatsA() ? C.user.uid + "|" + C.member.clubId : "";
+  if(key === watchKeyB) return;
+  if(unsubB){ try{ unsubB(); }catch(e){} unsubB = null; }
+  watchKeyB = key;
+  if(!key){ setBoatsPend(0); return; }
+  unsubB = C.F.onSnapshot(C.F.query(C.F.collection(C.db, "embarcacions"), C.F.where("clubId", "==", C.member.clubId), C.F.where("pendent", "==", true)),
+    qs => setBoatsPend(qs.size), () => { watchKeyB = ""; unsubB = null; });
+}
+function setBoatsPend(n){
+  if(n === boatsPend && window.OV_BOATS_PEND === n) return;
+  boatsPend = n; window.OV_BOATS_PEND = n;
+  window.dispatchEvent(new CustomEvent("ov-boats-pend", {detail:n}));   // club.js: puntet a la pestanya Base i a «Club»
+  badge();
+  render();
+  if(window.OV_CFG?.isOpen("adm-base")) renderBase();
 }
 // Escolta en directe les altes pendents del club: el puntet apareix sense haver d'obrir la configuració
 let unsub = null, watchKey = "";
@@ -89,17 +111,17 @@ const canBase = () => has("embarcacions") || has("planol") || !!(C && (C.member.
 // ⋮ ▸ Administració Club: una pantalla amb els apartats i una subpantalla per a cadascun
 function render(){
   const sec = $("admSec"), body = $("admBody"); if(!sec || !body) return;
-  sec.hidden = !(C && (gestor() || has("moderar") || has("avisos") || has("embarcacions"))); if(sec.hidden) return;
+  sec.hidden = !(C && (gestor() || has("moderar") || has("avisos") || canBoatsA())); if(sec.hidden) return;
   const pend = members.filter(m => m.estat === "pendent"), apr = members.filter(m => m.estat === "aprovat").length;
   const rol = C.isAdm ? "Administració" : C.isPremium ? "Premium · gestiones el club" : "Permisos: " + C.perms.map(k => PERMS[k]?.t).filter(Boolean).join(", ");
-  $("peekAdm").textContent = C.isAdm ? "Administració" + (pend.length ? " · " + pend.length + " pendents" : "") : rol;
+  $("peekAdm").textContent = C.isAdm ? "Administració" + (altesN() + boatsPend ? " · " + (altesN() + boatsPend) + " pendents" : "") : rol;
   const notes = gestor() ? [] : [has("moderar") ? `Tens el permís de moderar: al Club, a les publicacions, «Qui surt» i anuncis d'altres persones hi veuràs el botó «Retira».` : "", has("avisos") ? `Tens el permís de fer avisos: al Club ▸ Avisos hi veuràs «+ Nou avís» per a les teves comissions.` : ""].filter(Boolean);
   body.innerHTML = msgDiv() + `<div class="cfg-grp"><div class="cfg-prof"><span class="cfg-ic">${SHIELD}</span><div class="acc-who" style="flex:1"><b>${esc(CLUBNOM || C.member.clubId)}</b><span>${esc(rol)}</span></div></div></div>
     ${gestor() || canBase() ? `<div class="cfg-grp">
       ${gestor() ? goRow("adm-socis", "Socis i altes", `${apr} amb alta` + (has("altes") ? ` · ${pend.length} ${pend.length === 1 ? "pendent" : "pendents"}` : ""), has("altes") && pend.length ? `<span class="cfg-badge">${pend.length}</span>` : "") : ""}
       ${has("rols") ? goRow("adm-coms", "Comissions", Object.values(COMS).join(", ")) : ""}
       ${goRow("adm-rols", "Rols i permisos", "Què permet cada permís")}
-      ${canBase() ? goRow("adm-base", "Base i embarcacions", "Propostes per validar i plànol") : ""}
+      ${canBase() ? goRow("adm-base", "Base i embarcacions", boatsPend ? `${boatsPend} ${boatsPend === 1 ? "proposta" : "propostes"} per validar` : "Propostes per validar i plànol", boatsPend ? `<span class="cfg-badge">${boatsPend}</span>` : "") : ""}
     </div>` : ""}
     ${notes.map(t => `<p class="note">${t}</p>`).join("")}
     ${C.isAdm || C.isPremium ? `<div class="cfg-grp"><a class="cfg-row" href="gestio.html"><span class="cfg-rt"><b>Web de gestió del club</b><small>Socis, rols, comissions i plànol, millor des de l'ordinador</small></span>${CHEV}</a>${C.isAdm ? `<a class="cfg-row" href="admin.html"><span class="cfg-rt"><b>Administració global</b><small>Tots els clubs i usuaris</small></span>${CHEV}</a>` : ""}</div>` : ""}`;
@@ -197,6 +219,6 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => { const k = e.target.dataset && e.target.dataset.comname; if(!k || !C) return; const v = e.target.value.trim().slice(0, 40);
   if(v && v !== COMS[k]) saveComs(Object.assign({}, COMS, {[k]: v})); else e.target.value = COMS[k]; });
 document.addEventListener("input", e => { if(e.target.id !== "admCerca") return; cerca = e.target.value; const pos = e.target.selectionStart; render(); const i = $("admCerca"); if(i){ i.focus(); try{ i.setSelectionRange(pos, pos); }catch(err){} } });
-window.addEventListener("ov-cloud", async () => { await ctx(); render(); badge(); watch(); load(true); loadComs(); });
+window.addEventListener("ov-cloud", async () => { await ctx(); render(); badge(); watch(); watchBoats(); load(true); loadComs(); });
 ctx().then(() => { render(); watch(); load(true); loadComs(); });
 })();
