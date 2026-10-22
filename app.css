@@ -1642,7 +1642,8 @@ a.cfg-row:hover{background:var(--surface-2)}
 
 /* ---------- Previsió, versió neta (21-10-2026) ---------- */
 /* Matí / Migdia / Tarda: el veredicte en una línia */
-.sl .h .tag{white-space:nowrap;font-size:.7rem;letter-spacing:.02em}
+.sl .h .tag{white-space:normal;font-size:.7rem;letter-spacing:0;gap:4px;min-width:0;max-width:100%;line-height:1.1;align-items:flex-start}
+.sl .h .tag .vd{flex:none;margin-top:1px}
 :root[data-size="big"] .sl .h .tag{font-size:.78rem}
 .sl .o{display:flex;align-items:center;gap:4px}
 .sl .o .wave-ic{color:var(--sea);flex:none}
