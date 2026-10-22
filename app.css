@@ -99,6 +99,8 @@ h2,h3{font-family:var(--f-head);font-weight:700;margin:0;letter-spacing:.03em}
 .sl .w small{font-size:.72rem;font-weight:600;color:var(--muted)}
 .sl .o{font-size:.74rem;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sl.past{opacity:.5}
+.sl[data-slk]{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sl.sel{box-shadow:0 0 0 2.5px var(--ink);opacity:1}
 .vd{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
 .k-ideal{--k:var(--ideal);--kt:var(--ideal-t)} .k-bo{--k:var(--bo);--kt:var(--bo-t)} .k-marg{--k:var(--marg);--kt:var(--marg-t)} .k-no{--k:var(--no);--kt:var(--no-t)} .k-poc{--k:var(--poc);--kt:var(--poc-t)}
 .vd{background:var(--k)}

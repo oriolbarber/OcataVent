@@ -758,6 +758,9 @@ function applySel(){
     g.setAttribute("transform", `translate(${(+d.l) + (+d.dx)*j} 0)`); g.style.display = ""; });
   document.querySelectorAll(".hc-read").forEach(el => { el.innerHTML = readout(k); });
   document.querySelectorAll("tr[data-k], .hl-row[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === k));
+  // franja Matí/Migdia/Tarda que conté l'hora triada
+  const sl = SLOTS.find(x => x.hours.includes(+h));
+  document.querySelectorAll(".sl[data-slk]").forEach(el => el.classList.toggle("sel", !!sl && el.dataset.slk.slice(0,10) === date && sl.hours.includes(+el.dataset.slk.slice(11,13))));
 }
 // src: "chart" | "table" | "wm" (el mapa ja s'ha mogut tot sol)
 function selectHour(k, src){
@@ -796,6 +799,8 @@ document.addEventListener("pointermove", e => {
 document.addEventListener("pointerup", e => { if(hcT) hcPick(hcT.svg, e.clientX); hcT = null; hcDrag = null; });
 document.addEventListener("pointercancel", () => { hcT = null; hcDrag = null; });
 document.addEventListener("click", e => { const tr = e.target.closest && e.target.closest("tr[data-k], .hl-row[data-k]"); if(tr) selectHour(tr.dataset.k, "table"); });
+document.addEventListener("click", e => { const sl = e.target.closest && e.target.closest(".sl[data-slk]"); if(sl) selectHour(sl.dataset.slk, "slot"); });
+document.addEventListener("keydown", e => { if((e.key === "Enter" || e.key === " ") && e.target.matches?.(".sl[data-slk]")){ e.preventDefault(); selectHour(e.target.dataset.slk, "slot"); } });
 document.addEventListener("keydown", e => { if((e.key === "Enter" || e.key === " ") && e.target.classList?.contains("hl-row")){ e.preventDefault(); selectHour(e.target.dataset.k, "table"); } });
 const chartLegend = wide => `<details class="legend-d"><summary>Què és cada línia?</summary><div class="legend"><span><span class="sw" style="background:var(--accent-2)"></span>Vent mesurat</span><span><span class="sw" style="background:var(--ink)"></span>Vent previst (kn)</span><span><span class="sw" style="background:var(--muted)"></span>Ratxa</span>${wide?`<span><span class="sw" style="background:var(--wave-l)"></span>Onada (m)</span>`:""}<span><span class="sw" style="background:var(--ideal-t);height:10px"></span>Vent ideal ${esc(DEFAULTS[act].short)}</span></div>
   <div class="legend lv-legend"><span><span class="vd" style="background:var(--ideal)"></span>Bo</span><span><span class="vd" style="background:var(--marg)"></span>Limitat</span><span><span class="vd" style="background:var(--no)"></span>No recomanat</span></div>
@@ -1001,7 +1006,8 @@ function renderNow(){
   const vd = viewDay(), isTom = vd !== td;
   const slots = SLOTS.map(sl => { const a = slotAgg(vd, sl, c); if(!a) return "";
     const vv = verdict(a);
-    return `<div class="sl k-${vv.k}${a.past?" past":""}"><div class="h">${sl.label}<span class="tag"><span class="vd"></span>${vv.t}</span></div>
+    const mk = hourKey(vd, sl.hours[Math.floor(sl.hours.length/2)]);   // hora del mig de la franja (10, 13, 17 h): toca-la i el mapa hi va
+    return `<div class="sl k-${vv.k}${a.past?" past":""}" data-slk="${mk}" role="button" tabindex="0" aria-label="${sl.label}: mostra-la al mapa"><div class="h">${sl.label}<span class="tag"><span class="vd"></span>${vv.t}</span></div>
       <div class="w">${arrow(a.dir,13)}${r0(a.wind)}<small>/${r0(a.gust)} kn</small></div><div class="o">${waveIc(12)} ${r1(a.wave)} m</div>${a.code != null ? `<span class="sl-wx">${wxIcon(a.code, 18)}</span>` : ""}</div>`; }).join("");
   const ol = $("outlook");
   const dd = new Date(vd + "T12:00:00");
