@@ -564,7 +564,7 @@ async function backupIn(file){
 let detailMap = null;
 async function renderList(){
   $("logDetail").hidden = true; $("logList").hidden = false;
-  if(detailMap){ detailMap.remove(); detailMap = null; }
+  if(detailMap){ detailMap.remove(); detailMap = null; } trSel = null;
   let trips = []; try{ trips = (await DB.all()) || []; }catch(e){}
   trips.sort((a,b) => b.start - a.start);
   // Importar i còpia de seguretat: plegat en una sola targeta (es fa servir poc). Sense compte, avisa al títol.
@@ -604,12 +604,13 @@ function tripShape(pts){
 }
 function seriesChart(trip){
   const seg = segments(trip); if(seg.length < 3) return "";
-  const t0 = trip.start, t1 = trip.end || Date.now(), W = 760, H = 220, L = 34, R = 12, T = 14, B = 28, pw = W-L-R, ph = H-T-B;
+  // Mida pensada per cabre sencer al mòbil (sense lliscar de costat): així el dit pot triar un moment i el mapa marca on era
+  const t0 = trip.start, t1 = trip.end || Date.now(), W = 520, H = 240, L = 30, R = 10, T = 14, B = 26, pw = W-L-R, ph = H-T-B;
   const winds = trip.wind.filter(w => w.wind!=null);
   const maxV = Math.max(10, Math.ceil(Math.max(...seg.map(s=>s.smooth), ...winds.map(w=>w.gust||w.wind))/5)*5);
   const X = t => L + (t-t0)/(t1-t0||1)*pw, Y = v => T + ph - v/maxV*ph;
   let g = "";
-  for(let v=0; v<=maxV; v+=5) g += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${v}</text>`;
+  for(let v=0; v<=maxV; v+=5) g += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="13" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${v}</text>`;
   const step = Math.max(1, Math.round(seg.length/300));
   g += `<polyline points="${seg.filter((_,i)=>i%step===0).map(s => X(s.t).toFixed(1)+","+Y(Math.min(s.smooth,maxV)).toFixed(1)).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
   if(winds.length > 1){
@@ -617,8 +618,10 @@ function seriesChart(trip){
     g += `<polyline points="${winds.filter(w=>w.gust!=null).map(w => X(w.t)+","+Y(w.gust)).join(" ")}" fill="none" stroke="var(--accent-2)" stroke-width="1.5" stroke-dasharray="4 3" opacity=".8"/>`;
   }
   const mins = (t1-t0)/60000, tick = mins > 180 ? 60 : mins > 60 ? 30 : mins > 20 ? 10 : 5;
-  for(let m=0; m<=mins; m+=tick){ const x = X(t0+m*60000), d = new Date(t0+m*60000); g += `<text x="${x}" y="${H-6}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${pad(d.getHours())}:${pad(d.getMinutes())}</text>`; }
-  return `<div class="chart wide"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Velocitat del vaixell i vent durant la sortida">${g}</svg></div>
+  for(let m=0; m<=mins; m+=tick){ const x = X(t0+m*60000), d = new Date(t0+m*60000); g += `<text x="${x}" y="${H-6}" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${pad(d.getHours())}:${pad(d.getMinutes())}</text>`; }
+  g += `<g class="tsel" style="display:none"><line x1="0" x2="0" y1="${T}" y2="${T+ph}" stroke="var(--ink)" stroke-width="1.5"/><circle cx="0" cy="0" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2.5"/></g>`;
+  return `<div class="hc-read tr-read" id="trRead"><span class="tr-hint">Toca o arrossega el gràfic: el mapa marca on eres.</span></div>
+    <div class="chart tr-wrap"><svg class="tr-ch" viewBox="0 0 ${W} ${H}" data-t0="${t0}" data-t1="${t1}" data-w="${W}" data-l="${L}" data-pw="${pw}" data-t="${T}" data-ph="${ph}" data-max="${maxV}" role="img" aria-label="Velocitat del vaixell i vent durant la sortida. Toca'l per veure el punt al mapa">${g}</svg></div>
     <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>Velocitat vaixell (kn)</span><span><span class="sw" style="background:var(--accent-2)"></span>Vent ${winds.some(w=>w.src==="estació")?"estació":"model"} (kn)</span><span><span class="sw" style="background:var(--accent-2);opacity:.6"></span>Ratxa</span></div>`;
 }
 async function showTrip(id, ask){
@@ -663,9 +666,48 @@ async function showTrip(id, ask){
   $("expCsv").onclick = () => download(t, "csv");
   slideConfirm($("delTrip"), "Llisca per esborrar", async () => { await DB.del(t.id); window.OV_CLOUD?.deleted(t); renderList(); });
   if(detailMap){ detailMap.remove(); detailMap = null; }
+  trSel = {trip: t, seg: segments(t), mk: null};
   setTimeout(() => { detailMap = tripMap($("tripMap"), t); }, 0);
   window.scrollTo({top:0});
 }
+/* ---------- gràfic de la sortida ↔ mapa: tocar un moment del gràfic marca on eres ---------- */
+var trSel = null;   // {trip, seg, mk}: sortida oberta, trams i marcador del mapa
+function trPick(svg, clientX){
+  if(!trSel || !trSel.seg.length) return;
+  const d = svg.dataset, r = svg.getBoundingClientRect(), S = trSel.seg;
+  const x = (clientX - r.left) * (+d.w) / r.width, t0 = +d.t0, t1 = +d.t1;
+  const t = t0 + Math.max(0, Math.min(1, (x - (+d.l)) / (+d.pw))) * (t1 - t0);
+  let i = S.findIndex(s => s.t >= t); if(i < 0) i = S.length - 1;
+  const s = S[i], f = s.dt > 0 ? Math.max(0, Math.min(1, (t - s.a.t) / (s.b.t - s.a.t))) : 1;
+  const lat = s.a.lat + (s.b.lat - s.a.lat) * f, lon = s.a.lon + (s.b.lon - s.a.lon) * f, gap = s.dt > GAP_S;
+  // cursor al gràfic
+  const max = +d.max, X = (+d.l) + (t - t0) / (t1 - t0 || 1) * (+d.pw), Y = (+d.t) + (+d.ph) - Math.min(s.smooth, max) / max * (+d.ph);
+  const g = svg.querySelector(".tsel"); if(g){ g.style.display = ""; g.setAttribute("transform", `translate(${X.toFixed(1)} 0)`); const c = g.querySelector("circle"); c.setAttribute("cy", Y.toFixed(1)); c.style.display = gap ? "none" : ""; }
+  // lectura: hora · velocitat · vent
+  const w = windNear(trSel.trip, t), hd = new Date(t), rd = $("trRead");
+  if(rd) rd.innerHTML = `<span class="rd-h"><b>${pad(hd.getHours())}:${pad(hd.getMinutes())}</b></span><span>${gap ? "Sense GPS" : `Vaixell <b class="m">${r1(s.smooth)}</b> kn`}</span>${w && w.wind != null ? `<span>Vent ${r0(w.wind)}${w.gust != null ? "/" + r0(w.gust) : ""} kn${w.dir != null ? " " + windAbbr(w.dir) : ""}</span>` : ""}`;
+  // punt al mapa (si surt de la vista, el mapa s'hi mou)
+  const m = detailMap; if(!m || !window.L) return;
+  const ll = [lat, lon];
+  if(!trSel.mk) trSel.mk = L.circleMarker(ll, {radius:9, color:"#fff", weight:3, fillColor:"#111827", fillOpacity:1, interactive:false}).addTo(m);
+  else trSel.mk.setLatLng(ll);
+  if(!m.getBounds().pad(-0.08).contains(ll)) m.panTo(ll, {animate:false});
+}
+// Al dit, com el gràfic de la Previsió: un toc tria el moment; arrossegar en horitzontal el mou; amunt o avall és scroll
+let trT = null, trDrag = null;
+document.addEventListener("pointerdown", e => {
+  const svg = e.target.closest && e.target.closest("svg.tr-ch"); if(!svg) return;
+  if(e.pointerType === "mouse"){ trDrag = svg; trPick(svg, e.clientX); } else trT = {svg, x:e.clientX, y:e.clientY};
+});
+document.addEventListener("pointermove", e => {
+  if(trDrag){ trPick(trDrag, e.clientX); return; }
+  if(!trT) return;
+  const ax = Math.abs(e.clientX - trT.x), ay = Math.abs(e.clientY - trT.y);
+  if(ay > 8 && ay >= ax) trT = null; else if(ax > 8){ trDrag = trT.svg; trT = null; trPick(trDrag, e.clientX); }
+});
+document.addEventListener("pointerup", e => { if(trT) trPick(trT.svg, e.clientX); trT = null; trDrag = null; });
+document.addEventListener("pointercancel", () => { trT = null; trDrag = null; });
+
 function download(t, kind){
   const d = new Date(t.start), base = `sortida_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
   let body, type;

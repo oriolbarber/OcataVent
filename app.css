@@ -449,6 +449,10 @@ svg.hc{touch-action:pan-y;cursor:crosshair;-webkit-user-select:none;user-select:
 .hc-read .rd-v>span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .hc-read small{font-weight:600}
 .hc-read small.obs{color:var(--accent-2)}
+svg.tr-ch{touch-action:pan-y;cursor:crosshair;-webkit-user-select:none;user-select:none}
+.tr-read{margin-top:2px}
+.tr-read .tr-hint{font-weight:600}
+.tr-read b.m{font-family:var(--f-mono);font-size:1rem;color:var(--ink)}
 tr[data-k]{cursor:pointer}
 tr[data-k].sel td{background:color-mix(in srgb, var(--sel) 14%, var(--surface))}
 tr[data-k].sel td:first-child{box-shadow:inset 3px 0 0 var(--sel)}
