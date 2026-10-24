@@ -450,8 +450,10 @@ svg.hc{touch-action:pan-y;cursor:crosshair;-webkit-user-select:none;user-select:
 .hc-read small{font-weight:600}
 .hc-read small.obs{color:var(--accent-2)}
 svg.tr-ch{touch-action:pan-y;cursor:crosshair;-webkit-user-select:none;user-select:none}
-.tr-read{margin-top:2px}
-.tr-read .tr-hint{font-weight:600}
+/* Lectura del gràfic d'una sortida: classe pròpia (no .hc-read, que la Previsió omple sola en actualitzar-se) */
+.tr-read{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:2px 0 6px;padding:7px 10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);font-size:.84rem;font-weight:600;color:var(--muted);min-height:2.6em}
+.tr-read .rd-h{display:inline-flex;align-items:center;gap:8px;color:var(--ink)}
+.tr-read .rd-h b{font-family:var(--f-mono);font-size:1rem}
 .tr-read b.m{font-family:var(--f-mono);font-size:1rem;color:var(--ink)}
 tr[data-k]{cursor:pointer}
 tr[data-k].sel td{background:color-mix(in srgb, var(--sel) 14%, var(--surface))}

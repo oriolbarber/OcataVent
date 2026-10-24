@@ -620,7 +620,7 @@ function seriesChart(trip){
   const mins = (t1-t0)/60000, tick = mins > 180 ? 60 : mins > 60 ? 30 : mins > 20 ? 10 : 5;
   for(let m=0; m<=mins; m+=tick){ const x = X(t0+m*60000), d = new Date(t0+m*60000); g += `<text x="${x}" y="${H-6}" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${pad(d.getHours())}:${pad(d.getMinutes())}</text>`; }
   g += `<g class="tsel" style="display:none"><line x1="0" x2="0" y1="${T}" y2="${T+ph}" stroke="var(--ink)" stroke-width="1.5"/><circle cx="0" cy="0" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2.5"/></g>`;
-  return `<div class="hc-read tr-read" id="trRead"><span class="tr-hint">Toca o arrossega el gràfic: el mapa marca on eres.</span></div>
+  return `<div class="tr-read" id="trRead"><span class="tr-hint">Toca o arrossega el gràfic: el mapa marca on eres.</span></div>
     <div class="chart tr-wrap"><svg class="tr-ch" viewBox="0 0 ${W} ${H}" data-t0="${t0}" data-t1="${t1}" data-w="${W}" data-l="${L}" data-pw="${pw}" data-t="${T}" data-ph="${ph}" data-max="${maxV}" role="img" aria-label="Velocitat del vaixell i vent durant la sortida. Toca'l per veure el punt al mapa">${g}</svg></div>
     <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>Velocitat vaixell (kn)</span><span><span class="sw" style="background:var(--accent-2)"></span>Vent ${winds.some(w=>w.src==="estació")?"estació":"model"} (kn)</span><span><span class="sw" style="background:var(--accent-2);opacity:.6"></span>Ratxa</span></div>`;
 }
