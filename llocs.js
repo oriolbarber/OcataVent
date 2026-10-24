@@ -36,7 +36,7 @@
     map = typeof baseMap === "function" ? baseMap(box) : L.map(box);
     map.setView(LOC.home, 10, {animate:false});
     if(window.ResizeObserver) new ResizeObserver(() => map.invalidateSize({animate:false})).observe(box);   // si el full canvia de mida, el mapa l'omple sencer
-    if(typeof baseMap !== "function") L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, attribution:"© OpenStreetMap"}).addTo(map);
+    if(typeof baseMap !== "function") L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, attribution:"© OpenStreetMap contributors"}).addTo(map);
     keys.forEach(k => { const o = LOCS[k];
       marks[k] = L.circleMarker(o.home, {radius:7, weight:2, color:"#fff", fillColor: hasSt(k) ? C_ST : C_FC, fillOpacity:1})
         .bindTooltip(o.name, {direction:"top", offset:[0, -8]}).on("click", () => pick(k)).addTo(map); });

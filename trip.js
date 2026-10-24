@@ -296,7 +296,7 @@ function baseMap(el, scroll){
   const free = scroll && L.Browser.mobile;
   const m = L.map(el, {zoomControl:true, attributionControl:true, dragging:!free, tap:!free}).setView(HOME, 14);
   m.attributionControl.setPrefix(false);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, className:"base-tiles", attribution:"© OpenStreetMap"}).addTo(m);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, className:"base-tiles", attribution:"© OpenStreetMap contributors"}).addTo(m);
   L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {maxZoom:18, attribution:"© OpenSeaMap"}).addTo(m);
   return m;
 }

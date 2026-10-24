@@ -27,7 +27,7 @@ function wmEnsureMap(){
     scrollWheelZoom:false, boxZoom:false, keyboard:false, tap:false, zoomSnap:0.25, inertia:false}).setView(WM_BEACH, WM_ZOOM);
   wmMap.attributionControl.setPrefix(false);
   // crossOrigin: el mapa maximitzat llegeix els píxels de les rajoles per saber on és el mar (onades)
-  wmTiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:16, className:"base-tiles", attribution:"© OpenStreetMap", crossOrigin:"anonymous"}).addTo(wmMap);
+  wmTiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:16, className:"base-tiles", attribution:"© OpenStreetMap contributors", crossOrigin:"anonymous"}).addTo(wmMap);
   wmPin = L.marker(WM_BEACH, {interactive:false, keyboard:false, icon: L.divIcon({className:"wm-pin", iconSize:[0, 0], html:
     `<div class="wm-pivot"><div class="wm-flag wave" data-f="v"><span class="wm-txt"></span></div><div class="wm-flag wind" data-f="w"><span class="wm-txt"></span></div><i class="wm-dot"></i></div>`})}).addTo(wmMap);
   new ResizeObserver(() => { wmMap.invalidateSize(false); if(!wmFull()) wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); if(wmFx) wmFx.size(); }).observe(el);

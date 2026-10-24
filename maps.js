@@ -1,6 +1,10 @@
 "use strict";
 /* ============ Mar del Masnou · mapes en directe ============ */
 const RV_API = "https://api.rainviewer.com/public/weather-maps.json";
+// RainViewer, des de l'1-1-2026 (API gratuïta, ús personal i educatiu): només radar passat (2 h, cada 10 min), sense previsió
+// ni satèl·lit, zoom màxim 7, color «Universal Blue» (el 2) i un màxim de 100 peticions per minut i IP. Cada fotograma demana
+// les seves rajoles: amb 7 fotogrames (l'última hora) l'animació en fa unes 30–60 i queda lluny del límit (amb 13, s'hi acostava).
+const RV_FRAMES = 7;
 const WINDY_PRODUCT = {wind:"ecmwf", gust:"ecmwf", waves:"ecmwfWaves", rain:"ecmwf"};
 // autoplay/muted: molts reproductors els accepten per URL; si aquest no, no fan res (i cal tocar ▶ dins el vídeo)
 // Badalona: webcam del Club Natació Badalona (la mateixa que mostra badalona.meteoelmasnou.cat), reproductor de Windy
@@ -36,12 +40,12 @@ async function rvLoad(kind){
   try{
     const j = await (await fetch(RV_API, {cache:"no-store"})).json();
     rvLayers.forEach(l => rvMap.removeLayer(l));
-    rvFrames = kind === "sat" ? (j.satellite?.infrared || []) : [...(j.radar?.past || []), ...(j.radar?.nowcast || [])];
+    rvFrames = kind === "sat" ? (j.satellite?.infrared || []) : (j.radar?.past || []).slice(-RV_FRAMES);
     const tile = kind === "sat" ? "/256/{z}/{x}/{y}/0/0_0.png" : "/256/{z}/{x}/{y}/2/1_1.png";
     rvLayers = rvFrames.map(f => L.tileLayer(j.host + f.path + tile, {opacity:0, zIndex:10, maxNativeZoom:7, maxZoom:12, attribution:'RainViewer'}).addTo(rvMap));
     rvKind = kind; rvLoadedAt = Date.now();
     $("radarSlider").max = Math.max(0, rvFrames.length-1);
-    $("radarTitle").textContent = kind === "sat" ? "Satèl·lit infraroig · núvols" : "Radar de pluja · últimes 2 h";
+    $("radarTitle").textContent = kind === "sat" ? "Satèl·lit infraroig · núvols" : "Radar de pluja · última hora";
     $("radarNote").innerHTML = kind === "sat"
       ? `Núvols vistos pel satèl·lit en infraroig: com més blancs, més alts i freds (tempestes). Font: RainViewer.`
       : `Pluja detectada pels radars meteorològics, cada 10 minuts. Font: RainViewer.`;

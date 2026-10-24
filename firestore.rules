@@ -485,6 +485,14 @@ service cloud.firestore {
       allow delete: if signedIn() && me() in resource.data.uids;
     }
 
+    // ---------- memòria cau meteo ----------
+    // L'escriuen les Cloud Functions (functions/index.js, amb permisos de servidor). Dades públiques: estacions i previsió.
+    // Es llegeix un document concret (també sense sessió, per REST); no es poden llistar.
+    match /meteo/{id} {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
     // Qualsevol altra cosa: tancada
     match /{document=**} {
       allow read, write: if false;

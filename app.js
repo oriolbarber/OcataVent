@@ -187,7 +187,7 @@ const STATIONS = {
   // Badalona (Dalt de la Vila, uns 600 m terra endins i en alçada): mateix sistema (Meteotemplate) i mateixa xarxa meteoelmasnou.cat
   badalona: {name:"Badalona", url:"https://badalona.meteoelmasnou.cat/meteotemplateLive.txt"},
   // Port de Barcelona, estació Bocana Nord (dades obertes CC BY-SA 4.0): CSV cada 10 min en m/s, hora UTC; + històric de 3 dies.
-  // Sense CORS: al navegador falla i l'app mostra «sense dades · model»; a l'APK va per la petició nativa.
+  // Sense CORS: al navegador només arriba per la còpia del servidor (meteo/*); a l'APK, també per la petició nativa.
   portbcn: {name:"Port BCN", long:"Port de Barcelona · estació Bocana Nord", type:"pbcn", unit:"ms", maxAge:60,
     info:"Mesura cada 10 min, però el port publica les dades en blocs: poden arribar amb 30–40 min de retard.",
     url:"https://opendata.portdebarcelona.cat/dataset/1afd4f4d-f329-4959-b1d3-252d973a9c3b/resource/d4263236-5d2a-486e-9ba9-9c4cb27ddc8a/download/14-bocananord_opd_10m.csv",
@@ -216,6 +216,28 @@ async function getJSON(u){ const r = await fetch(u, {cache:"no-store"}); if(!r.o
 async function stFetch(u, headers){
   if(window.OV_NATIVE && OV_NATIVE.http){ try{ return await OV_NATIVE.http(u, headers); }catch(e){} }
   return fetch(u, {cache:"no-store", headers: headers || {}});
+}
+/* ---------- memòria cau meteo del servidor (Cloud Functions → Firestore meteo/*, functions/index.js) ---------- */
+// Un sol servidor llegeix estacions i Open-Meteo; els mòbils en llegeixen la còpia amb una petició REST (sense Firebase).
+// Si el document no hi és, no es pot llegir o és vell, l'app va a la font com abans: res no depèn només del servidor.
+const MC_URL = "https://firestore.googleapis.com/v1/projects/ocatavent/databases/(default)/documents/meteo/";
+const MC = {miss:{}, memo:{}, okSt:false};
+async function meteoCache(id, memoMs){
+  const m = MC.memo[id]; if(memoMs && m && Date.now() - m.t < memoMs) return m.v;
+  if(MC.miss[id] && Date.now() - MC.miss[id] < 30*60e3) return null;   // no hi és (o no es pot llegir): no ho reprovis fins d'aquí a 30 min
+  try{
+    const r = await fetch(MC_URL + id, {cache:"no-store"});
+    if(!r.ok){ if(r.status === 404 || r.status === 403) MC.miss[id] = Date.now(); return null; }
+    const s = (await r.json()).fields?.json?.stringValue, v = s ? JSON.parse(s) : null;
+    MC.memo[id] = {t: Date.now(), v}; return v;
+  }catch(e){ return null; }
+}
+// Lectures d'ara de totes les estacions (el servidor les renova cada 2 min): com a molt una lectura cada 100 s
+async function stCache(){ const c = await meteoCache("estacions", 100e3); MC.okSt = !!(c && Date.now() - c.upd < 6*60e3); return MC.okSt ? c : null; }
+// Registres de les últimes 24 h d'una estació (cada 10 min; Weathercloud, acumulats): [{t, wind, gust, dir, temp}]
+async function stRecsCache(key){
+  const c = await meteoCache("st_" + key, 5*60e3); if(!c || !Array.isArray(c.recs) || Date.now() - c.upd > 25*60e3) return null;
+  return c.recs.map(r => ({t:r[0], wind:r[1], gust:r[2], dir:r[3], temp:r[4]}));
 }
 function build(fc, ma){
   const hours = {}, H = fc.hourly;
@@ -368,8 +390,10 @@ function modelErrors(){
 function showMsg(text, err){ const m = $("msg"); m.hidden = !text; m.textContent = text || ""; m.className = "msg"+(err?" err":""); }
 async function load(){
   try{
-    const [fc, ma, alt] = await Promise.all([getJSON(URL_FC), getJSON(URL_MA).catch(() => getJSON(URL_MA.replace("forecast_days=16", "forecast_days=8"))).catch(()=>null), getJSON(URL_ALT).catch(()=>null)]);
-    DATA = build(fc, ma); DATA.alt = parseAlt(alt); applyModel();
+    // Primer la còpia del servidor (es renova cada hora); si no n'hi ha o té més de 90 min, directament d'Open-Meteo
+    const c = await meteoCache("fc_" + locKey), ok = c && c.fc && Date.now() - c.at < 90*60e3;
+    const [fc, ma, alt] = ok ? [c.fc, c.ma, c.alt] : await Promise.all([getJSON(URL_FC), getJSON(URL_MA).catch(() => getJSON(URL_MA.replace("forecast_days=16", "forecast_days=8"))).catch(()=>null), getJSON(URL_ALT).catch(()=>null)]);
+    DATA = build(fc, ma); DATA.alt = parseAlt(alt); if(ok){ DATA.fetchedAt = new Date(c.at).toISOString(); DATA.via = "servidor"; } applyModel();
     const {hours, ...toCache} = DATA; store.set("ov2_cache_" + locKey, toCache);
     showMsg(DATA.marineOk ? "" : "Sense dades d'onatge ara mateix: la valoració només té en compte el vent.");
   }catch(e){
@@ -396,8 +420,12 @@ async function stRead(key){
 async function loadStation(){
   if(!STATIONS[stKey]){ ST = null; if(DATA) renderNow(); return null; }   // club sense estació: només previsió
   const want = stKey, order = [want, ...LOC.stations.filter(k => k !== want)];
-  let got = null;
-  for(const k of order){ try{ got = await stRead(k); }catch(e){ got = null; } if(got && Date.now() - got.at < stMaxAge(k)) break; got = null; }
+  let got = null; const C = await stCache();
+  for(const k of order){
+    // Amb la còpia del servidor al dia, se'n fa cas (també si l'estació no té dades); a la font només si el servidor no l'ha pogut llegir
+    if(C && !C.err?.[k]){ got = C.st?.[k] ? Object.assign({key:k}, C.st[k]) : null; }
+    else { try{ got = await stRead(k); }catch(e){ got = null; } }
+    if(got && Date.now() - got.at < stMaxAge(k)) break; got = null; }
   if(want === stKey) ST = got;
   if(DATA) renderNow();
   return ST;
@@ -411,6 +439,12 @@ const fmtLocal = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pa
 // Registres de 5 minuts de l'estació (consulta «Taula interactiva», agrupació «Tot»), en nusos
 async function stationRecords(key, interval, fromMs, toMs){
   const S = STATIONS[key];
+  {   // còpia del servidor (24 h) si cobreix l'interval: no carrega l'estació i també funciona al navegador per al port i Weathercloud
+    const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    const a = interval === "today" ? d0.getTime() : (fromMs || 0), b = interval === "today" ? Date.now() : (toMs || Date.now());
+    const C = await stRecsCache(key);
+    if(C && C.length && C[0].t <= a + 15*60e3) return C.filter(o => o.t >= a && o.t <= b);
+  }
   if(S.type === "wcloud") throw new Error("sense historial");
   if(S.type === "pbcn"){   // històric de 3 dies del port, retallat a l'interval
     const [r, r2] = await Promise.all([stFetch(S.hist+"?t="+Date.now()), stFetch(S.url+"?t="+Date.now()).catch(() => null)]); if(!r.ok) throw new Error("HTTP "+r.status);
@@ -953,7 +987,7 @@ function stInfo(){
   let p = $("iStation"); if(!p){ p = document.createElement("p"); p.id = "iStation"; box.prepend(p); }
   const S = STATIONS[stKey];
   if(!S){ p.innerHTML = `<b>Estació:</b> aquest club encara no en té. Es mostra la previsió.`; return; }
-  const web = S.type && !window.OV_NATIVE ? " Des del navegador no es pot llegir: només a l'app Android." : "";
+  const web = S.type && !window.OV_NATIVE && !MC.okSt ? " Des del navegador no es pot llegir: només a l'app Android." : "";
   p.innerHTML = `<b>Estació:</b> ${esc(S.long || S.name)}${LOC.stNote ? ", " + esc(LOC.stNote.replace(/^Estació /i, "")) + " de la base" : ""}. ${esc(S.info || "")}${web}`;
 }
 function renderNow(){

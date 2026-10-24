@@ -67,7 +67,7 @@ function ensureMap(){
   pMap = L.map(el, {zoomControl:true, attributionControl:true, dragging:false, touchZoom:false, doubleClickZoom:false, scrollWheelZoom:false, boxZoom:false, keyboard:false, tap:false, zoomSnap:0.5}).setView(PB, 14);
   pMap.attributionControl.setPrefix(false);
   // crossOrigin: cal per llegir els píxels de les rajoles i saber on és el mar (color d'aigua d'OpenStreetMap)
-  baseL = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, className:"base-tiles", attribution:"© OpenStreetMap", crossOrigin:"anonymous"}).addTo(pMap);
+  baseL = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, className:"base-tiles", attribution:"© OpenStreetMap contributors", crossOrigin:"anonymous"}).addTo(pMap);
   fx = OV_FX(pMap, baseL, {pane:"prepWind", get: windNow, active: () => visible() && !recording(), onMask: n => {
     maskOk = n !== false;
     if(n === false){ if(LY.onades){ $("prepSeaT").hidden = false; $("prepSeaT").textContent = "No s'ha pogut localitzar el mar al mapa."; } }
