@@ -21,6 +21,7 @@ import org.json.JSONObject;
 
 /* Ocata Vent: widget de la pantalla d'inici amb la idoneïtat per navegar.
    L'app hi desa (WidgetPlugin) el veredicte d'ara i la previsió de les 48 hores següents.
+   «ARA» marca la nota gran; «PREVISIÓ ▾» (a la dreta de la font) marca la fila de 7 dies.
    Android el refresca cada 30 min sense obrir l'app: si les dades d'ara tenen menys de 45 min, les mostra
    (amb el vent de l'estació); si no, mostra la previsió de l'hora en curs. Tocar-lo obre l'app.
    A sota, resum de 7 dies (si el widget fa ≥ WEEK_MIN dp d'alt): per a cada dia, la nota del millor moment que queda
@@ -71,12 +72,12 @@ public class VentWidget extends AppWidgetProvider {
             if (now - at < NOW_MAX && o.has("now")) {
                 e = o.getJSONObject("now");
                 String st = o.optString("st", "");
-                src = (st.isEmpty() ? "Previsió" : "Estació " + st) + " · " + hm.format(new Date(at));
+                src = (st.isEmpty() ? "Model" : "Estació " + st) + " · " + hm.format(new Date(at));
             } else {
                 JSONArray h = o.optJSONArray("hrs");
                 if (h != null) for (int k = 0; k < h.length(); k++) {
                     JSONObject x = h.getJSONObject(k); long t = x.optLong("t", 0);
-                    if (now >= t && now < t + HOUR) { e = x; src = "Previsió de les " + hh.format(new Date(t)) + " h"; break; }
+                    if (now >= t && now < t + HOUR) { e = x; src = "Model de les " + hh.format(new Date(t)) + " h"; break; }
                 }
             }
             if (e == null) { empty(v, title(o), "Previsió caducada: obre l'app"); return v; }
@@ -98,7 +99,8 @@ public class VentWidget extends AppWidgetProvider {
             String why = e.optString("why", "");
             v.setTextViewText(R.id.wWave, wave + (!wave.isEmpty() && !why.isEmpty() ? " · " : "") + why);
             v.setTextViewText(R.id.wSrc, src);
-            fillWeek(c, v, o, showWeek, 7);
+            int nw = fillWeek(c, v, o, showWeek, 7);
+            v.setViewVisibility(R.id.wFcTag, nw > 0 ? android.view.View.VISIBLE : android.view.View.GONE);
         } catch (Exception ex) {
             empty(v, "Ocata Vent", "Obre l'app per veure les condicions");
         }
@@ -165,5 +167,6 @@ public class VentWidget extends AppWidgetProvider {
         v.setTextViewText(R.id.wSrc, "");
         v.removeAllViews(R.id.wWeek);
         v.setViewVisibility(R.id.wWeek, android.view.View.GONE);
+        v.setViewVisibility(R.id.wFcTag, android.view.View.GONE);
     }
 }
