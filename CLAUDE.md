@@ -176,6 +176,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 
 ## Decisions preses
 - **Marca del club** (decisió de l'Oriol, 19-10-2026): logo i títol de la capçalera editables a gestio.html ▸ Club ▸ Identitat del club (`clubs/{id}.logo` = data URL ≤ 150 kB, SVG ≤ 60 kB tal qual o imatge retallada quadrada a 256 px; `.titol` ≤ 24 caràcters, es mostra en majúscules; buits = logo `icons/logo.svg` i «Ocata Vent»). A sota del títol continua el club on navegues (`#clock`). L'app la llegeix en entrar amb compte aprovat (`loadBrand` a `club.js`) i la desa al mòbil (`ov2_brand`); l'aplica `window.OV_BRAND` (script en línia d'`index.html`, després de la capçalera) abans de carregar res. En tancar la sessió torna la d'Ocata Vent; sense connexió, la desada. La web de gestió posa el logo del club a la seva capçalera. La icona de l'app i del widget no canvien.
+- **Model econòmic** (decisió de l'Oriol, 24-10-2026): de moment, app gratuïta per als socis i sense Premium ni publicitat (amb Open-Meteo gratuït cal ús no comercial; les donacions hi són compatibles). Proves amb clubs amics; els clubs que vulguin poden fer una aportació voluntària (~200–300 €), de manera informal. Més endavant (Google Play, V3 multiclub): cobrar només per club (personalització i gestió), no als navegants; aleshores caldrà el pla comercial d'Open-Meteo. La seguretat sempre gratuïta.
 - La V3 serà oberta a qualsevol club de Catalunya i les Balears.
 - No hi haurà menors d'edat com a usuaris.
 - Text de consentiment RGPD i botó per esborrar el compte.
