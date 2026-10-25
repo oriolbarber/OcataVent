@@ -290,13 +290,15 @@ function gapsOf(trip){
 /* ---------- mapes ---------- */
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#3cd0ff"; }
 // scroll:true → al mòbil un dit fa desplaçar l'app (el mapa només es mou amb dos dits / pessic)
-function baseMap(el, scroll){
+// cors:true → rajoles amb crossOrigin (cal per a la màscara del mar de fx.js); la capa base queda a m._ovBase
+function baseMap(el, scroll, cors){
   if(!window.L) return null;
   el.innerHTML = "";
   const free = scroll && L.Browser.mobile;
-  const m = L.map(el, {zoomControl:true, attributionControl:true, dragging:!free, tap:!free}).setView(HOME, 14);
+  const m = L.map(el, {zoomControl:!cors, attributionControl:true, dragging:!free, tap:!free}).setView(HOME, 14);
   m.attributionControl.setPrefix(false);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, className:"base-tiles", attribution:"© OpenStreetMap contributors"}).addTo(m);
+  if(cors) L.control.zoom({position:"bottomright"}).addTo(m);
+  m._ovBase = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", Object.assign({maxZoom:18, className:"base-tiles", attribution:"© OpenStreetMap contributors"}, cors ? {crossOrigin:"anonymous"} : {})).addTo(m);
   L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {maxZoom:18, attribution:"© OpenSeaMap"}).addTo(m);
   return m;
 }
@@ -331,10 +333,10 @@ function updateLiveMap(){
   if(!liveDot) liveDot = L.circleMarker(cur, {radius:8, color:"#fff", weight:3, fillColor: cssVar("--no"), fillOpacity:1}).addTo(liveMap); else liveDot.setLatLng(cur);
   if(P.length === 1) liveMap.setView(cur, 15); else if(!liveMap.getBounds().pad(-0.15).contains(cur)) liveMap.panTo(cur);
 }
-function tripMap(el, trip){
+function tripMap(el, trip, full){
   const P = trip.pts;
   if(!window.L){ svgTrack(el, P); return null; }
-  const m = baseMap(el, true);
+  const m = baseMap(el, !full, full);
   if(P.length < 2){ if(P.length) L.circleMarker([P[0].lat,P[0].lon], {radius:6}).addTo(m); return m; }
   const seg = segments(trip), groups = SPEED_COLORS.map(() => []);
   const gaps = gapsOf(trip), isGap = s => (s.b.t - s.a.t)/1000 > GAP_S;
@@ -343,7 +345,8 @@ function tripMap(el, trip){
   if(gaps.length) L.polyline(gaps.map(g => [[g.a.lat,g.a.lon],[g.b.lat,g.b.lon]]), {color:"#8a94a6", weight:3, dashArray:"6 8", opacity:.9}).bindTooltip("Sense GPS (pantalla apagada?)").addTo(m);
   L.circleMarker([P[0].lat,P[0].lon], {radius:7, color:"#fff", weight:2, fillColor:"#34e39a", fillOpacity:1}).bindTooltip("Sortida").addTo(m);
   const e = P[P.length-1]; L.circleMarker([e.lat,e.lon], {radius:7, color:"#fff", weight:2, fillColor:"#ff6476", fillOpacity:1}).bindTooltip("Arribada").addTo(m);
-  m.fitBounds(L.latLngBounds(P.map(p=>[p.lat,p.lon])).pad(0.15));
+  const bb = L.latLngBounds(P.map(p=>[p.lat,p.lon]));
+  if(full) m.fitBounds(bb, {paddingTopLeft:[24, 96], paddingBottomRight:[24, 24]}); else m.fitBounds(bb.pad(0.15));   // a dalt hi ha la lectura
   return m;
 }
 
@@ -564,7 +567,7 @@ async function backupIn(file){
 let detailMap = null;
 async function renderList(){
   $("logDetail").hidden = true; $("logList").hidden = false;
-  if(detailMap){ detailMap.remove(); detailMap = null; } trSel = null;
+  trFullClose(true); if(detailMap){ detailMap.remove(); detailMap = null; } trSel = null;
   let trips = []; try{ trips = (await DB.all()) || []; }catch(e){}
   trips.sort((a,b) => b.start - a.start);
   // Importar i còpia de seguretat: plegat en una sola targeta (es fa servir poc). Sense compte, avisa al títol.
@@ -602,27 +605,35 @@ function tripShape(pts){
   const pl = Q.map((p, i) => (ox + (xs[i] - x0) * sc).toFixed(1) + "," + (oy + (y1 - ys[i]) * sc).toFixed(1)).join(" ");
   return `<svg class="tr-shape" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${pl}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
-function seriesChart(trip){
+// Gràfic de velocitat i vent. W×H = mida del dibuix (a pantalla completa, els píxels lliures: la lletra no s'escala)
+function seriesSvg(trip, W, H, full){
   const seg = segments(trip); if(seg.length < 3) return "";
-  // Mida pensada per cabre sencer al mòbil (sense lliscar de costat): així el dit pot triar un moment i el mapa marca on era
-  const t0 = trip.start, t1 = trip.end || Date.now(), W = 520, H = 240, L = 30, R = 10, T = 14, B = 26, pw = W-L-R, ph = H-T-B;
+  const t0 = trip.start, t1 = trip.end || Date.now(), L = 30, R = 10, T = full ? 8 : 14, B = full ? 22 : 26, pw = W-L-R, ph = H-T-B, fs = full ? 12 : 13;
   const winds = trip.wind.filter(w => w.wind!=null);
   const maxV = Math.max(10, Math.ceil(Math.max(...seg.map(s=>s.smooth), ...winds.map(w=>w.gust||w.wind))/5)*5);
   const X = t => L + (t-t0)/(t1-t0||1)*pw, Y = v => T + ph - v/maxV*ph;
   let g = "";
-  for(let v=0; v<=maxV; v+=5) g += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="13" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${v}</text>`;
-  const step = Math.max(1, Math.round(seg.length/300));
+  const vStep = ph < 90 && maxV > 10 ? 10 : 5;
+  for(let v=0; v<=maxV; v+=vStep) g += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="${fs}" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${v}</text>`;
+  const step = Math.max(1, Math.round(seg.length/Math.max(150, pw)));
   g += `<polyline points="${seg.filter((_,i)=>i%step===0).map(s => X(s.t).toFixed(1)+","+Y(Math.min(s.smooth,maxV)).toFixed(1)).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
   if(winds.length > 1){
     g += `<polyline points="${winds.map(w => X(w.t)+","+Y(w.wind)).join(" ")}" fill="none" stroke="var(--accent-2)" stroke-width="2.5"/>`;
     g += `<polyline points="${winds.filter(w=>w.gust!=null).map(w => X(w.t)+","+Y(w.gust)).join(" ")}" fill="none" stroke="var(--accent-2)" stroke-width="1.5" stroke-dasharray="4 3" opacity=".8"/>`;
   }
-  const mins = (t1-t0)/60000, tick = mins > 180 ? 60 : mins > 60 ? 30 : mins > 20 ? 10 : 5;
-  for(let m=0; m<=mins; m+=tick){ const x = X(t0+m*60000), d = new Date(t0+m*60000); g += `<text x="${x}" y="${H-6}" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${pad(d.getHours())}:${pad(d.getMinutes())}</text>`; }
+  const mins = (t1-t0)/60000, per = pw / Math.max(1, mins);   // px per minut: les etiquetes d'hora no s'han de tocar (~46 px)
+  const tick = [5, 10, 15, 30, 60, 120].find(k => k * per >= 46) || 180;
+  for(let m=0; m<=mins; m+=tick){ const x = X(t0+m*60000), d = new Date(t0+m*60000); g += `<text x="${x}" y="${H-6}" text-anchor="${x > W - R - 20 ? "end" : "middle"}" font-size="${fs}" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${pad(d.getHours())}:${pad(d.getMinutes())}</text>`; }
   g += `<g class="tsel" style="display:none"><line x1="0" x2="0" y1="${T}" y2="${T+ph}" stroke="var(--ink)" stroke-width="1.5"/><circle cx="0" cy="0" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2.5"/></g>`;
+  return `<svg class="tr-ch" viewBox="0 0 ${W} ${H}"${full ? ` width="${W}" height="${H}"` : ""} data-t0="${t0}" data-t1="${t1}" data-w="${W}" data-l="${L}" data-pw="${pw}" data-t="${T}" data-ph="${ph}" data-max="${maxV}" role="img" aria-label="Velocitat del vaixell i vent durant la sortida. Toca'l per veure el punt al mapa">${g}</svg>`;
+}
+const trLegend = trip => `<span><span class="sw" style="background:var(--accent)"></span>Velocitat vaixell (kn)</span><span><span class="sw" style="background:var(--accent-2)"></span>Vent ${trip.wind.some(w=>w.src==="estació")?"estació":"model"} (kn)</span><span><span class="sw" style="background:var(--accent-2);opacity:.6"></span>Ratxa</span>`;
+function seriesChart(trip){
+  // Mida pensada per cabre sencer al mòbil (sense lliscar de costat): així el dit pot triar un moment i el mapa marca on era
+  const svg = seriesSvg(trip, 520, 240); if(!svg) return "";
   return `<div class="tr-read" id="trRead"><span class="tr-hint">Toca o arrossega el gràfic: el mapa marca on eres.</span></div>
-    <div class="chart tr-wrap"><svg class="tr-ch" viewBox="0 0 ${W} ${H}" data-t0="${t0}" data-t1="${t1}" data-w="${W}" data-l="${L}" data-pw="${pw}" data-t="${T}" data-ph="${ph}" data-max="${maxV}" role="img" aria-label="Velocitat del vaixell i vent durant la sortida. Toca'l per veure el punt al mapa">${g}</svg></div>
-    <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>Velocitat vaixell (kn)</span><span><span class="sw" style="background:var(--accent-2)"></span>Vent ${winds.some(w=>w.src==="estació")?"estació":"model"} (kn)</span><span><span class="sw" style="background:var(--accent-2);opacity:.6"></span>Ratxa</span></div>`;
+    <div class="chart tr-wrap">${svg}</div>
+    <div class="legend">${trLegend(trip)}</div>`;
 }
 async function showTrip(id, ask){
   const t = await DB.get(id); if(!t){ renderList(); return; }
@@ -649,7 +660,7 @@ async function showTrip(id, ask){
       ${stat("gust","Ratxa màx.", r0(W.gust), "kn", W.src)}
       ${stat("air","Aire", r0(W.temp), "°C", W.n+" lectures de vent")}
     </div>
-    <article class="card"><div class="card-h"><span class="lbl">Ruta · color segons velocitat</span></div><div class="map short" id="tripMap"></div>
+    <article class="card"><div class="card-h"><span class="lbl">Ruta · color segons velocitat</span></div><div class="tr-mbox"><div class="map short" id="tripMap"></div><button type="button" class="wm-maxb" id="trMax" aria-label="Mapa i gràfic a pantalla completa" title="Pantalla completa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
       <div class="legend">${SPEED_COLORS.map((c,i) => `<span><span class="sw" style="background:${c};height:6px"></span>${i===0?"< 2":i===4?"> 8":SPEED_BINS[i-1]+"–"+SPEED_BINS[i]} kn</span>`).join("")}</div></article>
     <article class="card"><div class="card-h"><span class="lbl">Velocitat i vent</span></div>${seriesChart(t) || `<p class="note">No hi ha prou punts per dibuixar el gràfic.</p>`}</article>
     <article class="card"><div class="card-h"><span class="lbl">Rumbs respecte al vent</span><span class="lbl">temps · vel. mitjana</span></div>
@@ -664,9 +675,11 @@ async function showTrip(id, ask){
   $("backList").onclick = renderList;
   $("expGpx").onclick = () => download(t, "gpx");
   $("expCsv").onclick = () => download(t, "csv");
+  $("trMax").onclick = () => trFullOpen();
   slideConfirm($("delTrip"), "Llisca per esborrar", async () => { await DB.del(t.id); window.OV_CLOUD?.deleted(t); renderList(); });
   if(detailMap){ detailMap.remove(); detailMap = null; }
-  trSel = {trip: t, seg: segments(t), mk: null};
+  trFullClose(true);
+  trSel = {trip: t, seg: segments(t), mk: null, t: null};
   setTimeout(() => { detailMap = tripMap($("tripMap"), t); }, 0);
   window.scrollTo({top:0});
 }
@@ -674,25 +687,111 @@ async function showTrip(id, ask){
 var trSel = null;   // {trip, seg, mk}: sortida oberta, trams i marcador del mapa
 function trPick(svg, clientX){
   if(!trSel || !trSel.seg.length) return;
-  const d = svg.dataset, r = svg.getBoundingClientRect(), S = trSel.seg;
+  const d = svg.dataset, r = svg.getBoundingClientRect();
   const x = (clientX - r.left) * (+d.w) / r.width, t0 = +d.t0, t1 = +d.t1;
-  const t = t0 + Math.max(0, Math.min(1, (x - (+d.l)) / (+d.pw))) * (t1 - t0);
+  trApply(t0 + Math.max(0, Math.min(1, (x - (+d.l)) / (+d.pw))) * (t1 - t0));
+}
+// Aplica un moment t a tots els gràfics (fitxa i pantalla completa), les lectures i els mapes
+function trApply(t){
+  if(!trSel || !trSel.seg.length) return;
+  const S = trSel.seg; trSel.t = t;
   let i = S.findIndex(s => s.t >= t); if(i < 0) i = S.length - 1;
   const s = S[i], f = s.dt > 0 ? Math.max(0, Math.min(1, (t - s.a.t) / (s.b.t - s.a.t))) : 1;
   const lat = s.a.lat + (s.b.lat - s.a.lat) * f, lon = s.a.lon + (s.b.lon - s.a.lon) * f, gap = s.dt > GAP_S;
-  // cursor al gràfic
-  const max = +d.max, X = (+d.l) + (t - t0) / (t1 - t0 || 1) * (+d.pw), Y = (+d.t) + (+d.ph) - Math.min(s.smooth, max) / max * (+d.ph);
-  const g = svg.querySelector(".tsel"); if(g){ g.style.display = ""; g.setAttribute("transform", `translate(${X.toFixed(1)} 0)`); const c = g.querySelector("circle"); c.setAttribute("cy", Y.toFixed(1)); c.style.display = gap ? "none" : ""; }
-  // lectura: hora · velocitat · vent
-  const w = windNear(trSel.trip, t), hd = new Date(t), rd = $("trRead");
-  if(rd) rd.innerHTML = `<span class="rd-h"><b>${pad(hd.getHours())}:${pad(hd.getMinutes())}</b></span><span>${gap ? "Sense GPS" : `Vaixell <b class="m">${r1(s.smooth)}</b> kn`}</span>${w && w.wind != null ? `<span>Vent ${r0(w.wind)}${w.gust != null ? "/" + r0(w.gust) : ""} kn${w.dir != null ? " " + windAbbr(w.dir) : ""}</span>` : ""}`;
-  // punt al mapa (si surt de la vista, el mapa s'hi mou)
-  const m = detailMap; if(!m || !window.L) return;
-  const ll = [lat, lon];
-  if(!trSel.mk) trSel.mk = L.circleMarker(ll, {radius:9, color:"#fff", weight:3, fillColor:"#111827", fillOpacity:1, interactive:false}).addTo(m);
-  else trSel.mk.setLatLng(ll);
-  if(!m.getBounds().pad(-0.08).contains(ll)) m.panTo(ll, {animate:false});
+  // cursor a cada gràfic
+  document.querySelectorAll("svg.tr-ch").forEach(svg => {
+    const d = svg.dataset, t0 = +d.t0, t1 = +d.t1, max = +d.max;
+    const X = (+d.l) + (t - t0) / (t1 - t0 || 1) * (+d.pw), Y = (+d.t) + (+d.ph) - Math.min(s.smooth, max) / max * (+d.ph);
+    const g = svg.querySelector(".tsel"); if(!g) return;
+    g.style.display = ""; g.setAttribute("transform", `translate(${X.toFixed(1)} 0)`);
+    const c = g.querySelector("circle"); c.setAttribute("cy", Y.toFixed(1)); c.style.display = gap ? "none" : "";
+  });
+  // lectura: hora · velocitat · vent (· onada a pantalla completa)
+  const w = windNear(trSel.trip, t), hd = new Date(t), sea = trSea(t);
+  const base = `<span class="rd-h"><b>${pad(hd.getHours())}:${pad(hd.getMinutes())}</b></span><span>${gap ? "Sense GPS" : `Vaixell <b class="m">${r1(s.smooth)}</b> kn`}</span>${w && w.wind != null ? `<span>Vent <b class="m">${r0(w.wind)}${w.gust != null ? "/" + r0(w.gust) : ""}</b> kn${w.dir != null ? " " + windAbbr(w.dir) : ""}</span>` : ""}`;
+  const rd = $("trRead"); if(rd) rd.innerHTML = base;
+  const rf = $("trfRead"); if(rf) rf.innerHTML = base + (sea && sea.wave != null ? `<span>Onada <b class="m">${String(r1(sea.wave)).replace(".", ",")}</b> m</span>` : "");
+  // punt als mapes (si surt de la vista, el mapa s'hi mou)
+  if(!window.L) return;
+  const ll = [lat, lon], dot = {radius:9, color:"#fff", weight:3, fillColor:"#111827", fillOpacity:1, interactive:false};
+  if(detailMap){ if(!trSel.mk) trSel.mk = L.circleMarker(ll, dot).addTo(detailMap); else trSel.mk.setLatLng(ll);
+    if(!detailMap.getBounds().pad(-0.08).contains(ll)) detailMap.panTo(ll, {animate:false}); }
+  if(trF.map){ if(!trF.mk) trF.mk = L.circleMarker(ll, Object.assign({}, dot, {radius:10})).addTo(trF.map); else trF.mk.setLatLng(ll);
+    if(!trF.map.getBounds().pad(-0.08).contains(ll)) trF.map.panTo(ll, {animate:false});
+    if(trF.fx) trF.fx.kick(); }
 }
+
+/* ---------- pantalla completa de la sortida: 3/4 mapa amb vent i onades del moment · 1/4 gràfic ---------- */
+const trF = {el: null, map: null, fx: null, mk: null, ro: null, w: 0, h: 0};
+const trSeaCache = {};   // onatge per hores del dia de la sortida (Open-Meteo marine), per id de sortida
+function trSea(t){
+  const c = trSel && trSeaCache[trSel.trip.id];
+  if(c && c.length){ let b = null, bd = Infinity; for(const h of c){ const d = Math.abs(h.t - t); if(d < bd){ bd = d; b = h; } } if(b && bd <= 90*60*1000) return b; }
+  const f = forecastAt(t); return f && f.wave != null ? {wave: f.wave, wdir: f.wdir, per: f.tp ?? f.per} : null;
+}
+async function trSeaLoad(trip){
+  if(trSeaCache[trip.id]) return;
+  trSeaCache[trip.id] = [];
+  try{
+    const ymd = ms => { const d = new Date(ms); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+    const u = `https://marine-api.open-meteo.com/v1/marine?latitude=${LOC.mlat}&longitude=${LOC.mlon}&hourly=wave_height,wave_direction,wave_period,swell_wave_peak_period&timezone=Europe%2FMadrid&start_date=${ymd(trip.start)}&end_date=${ymd(trip.end||trip.start)}`;
+    const H = (await getJSON(u)).hourly;
+    trSeaCache[trip.id] = H.time.map((t, i) => ({t: new Date(t).getTime(), wave: H.wave_height[i], wdir: H.wave_direction[i], per: H.swell_wave_peak_period?.[i] ?? H.wave_period[i]})).filter(h => h.wave != null);
+  }catch(e){}
+  if(trSel && trSel.trip.id === trip.id && trSel.t != null) trApply(trSel.t);
+}
+// vent i onada del moment triat, per a l'efecte del mapa
+function trFxPoint(){
+  if(!trSel) return null;
+  const t = trSel.t ?? trSel.trip.start, w = windNear(trSel.trip, t) || {}, sea = trSea(t) || {};
+  return {wind: w.wind, dir: w.dir, wave: sea.wave, wdir: sea.wdir, per: sea.per};
+}
+function trFullChart(){
+  const box = $("trfCh"); if(!box || !trSel) return;
+  const w = Math.floor(box.clientWidth), h = Math.floor(box.clientHeight); if(w < 50 || h < 50) return;
+  if(Math.abs(w - trF.w) < 2 && Math.abs(h - trF.h) < 2 && box.firstChild) return;
+  trF.w = w; trF.h = h;
+  box.innerHTML = seriesSvg(trSel.trip, w, h, true) || `<p class="note">No hi ha prou punts per dibuixar el gràfic.</p>`;
+  if(trSel.t != null) trApply(trSel.t);
+}
+function trFullOpen(){
+  if(!trSel || trF.el) return;
+  const t = trSel.trip;
+  const el = document.createElement("div");
+  el.id = "trFull"; el.className = "trf full"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Mapa i gràfic de la sortida a pantalla completa");
+  el.innerHTML = `<div class="trf-mw"><div class="trf-map" id="trfMap"></div>
+      <div class="trf-top"><div class="tr-read trf-read" id="trfRead"><span class="tr-hint">Toca o arrossega el gràfic de sota</span></div>
+        <button type="button" class="trf-x" id="trfX" aria-label="Tanca la pantalla completa">✕</button></div></div>
+    <div class="trf-cw"><div class="legend trf-leg">${trLegend(t)}</div><div class="trf-ch" id="trfCh"></div></div>`;
+  document.body.appendChild(el); document.body.classList.add("wm-open"); trF.el = el;
+  try{ history.pushState({trFull:1}, ""); }catch(e){}
+  $("trfX").onclick = () => { if(history.state && history.state.trFull) history.back(); else trFullClose(); };
+  trF.w = trF.h = 0;
+  trF.ro = new ResizeObserver(() => { trFullChart(); if(trF.map){ trF.map.invalidateSize(false); if(trF.fx){ trF.fx.size(); trF.fx.buildMask(true); } } });
+  trF.ro.observe($("trfCh")); trF.ro.observe($("trfMap"));
+  requestAnimationFrame(() => {
+    trFullChart();
+    trF.map = tripMap($("trfMap"), t, true);
+    if(trF.map && trF.map._ovBase && window.OV_FX){
+      trF.fx = OV_FX(trF.map, trF.map._ovBase, {pane: "trfWind", get: trFxPoint, active: () => !!trF.el && document.visibilityState === "visible"});
+      setTimeout(() => { if(!trF.map) return; trF.map.invalidateSize(false); trF.fx.size(); trF.fx.buildMask(); trF.fx.reset(); }, 60);
+    }
+    trApply(trSel.t ?? t.start);
+    trSeaLoad(t);
+  });
+}
+function trFullClose(silent){
+  if(!trF.el) return;
+  if(trF.fx) trF.fx.stop(); if(trF.ro) trF.ro.disconnect();
+  if(trF.map) trF.map.remove();
+  trF.el.remove(); document.body.classList.remove("wm-open");
+  Object.assign(trF, {el: null, map: null, fx: null, mk: null, ro: null, w: 0, h: 0});
+  if(!silent && trSel && trSel.t != null) trApply(trSel.t);   // la fitxa queda al mateix moment
+}
+window.addEventListener("popstate", () => { if(trF.el) trFullClose(); });
+document.addEventListener("visibilitychange", () => { if(trF.fx && document.visibilityState === "visible") trF.fx.kick(); });
+window.addEventListener("mm-theme", () => { if(trF.fx) trF.fx.reset(); });
+
 // Al dit, com el gràfic de la Previsió: un toc tria el moment; arrossegar en horitzontal el mou; amunt o avall és scroll
 let trT = null, trDrag = null;
 document.addEventListener("pointerdown", e => {

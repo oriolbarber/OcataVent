@@ -127,6 +127,11 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 - L'app crida `window.renderPrep()` quan arriben dades noves.
 - L'efecte de vent i onades (canvas + màscara del mar) és a `fx.js` (`OV_FX(map, tiles, {get, active, onMask})`) i el fan servir «Nova sortida» i el mapa maximitzat de la Previsió.
 
+## Sortida guardada: pantalla completa (`trip.js`, decisió de l'Oriol, 26-10-2026)
+- Botó de maximitzar al mapa de la fitxa (`#trMax`) → `#trFull` (`.trf.full`, `role=dialog`, fixa a tota la pantalla, vertical): 3/4 mapa (`tripMap(…, full)`: es mou amb un dit, zoom a baix a la dreta, rajoles amb `crossOrigin` per a la màscara del mar) amb l'efecte `OV_FX` (pane `trfWind`) del moment triat + lectura flotant a dalt (`#trfRead`: hora · vaixell · vent · onada) i ✕; 1/4 gràfic (`seriesSvg(trip, W, H, true)`, redibuixat a la mida en píxels amb un `ResizeObserver`). Enrere d'Android la tanca (`history` `{trFull:1}`).
+- `trPick` → `trApply(t)`: un sol moment (`trSel.t`) per a tots els gràfics `svg.tr-ch`, les lectures i els dos mapes; en tancar, la fitxa queda al mateix moment.
+- Vent del moment: `windNear` (estació de la sortida o model). Onada: Open-Meteo marine del dia de la sortida al punt d'onatge del club actual (`trSeaLoad`, memòria `trSeaCache` per id, no es desa a la sortida); si falla, la previsió carregada (`forecastAt`).
+
 ## Estirar per actualitzar (`app.js`, `#ptr`)
 - No hi ha botó de recarregar a la capçalera (decisió de l'Oriol). A dalt de tot de la pàgina, estirar avall obre un espai sota la capçalera amb la fletxa circular (gira amb l'estirada, es pinta d'accent en passar el llindar de 64 px); en deixar anar, `refreshAll()` (previsió, estació, observacions, info i boia) i emet `ov-pull` (club.js rellegeix la secció oberta). No s'activa sobre mapes, gràfics/taules amb scroll horitzontal, pantalles de configuració, fulls ni amb la ruta o webcams obertes. `html{overscroll-behavior-y:contain}` evita el recarregar natiu de Chrome.
 
