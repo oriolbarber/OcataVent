@@ -129,6 +129,7 @@ Pla complet: document «Ocata Vent 2 — usuaris i dades compartides» (Claude D
 
 ## Sortida guardada: pantalla completa (`trip.js`, decisió de l'Oriol, 26-10-2026)
 - Botó de maximitzar al mapa de la fitxa (`#trMax`) → `#trFull` (`.trf.full`, `role=dialog`, fixa a tota la pantalla, vertical): 3/4 mapa (`tripMap(…, full)`: es mou amb un dit, zoom a baix a la dreta, rajoles amb `crossOrigin` per a la màscara del mar) amb l'efecte `OV_FX` (pane `trfWind`) del moment triat + lectura flotant a dalt (`#trfRead`: hora · vaixell · vent · onada) i ✕; 1/4 gràfic (`seriesSvg(trip, W, H, true)`, redibuixat a la mida en píxels amb un `ResizeObserver`). Enrere d'Android la tanca (`history` `{trFull:1}`).
+- **Reproducció** (decisió de l'Oriol, 26-10-2026): botó ▶/❚❚ (`#trfPlay`, a baix a l'esquerra del mapa) + velocitat (`#trfSpd`, ×1 → ×2 → ×4; `trF.spd`). `trPlay(on)` avança `trSel.t` amb `requestAnimationFrame`: a ×1 tota la sortida dura 60 s (`TRP_MS`); al final s'atura i el següent ▶ torna a començar. Tocar el gràfic o tancar la pantalla l'atura. (Noms `TRP_*`: `PLAY_IC` ja existeix a `maps.js`.)
 - `trPick` → `trApply(t)`: un sol moment (`trSel.t`) per a tots els gràfics `svg.tr-ch`, les lectures i els dos mapes; en tancar, la fitxa queda al mateix moment.
 - Vent del moment: `windNear` (estació de la sortida o model). Onada: Open-Meteo marine del dia de la sortida al punt d'onatge del club actual (`trSeaLoad`, memòria `trSeaCache` per id, no es desa a la sortida); si falla, la previsió carregada (`forecastAt`).
 

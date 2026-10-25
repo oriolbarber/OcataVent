@@ -722,7 +722,7 @@ function trApply(t){
 }
 
 /* ---------- pantalla completa de la sortida: 3/4 mapa amb vent i onades del moment · 1/4 gràfic ---------- */
-const trF = {el: null, map: null, fx: null, mk: null, ro: null, w: 0, h: 0};
+const trF = {el: null, map: null, fx: null, mk: null, ro: null, w: 0, h: 0, play: 0, spd: 1};
 const trSeaCache = {};   // onatge per hores del dia de la sortida (Open-Meteo marine), per id de sortida
 function trSea(t){
   const c = trSel && trSeaCache[trSel.trip.id];
@@ -761,10 +761,14 @@ function trFullOpen(){
   el.id = "trFull"; el.className = "trf full"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Mapa i gràfic de la sortida a pantalla completa");
   el.innerHTML = `<div class="trf-mw"><div class="trf-map" id="trfMap"></div>
       <div class="trf-top"><div class="tr-read trf-read" id="trfRead"><span class="tr-hint">Toca o arrossega el gràfic de sota</span></div>
-        <button type="button" class="trf-x" id="trfX" aria-label="Tanca la pantalla completa">✕</button></div></div>
+        <button type="button" class="trf-x" id="trfX" aria-label="Tanca la pantalla completa">✕</button></div>
+      <div class="trf-play"><button type="button" class="trf-pb" id="trfPlay" aria-label="Reprodueix la sortida">${TRP_PLAY}</button><button type="button" class="trf-sp" id="trfSpd" aria-label="Velocitat de reproducció">×1</button></div></div>
     <div class="trf-cw"><div class="legend trf-leg">${trLegend(t)}</div><div class="trf-ch" id="trfCh"></div></div>`;
   document.body.appendChild(el); document.body.classList.add("wm-open"); trF.el = el;
   try{ history.pushState({trFull:1}, ""); }catch(e){}
+  $("trfPlay").onclick = () => trPlay(!trF.play);
+  $("trfSpd").onclick = () => { trF.spd = trF.spd >= 4 ? 1 : trF.spd * 2; $("trfSpd").textContent = "×" + trF.spd; };
+  $("trfSpd").textContent = "×" + trF.spd;
   $("trfX").onclick = () => { if(history.state && history.state.trFull) history.back(); else trFullClose(); };
   trF.w = trF.h = 0;
   trF.ro = new ResizeObserver(() => { trFullChart(); if(trF.map){ trF.map.invalidateSize(false); if(trF.fx){ trF.fx.size(); trF.fx.buildMask(true); } } });
@@ -780,12 +784,35 @@ function trFullOpen(){
     trSeaLoad(t);
   });
 }
+// ▶ Reprodueix la sortida: a ×1 tota la sortida dura 60 s (×2 = 30 s, ×4 = 15 s); el marcador, la lectura, el gràfic i el vent i les onades segueixen el moment
+const TRP_PLAY = `<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>`;
+const TRP_PAUSE = `<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/></svg>`;
+const TRP_MS = 60000;
+function trPlay(on){
+  const b = $("trfPlay");
+  if(!on || !trSel){ if(trF.play){ cancelAnimationFrame(trF.play); trF.play = 0; }
+    if(b){ b.innerHTML = TRP_PLAY; b.setAttribute("aria-label", "Reprodueix la sortida"); } return; }
+  const T0 = trSel.trip.start, T1 = trSel.trip.end || T0, span = Math.max(1, T1 - T0);
+  if(trSel.t == null || trSel.t >= T1 - span * 0.002) trApply(T0);   // al final: torna a començar
+  if(b){ b.innerHTML = TRP_PAUSE; b.setAttribute("aria-label", "Atura la reproducció"); }
+  let last = performance.now();
+  const tick = now => {
+    if(!trF.el || !trSel){ trF.play = 0; return; }
+    const dt = Math.min(100, now - last); last = now;
+    const t = Math.min(T1, (trSel.t ?? T0) + dt * span * trF.spd / TRP_MS);
+    trApply(t);
+    if(t >= T1){ trF.play = 0; trPlay(false); return; }
+    trF.play = requestAnimationFrame(tick);
+  };
+  trF.play = requestAnimationFrame(tick);
+}
 function trFullClose(silent){
   if(!trF.el) return;
+  trPlay(false);
   if(trF.fx) trF.fx.stop(); if(trF.ro) trF.ro.disconnect();
   if(trF.map) trF.map.remove();
   trF.el.remove(); document.body.classList.remove("wm-open");
-  Object.assign(trF, {el: null, map: null, fx: null, mk: null, ro: null, w: 0, h: 0});
+  Object.assign(trF, {el: null, map: null, fx: null, mk: null, ro: null, w: 0, h: 0, play: 0});
   if(!silent && trSel && trSel.t != null) trApply(trSel.t);   // la fitxa queda al mateix moment
 }
 window.addEventListener("popstate", () => { if(trF.el) trFullClose(); });
@@ -796,6 +823,7 @@ window.addEventListener("mm-theme", () => { if(trF.fx) trF.fx.reset(); });
 let trT = null, trDrag = null;
 document.addEventListener("pointerdown", e => {
   const svg = e.target.closest && e.target.closest("svg.tr-ch"); if(!svg) return;
+  if(trF.play) trPlay(false);   // tocar el gràfic atura la reproducció
   if(e.pointerType === "mouse"){ trDrag = svg; trPick(svg, e.clientX); } else trT = {svg, x:e.clientX, y:e.clientY};
 });
 document.addEventListener("pointermove", e => {

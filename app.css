@@ -1743,3 +1743,6 @@ a.cfg-row:hover{background:var(--surface-2)}
 .trf-leg{margin:0 0 2px;font-size:.74rem;flex:none}
 .trf-ch{flex:1;min-height:0;overflow:hidden}
 .trf-ch svg{display:block}
+.trf-play{position:absolute;left:10px;bottom:10px;z-index:800;display:flex;align-items:center;gap:8px}
+.trf-pb{width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 3px 12px #0004}
+.trf-sp{height:40px;min-width:48px;padding:0 10px;border-radius:20px;border:1px solid var(--line);background:color-mix(in srgb, var(--surface) 92%, transparent);color:var(--ink);font:700 1rem var(--f-mono);cursor:pointer;box-shadow:0 2px 8px #0003}
