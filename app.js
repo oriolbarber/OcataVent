@@ -1349,3 +1349,7 @@ window.OV_SET_COAST = (club, v) => {
 };
 function setLoc(k){ if(!LOCS[k] || k === locKey) return; store.set("ov2_loc", k); store.set("ov2_station_v3", LOCS[k].st); location.reload(); }
 $("peekLoc").textContent = LOC.name;
+// «+ 7 dies» desplegat per defecte (decisió de l'Oriol, 26-10-2026); si el soci el plega, es recorda en aquest mòbil
+(() => { const d = $("secWeek"); if(!d) return;
+  try{ if(localStorage.getItem("ov2_week_open") === "0") d.open = false; }catch(e){}
+  d.addEventListener("toggle", () => { try{ localStorage.setItem("ov2_week_open", d.open ? "1" : "0"); }catch(e){} }); })();
