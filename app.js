@@ -504,6 +504,7 @@ function forecastAt(ms){
   return DATA.hours[k] || null;
 }
 
+const SLOT_RISK = new Set(["massa vent","ratxes fortes","onada alta","tempesta","terral fort","poca llum"]);
 function slotAgg(date, slot, c){
   const hs = slot.hours.map(h => hourAt(date,h)).filter(Boolean);
   if(!hs.length) return null;
@@ -514,7 +515,11 @@ function slotAgg(date, slot, c){
   const dir = (sx||sy) ? norm(Math.atan2(sx,sy)*180/Math.PI) : null;
   const sc = hs.map(h => scoreHour(h,c));
   const ss = sc.map(s=>s.score).filter(s=>s!=null);
-  let score = ss.length ? Math.round(Math.min(ss.reduce((a,b)=>a+b,0)/ss.length, Math.min(...ss)+25)) : null;
+  // La pitjor hora limita la franja (com a màxim +25) només si és dolenta per un perill (decisió de l'Oriol, 26-10-2026).
+  // Si és dolenta per poc vent (encara no ha entrat la marinada, o ja ha caigut), compta la mitjana.
+  const avgS = ss.length ? ss.reduce((a,b)=>a+b,0)/ss.length : null;
+  const risky = sc.filter(s => s.score != null && (s.why || []).some(w => SLOT_RISK.has(w))).map(s => s.score);
+  let score = avgS == null ? null : Math.round(risky.length ? Math.min(avgS, Math.min(...risky)+25) : avgS);
   const gmax = Math.max(...hs.map(h => h.gust ?? 0));
   if(score != null && gmax > c.gust) score = Math.min(score, 25);   // la ratxa màxima de la franja també compta
   return {wind:avg(h=>h.wind), gust:max(h=>h.gust), dir, wave:max(h=>h.wave), per:avg(h=>h.per), temp:avg(h=>h.temp), sst:avg(h=>h.sst),
