@@ -279,14 +279,19 @@
     const near = (q, t, s) => { ctx.font = F(800, s); const bw = ctx.measureText(t).width + s*.9, bh = s*1.5, g = 26;
       return [{x:q[0]+g, y:q[1]-bh/2}, {x:q[0]-g-bw, y:q[1]-bh/2}, {x:q[0]-bw/2, y:q[1]-g-bh}, {x:q[0]-bw/2, y:q[1]+g}, {x:q[0]+g*.7, y:q[1]-g*.7-bh}, {x:q[0]-g*.7-bw, y:q[1]+g*.7}]
         .map(b => Object.assign(b, {w:bw, h:bh})); };
-    if(D.wind){ ctx.font = F(800, 40); const ww = Math.max(300, ctx.measureText(windTxt(D.wind)).width + 140); windChip(best(corners(ww, 120)), C); }
-    if(O.route && O.speed) legend(best(corners(336, 50)), C, vmax);
-    marks.forEach(m => chip(m.t, best(near(m.q, m.t, 30)), C, 30));
-    if(O.route && O.speed && D.maxPt){
-      const mp = sp.find(o => o.ll === D.maxPt);
-      if(mp){ const q = P(mp.p); ctx.beginPath(); ctx.arc(...q, 14, 0, 7); ctx.fillStyle = "#ef4444"; ctx.fill();
-        ctx.lineWidth = 5; ctx.strokeStyle = "#fff"; ctx.stroke(); const t = fmt1(vmax) + " kn"; chip(t, best(near(q, t, 34)), C, 34); }
-    }
+    // Primer les etiquetes lligades a un punt (inici, final, màxima); després el vent i la llegenda, a la cantonada que quedi lliure
+    const labels = [];
+    marks.forEach(m => labels.push({t:m.t, s:30, b:best(near(m.q, m.t, 30))}));
+    let mq = null;
+    if(O.route && O.speed && D.maxPt){ const mp = sp.find(o => o.ll === D.maxPt);
+      if(mp){ mq = P(mp.p); occ.push(mq); const t = fmt1(vmax) + " kn"; labels.push({t, s:34, b:best(near(mq, t, 34))}); } }
+    let wb = null, lb = null;
+    if(D.wind){ ctx.font = F(800, 40); const ww = Math.max(300, ctx.measureText(windTxt(D.wind)).width + 140); wb = best(corners(ww, 120)); }
+    if(O.route && O.speed) lb = best(corners(336, 50));
+    if(wb) windChip(wb, C);
+    if(lb) legend(lb, C, vmax);
+    if(mq){ ctx.beginPath(); ctx.arc(...mq, 14, 0, 7); ctx.fillStyle = "#ef4444"; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = "#fff"; ctx.stroke(); }
+    labels.forEach(l => chip(l.t, l.b, C, l.s));
     if(coast.status === "loading") chip("Carregant el mapa…", {x:x + w/2 - 150, y:y + h/2 - 26}, C, 30);
     ctx.restore();
   }
@@ -390,7 +395,9 @@
           note("Aquesta versió de l'app no pot compartir imatges. Instal·la l'APK nou (el text ja és copiat).", 9000); return;
         }
         try{
-          const Fs = CAP.registerPlugin("Filesystem"), Sh = CAP.registerPlugin("Share");
+          // L'APK carrega la web publicada: el pont natiu exposa els connectors a Capacitor.Plugins (no hi ha registerPlugin)
+          const plug = n => (CAP.Plugins && CAP.Plugins[n]) || (CAP.registerPlugin && CAP.registerPlugin(n));
+          const Fs = plug("Filesystem"), Sh = plug("Share");
           const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
           const w = await Fs.writeFile({path:name, data:b64, directory:"CACHE"});
           note("");
