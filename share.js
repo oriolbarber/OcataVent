@@ -341,7 +341,7 @@
         <input class="field" id="shrCom" type="text" maxlength="90" placeholder="Comentari (opcional)" aria-label="Comentari de la imatge">
         <textarea class="field shr-msg" id="shrMsg" rows="3" aria-label="Text que acompanya la imatge"></textarea>
         <div class="shr-act"><button type="button" class="btn cl-pri shr-go" id="shrGo">${SHARE_IC}Comparteix</button><button type="button" class="btn" id="shrCopy">Copia el text</button></div>
-        <p class="note shr-note" id="shrNote"></p>
+        <p class="shr-note" id="shrNote" role="status" hidden></p>
       </div>`;
     document.body.appendChild(el);
     cv = el.querySelector("#shrCv"); ctx = cv.getContext("2d");
@@ -367,34 +367,52 @@
   }
   function close(){ if(!el) return; el.remove(); el = null; cv = ctx = null; }
   window.addEventListener("popstate", () => { if(el) close(); });
-  function note(t){ const n = el && el.querySelector("#shrNote"); if(!n) return; n.textContent = t; clearTimeout(note.tm); note.tm = setTimeout(() => { n.textContent = ""; }, 3000); }
+  // Missatge flotant sobre el botó (abans quedava sota la imatge, fora de la vista)
+  function note(t, ms){ const n = el && el.querySelector("#shrNote"); if(!n) return; n.textContent = t; n.hidden = !t;
+    clearTimeout(note.tm); if(t) note.tm = setTimeout(() => { n.hidden = true; }, ms || 4000); }
+  const busy = on => { const b = el && el.querySelector("#shrGo"); if(!b) return; b.disabled = on; b.classList.toggle("busy", on); };
+  const canceled = e => e && (e.name === "AbortError" || /cancel/i.test(e.message || e.errorMessage || ""));
 
   async function share(text){
-    if(coast.status === "loading"){ note("Espera que es carregui el mapa"); return; }
-    const blob = await new Promise(r => cv.toBlob(r, "image/png"));
-    const d = new Date(D.trip.start), name = "sortida-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "-" + pad(d.getHours()) + pad(d.getMinutes()) + ".png";
-    const CAP = window.Capacitor;
-    if(CAP && CAP.isNativePlatform && CAP.isNativePlatform()){
-      // APK: la WebView no té Web Share; es desa a la memòria cau de l'app i s'obre el full de compartir d'Android
-      try{
-        const Fs = CAP.registerPlugin("Filesystem"), Sh = CAP.registerPlugin("Share");
-        const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
-        const w = await Fs.writeFile({path:name, data:b64, directory:"CACHE"});
-        await Sh.share({files:[w.uri], text, dialogTitle:"Comparteix la sortida"});
-      }catch(e){ if(!/cancel/i.test(e && e.message || "")) note("Per compartir la imatge cal l'última versió de l'app (APK)"); }
-      return;
-    }
-    const file = new File([blob], name, {type:"image/png"});
-    if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], text}); }catch(e){} return; }
-    // Ordinador: es desa la imatge i es copia el text
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    try{ await navigator.clipboard.writeText(text); }catch(e){}
-    note("Imatge desada i text copiat");
+    busy(true);
+    try{
+      // Si el mapa encara es carrega, s'espera (com a molt el temps màxim de càrrega) i es comparteix igualment
+      for(let i = 0; coast.status === "loading" && i < MAP.timeout/250 + 4; i++){ note("Carregant el mapa…"); await new Promise(r => setTimeout(r, 250)); }
+      draw();
+      const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+      const d = new Date(D.trip.start), name = "sortida-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "-" + pad(d.getHours()) + pad(d.getMinutes()) + ".png";
+      const CAP = window.Capacitor;
+      if(CAP && CAP.isNativePlatform && CAP.isNativePlatform()){
+        // APK: la WebView no té Web Share; es desa a la memòria cau de l'app i s'obre el full de compartir d'Android
+        const has = n => CAP.isPluginAvailable ? CAP.isPluginAvailable(n) : !!(CAP.Plugins && CAP.Plugins[n]);
+        if(!has("Share") || !has("Filesystem")){
+          try{ await navigator.clipboard.writeText(text); }catch(e){}
+          note("Aquesta versió de l'app no pot compartir imatges. Instal·la l'APK nou (el text ja és copiat).", 9000); return;
+        }
+        try{
+          const Fs = CAP.registerPlugin("Filesystem"), Sh = CAP.registerPlugin("Share");
+          const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
+          const w = await Fs.writeFile({path:name, data:b64, directory:"CACHE"});
+          note("");
+          await Sh.share({files:[w.uri], text, dialogTitle:"Comparteix la sortida"});
+        }catch(e){ if(!canceled(e)) note("No s'ha pogut compartir: " + (e && (e.message || e.errorMessage) || e), 9000); }
+        return;
+      }
+      const file = new File([blob], name, {type:"image/png"});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{ note(""); await navigator.share({files:[file], text}); return; }
+        catch(e){ if(canceled(e)) return; }   // si el navegador no ho deixa, es desa la imatge
+      }
+      // Ordinador (o navegador sense compartir fitxers): es desa la imatge i es copia el text
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      try{ await navigator.clipboard.writeText(text); }catch(e){}
+      note("Imatge desada i text copiat");
+    }catch(e){ note("No s'ha pogut preparar la imatge: " + (e && e.message || e), 9000); }
+    finally{ busy(false); }
   }
 
-  // Botó al resum de la sortida (trip.js el posa només en acabar-la)
-  function button(box, trip){
+  function button(box, trip){ // al resum de la sortida
     if(!box || !trip || !trip.pts || trip.pts.length < 2) return;
     box.innerHTML = `<button type="button" class="btn cl-pri shr-open">${SHARE_IC}Comparteix la sortida</button>`;
     box.firstChild.onclick = () => open(trip);
