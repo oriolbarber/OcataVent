@@ -1050,9 +1050,12 @@ function renderNow(){
       <div class="w">${arrow(a.dir,13)}${r0(a.wind)}<small>/${r0(a.gust)} kn</small></div><div class="o">${waveIc(12)} ${r1(a.wave)} m</div>${a.code != null ? `<span class="sl-wx">${wxIcon(a.code, 18)}</span>` : ""}</div>`; }).join("");
   const ol = $("outlook");
   const dd = new Date(vd + "T12:00:00");
-  ol.innerHTML = `<div class="card-h" style="margin-bottom:6px">${daySeg("day-seg", false)}
-    ${vd === td || vd === DATA.daily.time[DATA.daily.time.indexOf(td)+1] ? `<span class="lbl day-date">${DAYS_L[dd.getDay()]} ${dd.getDate()} ${MONTHS[dd.getMonth()]}</span>` : ""}</div>
+  // Avui · Demà · calendari i el dia escrit: a Matí/Migdia/Tarda i també a sobre del gràfic per hores (decisió de l'Oriol, 26-10-2026)
+  const dayHead = `${daySeg("day-seg", false)}
+    ${vd === td || vd === DATA.daily.time[DATA.daily.time.indexOf(td)+1] ? `<span class="lbl day-date">${DAYS_L[dd.getDay()]} ${dd.getDate()} ${MONTHS[dd.getMonth()]}</span>` : ""}`;
+  ol.innerHTML = `<div class="card-h" style="margin-bottom:6px">${dayHead}</div>
     <div class="slots">${slots}</div>`;
+  const wd = $("wmDay"); if(wd) wd.innerHTML = dayHead;
   renderDayChart(); applySel();
 }
 const tpOf = p => p.tp ?? p.per ?? null;

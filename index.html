@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=190">
+<link rel="stylesheet" href="app.css?v=191">
 </head>
 <body>
 <div class="app">
@@ -180,7 +180,7 @@
   </div>
 
   <article class="card wm" id="windMap" hidden>
-    <div class="card-h"><span class="lbl">Previsió horària</span><span class="wm-cap" id="wmCap"></span><button type="button" class="wm-x" data-wmclose aria-label="Tanca la pantalla completa">✕</button></div>
+    <div class="card-h"><span class="lbl">Previsió horària</span><div class="wm-day" id="wmDay"></div><span class="wm-cap" id="wmCap"></span><button type="button" class="wm-x" data-wmclose aria-label="Tanca la pantalla completa">✕</button></div>
     <div class="wm-cwrap"><div class="chart" id="dayChart"></div><button type="button" class="wm-maxb" data-wmfull="chart" aria-label="Gràfic a pantalla completa"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
     <div id="dayLegend"></div>
     <div class="hc-read"></div>
@@ -428,7 +428,7 @@
 <script src="native.js?v=114"></script>
 <script src="clubs.js?v=1"></script>
 <script src="boats.js?v=2"></script>
-<script src="app.js?v=147"></script>
+<script src="app.js?v=148"></script>
 <script src="cfg.js?v=6"></script>
 <script src="ajuda.js?v=3"></script>
 <script src="trip.js?v=133"></script>

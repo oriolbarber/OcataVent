@@ -560,7 +560,12 @@ details.vp-sec[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 #outlook .card-h{align-items:center}
 .day-seg{padding:2px;border-radius:10px;flex:none}
 .day-seg button{min-height:26px;padding:0 11px;font-size:.8rem;letter-spacing:.08em;border-radius:8px}
-#outlook .day-date{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#outlook .day-date,.wm-day .day-date{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Selector de dia sobre el gràfic per hores (fora de la pantalla completa substitueix el títol «Previsió horària») */
+.wm-day{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-width:0}
+.wm-day .day-date{margin-left:auto}
+.wm:not(.full) .card-h>.lbl{display:none}
+.wm.full .wm-day{display:none}
 #wmNow{display:none}
 #windMap .chart{margin-bottom:2px}
 #windMap .wm-wrap{margin-top:4px}
