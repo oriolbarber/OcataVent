@@ -421,7 +421,7 @@
 
   function button(box, trip){ // al resum de la sortida
     if(!box || !trip || !trip.pts || trip.pts.length < 2) return;
-    box.innerHTML = `<button type="button" class="btn cl-pri shr-open">${SHARE_IC}Comparteix la sortida</button>`;
+    box.innerHTML = `<button type="button" class="btn cl-pri shr-open" aria-label="Comparteix la sortida com a imatge">${SHARE_IC}Imatge</button>`;
     box.firstChild.onclick = () => open(trip);
   }
   window.OV_SHARE = {open, button, close};

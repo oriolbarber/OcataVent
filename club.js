@@ -1241,7 +1241,7 @@ const OV_CLUB = window.OV_CLUB = {
     if(!C || !t || t.owner !== uid()) return;
     let p = D.pubs.find(x => x.id === uid() + "_" + t.id);
     if(!p){ try{ const s = await TO(C.F.getDoc(ref("publicacions", uid() + "_" + t.id)), 8000); if(s.exists()) p = Object.assign({id:s.id}, s.data()); }catch(e){} }
-    el.innerHTML = p ? `<button type="button" class="btn cl-wide">Publicada al mur · Edita</button>` : `<button type="button" class="btn cl-pri cl-wide">Comparteix amb el club</button>`;
+    el.innerHTML = p ? `<button type="button" class="btn cl-wide">Al mur · Edita</button>` : `<button type="button" class="btn cl-pri cl-wide">Publica al mur</button>`;
     el.firstChild.onclick = () => pubSheet(t, p || null);
   },
   async tripStart(Lv){

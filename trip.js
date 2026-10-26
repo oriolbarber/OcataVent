@@ -651,7 +651,6 @@ async function showTrip(id, ask){
       ${ask && !t.name ? `<div class="tr-name"><input class="field" id="trName" type="text" maxlength="60" placeholder="Posa-li nom (opcional) · p. ex. Regata de dissabte" autocomplete="off" aria-label="Nom de la sortida"><button class="btn" type="button" id="trNameOk" data-tid="${t.id}">Desa</button></div>`
         : `<div class="tr-title"><h2 style="font-size:1.6rem;text-transform:uppercase;margin-top:2px">${esc(t.name || "Sortida de les "+pad(d.getHours())+":"+pad(d.getMinutes()))}</h2><button class="ib" type="button" id="trRename" data-tid="${t.id}" aria-label="Canvia el nom de la sortida" title="Canvia el nom"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg></button></div>`}
       <div class="muted" style="font-weight:600;font-size:.85rem">${pad(d.getHours())}:${pad(d.getMinutes())} – ${t.end?new Date(t.end).toTimeString().slice(0,5):"–"} · ${s.points} punts GPS</div></article>
-    ${shareNow ? `<div id="trShare"></div>` : ""}
     ${s.gapN ? `<div class="warnbox">⚠ Aquesta sortida té ${s.gapN} ${s.gapN === 1 ? "tram" : "trams"} sense GPS (${fmtDurShort(s.gapS*1000)} en total), segurament amb la pantalla apagada. Al mapa surten amb línia discontínua: la distància hi és en línia recta i la velocitat no s'hi pot calcular.</div>` : ""}
     <div class="big-stats">
       ${stat("dist","Distància", s.distNm.toFixed(2).replace(".",","), "nm", Math.round(s.distNm*NM)+" m")}
@@ -672,7 +671,7 @@ async function showTrip(id, ask){
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" type="button" id="expGpx">Exporta GPX</button><button class="btn" type="button" id="expCsv">Exporta CSV</button>
 </div>
-    <div id="clubShare"></div>
+    <div class="tr-shares"><div id="clubShare"></div>${shareNow ? `<div id="trShare"></div>` : ""}</div>
     <div id="delTrip"></div>`;
   window.OV_CLUB?.shareBtn($("clubShare"), t);
   if(shareNow) window.OV_SHARE.button($("trShare"), t);
