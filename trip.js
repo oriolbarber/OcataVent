@@ -59,8 +59,6 @@ const cogName = d => d==null ? "–" : COMPASS16[Math.round(norm(d)/22.5)%16];
 
 /* ---------- estat de la sortida ---------- */
 let ecoTimer = null, ecoVisible = false;
-// Sortida acabada en aquesta sessió: el seu resum porta el botó de compartir (share.js)
-let trJust = null;
 let LIVE = null, watchId = null, wakeLock = null, tTimer = null, tWind = null, tSave = null, liveMap = null, liveLine = null, liveDot = null;
 
 function windNear(trip, t){
@@ -237,7 +235,6 @@ async function finishTrip(){
   window.OV_CLOUD?.saved(trip);
   LIVE = null; store.del("ov2_live"); window.OV_CLUB?.tripEnd();
   destroyLiveMap(); setRecUI();
-  trJust = trip.id;
   go("log"); showTrip(trip.id, true);   // acabada de desar: demana el nom
 }
 function discardTrip(){
@@ -646,8 +643,8 @@ async function showTrip(id, ask){
   const posRows = POS.map(p => { const v = s.pos[p.k], pc = posTot ? v.t/posTot*100 : 0, kn = v.t ? (v.d/NM)/(v.t/3600) : 0;
     return `<div class="pos"><b>${p.t}</b><span class="bar"><i style="width:${pc.toFixed(1)}%"></i></span><span>${Math.round(pc)}% · ${r1(kn)} kn</span></div>`; }).join("");
   const W = s.wind;
-  // Compartir (imatge per al WhatsApp): només en acabar la sortida, o fins a 2 h després si l'app s'ha tancat
-  const shareNow = !!window.OV_SHARE && (t.id === trJust || (t.end && Date.now() - t.end < 2*3600e3));
+  // Compartir (imatge per al WhatsApp): al resum de qualsevol sortida desada (no al mur)
+  const shareNow = !!window.OV_SHARE && t.pts && t.pts.length > 1;
   $("logDetail").innerHTML = `
     <div style="display:flex;gap:8px;align-items:center"><button class="btn" type="button" id="backList">← Sortides</button></div>
     <article class="card"><span class="lbl">${esc(DEFAULTS[t.act]?.name||"")} · ${d.toLocaleDateString("ca",{weekday:"long",day:"numeric",month:"long"})}</span>
