@@ -595,13 +595,19 @@ function roseHist(recs, fc, c){
   (fc || []).forEach(h => { if(h.wind!=null && h.wind >= 0.5) add(h, 60); });
   return sec;
 }
+// Lectures de l'estació d'avui per a la rosa. Si n'hi ha menys de 3 (estació sense historial, com Weathercloud,
+// sense la còpia del servidor), les hores passades surten del model (decisió de l'Oriol, 26-10-2026)
+const roseRecs = () => OBS.key === stKey ? OBS.recs || [] : [];
+const roseToday = () => roseRecs().filter(o => o.t >= new Date(todayDate() + "T00:00:00").getTime()).length;
 // Hores de previsió d'avui que queden (de la propera hora fins a la posta)
-function roseForecast(){
+// past = true: les hores ja passades d'avui (de la sortida del sol fins ara), per a estacions sense historial (Weathercloud)
+function roseForecast(past){
   if(!DATA) return []; const td = todayDate(), i = DATA.daily.time.indexOf(td), set = i >= 0 ? new Date(DATA.daily.sunset[i]).getHours() : 20, nh = +nowKey().slice(11,13);
+  const rise = i >= 0 ? new Date(DATA.daily.sunrise[i]).getHours() : 7, from = past ? rise : nh + 1, to = past ? Math.min(nh, set) : set;
   // Optimista / Pessimista trien model segons l'embarcació: l'histograma ha de ser el mateix per a totes,
   // així que llavors fa servir el model que més encerta (o la base d'Open-Meteo)
   const per = model === "opt" || model === "pes", bk = store.get("ov2_model_best") || "auto", alt = per && MODELS[bk]?.api ? DATA.alt?.[MODELS[bk].api] : null;
-  const out = []; for(let h = nh + 1; h <= set; h++){ const k = hourKey(td, h), p = per ? (alt?.[k] ? Object.assign({}, DATA.base[k], alt[k]) : DATA.base[k]) : DATA.hours[k]; if(p) out.push(p); } return out;
+  const out = []; for(let h = from; h <= to; h++){ const k = hourKey(td, h), p = per ? (alt?.[k] ? Object.assign({}, DATA.base[k], alt[k]) : DATA.base[k]) : DATA.hours[k]; if(p) out.push(p); } return out;
 }
 // icona d'onada (dibuixada a l'editor d'icones, graella 24×24)
 const WAVE_IC = ["M4 10.5C6 8 3 5.5 7 9C9 11 10.5 11 12 9C13.5 7 9.5 5 16.5 9C18 10 19.5 11 18 10","M4 17C6.5 13.5 3 12 7.5 15.5C9 17 10.5 17 12 15C13.5 13 10 11.5 16.5 15C18 16 19.5 17 16.5 15"];
@@ -1010,7 +1016,7 @@ function renderNow(){
   if(STATIONS[stKey]) $("src").setAttribute("aria-label", "Estació: "+STATIONS[stKey].name+(live && ST.key !== stKey ? ", sense vent ara; dades de "+STATIONS[ST.key].name : "")+". Canvia d'estació");
   $("gauge").innerHTML = gaugeSvg(s, v) + `<div class="grow"><div class="gflag" id="gflag"></div><span class="g-why k-${v.k}">${esc(v.sub || "")}</span></div>`; renderFlag();
   const kind = isOffshore(n.dir) ? "terral" : isOnshore(n.dir) ? "de mar" : "lateral";
-  $("rose").innerHTML = `<button class="ib-i rose-i" type="button" data-info="iRose" aria-label="Com es llegeix la rosa dels vents" aria-expanded="${!$("iRose")?.hidden}">i</button><button type="button" class="cmp-btn" id="cmpBtn" aria-pressed="${cmpOn}" aria-label="Orienta la rosa amb la brúixola del mòbil" title="Orienta amb la brúixola"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 15 12h-6z" fill="currentColor"/><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35"/></svg></button>` + roseSvg({k: kOf(s.score), dir:n.dir, wind:n.wind, fcDir:fc.dir, wdir:fc.wdir, wave:fc.wave, live, hist: roseHist(OBS.key === stKey ? OBS.recs : [], roseForecast(), c)}); cmpApply();
+  $("rose").innerHTML = `<button class="ib-i rose-i" type="button" data-info="iRose" aria-label="Com es llegeix la rosa dels vents" aria-expanded="${!$("iRose")?.hidden}">i</button><button type="button" class="cmp-btn" id="cmpBtn" aria-pressed="${cmpOn}" aria-label="Orienta la rosa amb la brúixola del mòbil" title="Orienta amb la brúixola"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 15 12h-6z" fill="currentColor"/><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35"/></svg></button>` + roseSvg({k: kOf(s.score), dir:n.dir, wind:n.wind, fcDir:fc.dir, wdir:fc.wdir, wave:fc.wave, live, hist: roseHist(roseRecs(), roseForecast().concat(roseToday() < 3 ? roseForecast(true) : []), c)}); cmpApply();
   // sense repetir el que ja diu el motiu de sota l'indicador
   // Els avisos (vermells) van com a text al motiu de sota l'indicador; només la informació (mar de fons, aigua freda) va en etiqueta grisa
   const FW = {"Ràfagues":"vent a ràfagues","Probable pluja":"pluja probable","Terral":"terral"}, why = (s.why || []).filter(w => !INFO_FLAGS.some(f => f.toLowerCase() === w));
