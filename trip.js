@@ -59,6 +59,8 @@ const cogName = d => d==null ? "–" : COMPASS16[Math.round(norm(d)/22.5)%16];
 
 /* ---------- estat de la sortida ---------- */
 let ecoTimer = null, ecoVisible = false;
+// Sortida acabada en aquesta sessió: el seu resum porta el botó de compartir (share.js)
+let trJust = null;
 let LIVE = null, watchId = null, wakeLock = null, tTimer = null, tWind = null, tSave = null, liveMap = null, liveLine = null, liveDot = null;
 
 function windNear(trip, t){
@@ -235,6 +237,7 @@ async function finishTrip(){
   window.OV_CLOUD?.saved(trip);
   LIVE = null; store.del("ov2_live"); window.OV_CLUB?.tripEnd();
   destroyLiveMap(); setRecUI();
+  trJust = trip.id;
   go("log"); showTrip(trip.id, true);   // acabada de desar: demana el nom
 }
 function discardTrip(){
@@ -643,12 +646,15 @@ async function showTrip(id, ask){
   const posRows = POS.map(p => { const v = s.pos[p.k], pc = posTot ? v.t/posTot*100 : 0, kn = v.t ? (v.d/NM)/(v.t/3600) : 0;
     return `<div class="pos"><b>${p.t}</b><span class="bar"><i style="width:${pc.toFixed(1)}%"></i></span><span>${Math.round(pc)}% · ${r1(kn)} kn</span></div>`; }).join("");
   const W = s.wind;
+  // Compartir (imatge per al WhatsApp): només en acabar la sortida, o fins a 2 h després si l'app s'ha tancat
+  const shareNow = !!window.OV_SHARE && (t.id === trJust || (t.end && Date.now() - t.end < 2*3600e3));
   $("logDetail").innerHTML = `
     <div style="display:flex;gap:8px;align-items:center"><button class="btn" type="button" id="backList">← Sortides</button></div>
     <article class="card"><span class="lbl">${esc(DEFAULTS[t.act]?.name||"")} · ${d.toLocaleDateString("ca",{weekday:"long",day:"numeric",month:"long"})}</span>
       ${ask && !t.name ? `<div class="tr-name"><input class="field" id="trName" type="text" maxlength="60" placeholder="Posa-li nom (opcional) · p. ex. Regata de dissabte" autocomplete="off" aria-label="Nom de la sortida"><button class="btn" type="button" id="trNameOk" data-tid="${t.id}">Desa</button></div>`
         : `<div class="tr-title"><h2 style="font-size:1.6rem;text-transform:uppercase;margin-top:2px">${esc(t.name || "Sortida de les "+pad(d.getHours())+":"+pad(d.getMinutes()))}</h2><button class="ib" type="button" id="trRename" data-tid="${t.id}" aria-label="Canvia el nom de la sortida" title="Canvia el nom"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg></button></div>`}
       <div class="muted" style="font-weight:600;font-size:.85rem">${pad(d.getHours())}:${pad(d.getMinutes())} – ${t.end?new Date(t.end).toTimeString().slice(0,5):"–"} · ${s.points} punts GPS</div></article>
+    ${shareNow ? `<div id="trShare"></div>` : ""}
     ${s.gapN ? `<div class="warnbox">⚠ Aquesta sortida té ${s.gapN} ${s.gapN === 1 ? "tram" : "trams"} sense GPS (${fmtDurShort(s.gapS*1000)} en total), segurament amb la pantalla apagada. Al mapa surten amb línia discontínua: la distància hi és en línia recta i la velocitat no s'hi pot calcular.</div>` : ""}
     <div class="big-stats">
       ${stat("dist","Distància", s.distNm.toFixed(2).replace(".",","), "nm", Math.round(s.distNm*NM)+" m")}
@@ -672,6 +678,7 @@ async function showTrip(id, ask){
     <div id="clubShare"></div>
     <div id="delTrip"></div>`;
   window.OV_CLUB?.shareBtn($("clubShare"), t);
+  if(shareNow) window.OV_SHARE.button($("trShare"), t);
   $("backList").onclick = renderList;
   $("expGpx").onclick = () => download(t, "gpx");
   $("expCsv").onclick = () => download(t, "csv");

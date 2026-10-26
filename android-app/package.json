@@ -12,7 +12,9 @@
     "@capacitor/android": "8.5.3",
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.5.3",
-    "@capacitor/screen-orientation": "8.0.2"
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/screen-orientation": "8.0.2",
+    "@capacitor/share": "8.0.3"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.3"

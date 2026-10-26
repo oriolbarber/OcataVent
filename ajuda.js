@@ -95,6 +95,7 @@ const FONTS = [
   ["Nàutic Masnou", "Webcam de la platja"],
   ["RainViewer", "Radar de pluja"],
   ["OpenStreetMap i OpenSeaMap", "Mapa base © OpenStreetMap contributors (ODbL, openstreetmap.org/copyright) i carta nàutica (CC BY-SA)"],
+  ["OpenFreeMap i OpenMapTiles", "Costa de la imatge per compartir una sortida · dades © OpenStreetMap contributors (ODbL)"],
   ["Google Firebase", "Comptes, base de dades i còpia compartida de les dades meteo, en servidors de la Unió Europea"]
 ];
 const LIBS = "Capacitor (MIT) · Leaflet (BSD-2) · Firebase JS SDK (Apache-2.0) · Lletres IBM Plex i Rajdhani (SIL OFL)";
