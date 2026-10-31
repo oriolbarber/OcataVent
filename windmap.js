@@ -79,7 +79,39 @@ function wmShow(k, scroll){
   if(wmFull()) wmLegend();
   tlSync(k, scroll);
   if(window.mmSel) mmSel(k);
+  wmPlayBtn();
 }
+/* ---------- reproducció de les hores al mapa maximitzat (decisió de l'Oriol, 31-10-2026): ▶/❚❚ + ×1/×2/×4; ×1 = 1 hora per segon ---------- */
+const WMP_PLAY = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>`;
+const WMP_PAUSE = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`;
+const wmP = {on:false, spd:1, t:0};
+function wmPlayBtn(){ const b = $("wmPlay"); if(!b) return; b.innerHTML = wmP.on ? WMP_PAUSE : WMP_PLAY; b.setAttribute("aria-label", wmP.on ? "Atura" : "Reprodueix les hores"); }
+function wmPlay(on){
+  clearTimeout(wmP.t); wmP.on = !!on;
+  if(wmP.on){
+    const ks = wmKeys().map(x => x.k);
+    // a l'última hora, torna a començar des d'ara
+    if(!ks.length) wmP.on = false;
+    else if(!wmSel || ks.indexOf(wmSel) >= ks.length - 1){ const nk = nowKey(); wmShow(ks.find(k => k >= nk) || ks[0], true); }
+    if(wmP.on) wmP.t = setTimeout(wmStep, 1000 / wmP.spd);
+  }
+  wmPlayBtn();
+}
+function wmStep(){
+  if(!wmP.on) return;
+  const ks = wmKeys().map(x => x.k), i = ks.indexOf(wmSel);
+  if(i < 0 || i >= ks.length - 1){ wmPlay(false); return; }
+  wmShow(ks[i + 1], true);
+  if(i + 1 >= ks.length - 1){ wmPlay(false); return; }
+  wmP.t = setTimeout(wmStep, 1000 / wmP.spd);
+}
+document.addEventListener("click", e => {
+  if(e.target.closest && e.target.closest("#wmPlay")){ wmPlay(!wmP.on); return; }
+  if(e.target.closest && e.target.closest("#wmSpd")){ wmP.spd = wmP.spd >= 4 ? 1 : wmP.spd * 2; $("wmSpd").textContent = "×" + wmP.spd; if(wmP.on){ clearTimeout(wmP.t); wmP.t = setTimeout(wmStep, 1000 / wmP.spd); } return; }
+  // tocar la línia del temps atura la reproducció
+  if(wmP.on && e.target.closest && e.target.closest("#wmTl")) wmPlay(false);
+}, true);
+document.addEventListener("visibilitychange", () => { if(document.visibilityState !== "visible" && wmP.on) wmPlay(false); });
 window.wmSelect = (k, scroll) => { if(DATA && DATA.hours[k] && document.querySelector(`#wmTl [data-tk="${k}"]`)) wmShow(k, scroll); };
 function renderWindMap(){
   const host = $("windMap"); if(!host || !DATA) return;
@@ -142,7 +174,7 @@ function tlOnScroll(){
   if(Date.now() - tlProg < 400 || tlRaf) return;
   tlRaf = requestAnimationFrame(() => { tlRaf = 0; const tr = $("tlTrack"); if(!tr) return;
     const hs = tr.querySelectorAll(".tl-h"), i = Math.max(0, Math.min(hs.length - 1, Math.round(tr.scrollLeft / TL_W)));
-    const k = hs[i]?.dataset.tk; if(k && k !== wmSel) wmShow(k, false); });
+    const k = hs[i]?.dataset.tk; if(k && k !== wmSel){ if(wmP.on) wmPlay(false); wmShow(k, false); } });
 }
 document.addEventListener("click", e => {
   const h = e.target.closest && e.target.closest("#wmTl [data-tk]"); if(h){ wmShow(h.dataset.tk, true); return; }
@@ -187,7 +219,7 @@ function wmClose(){
   const c = wmCard(); if(!c || !wmFull()) return;
   const wasChart = c.classList.contains("full-chart");
   c.classList.remove("full", "full-chart", "full-map"); document.body.classList.remove("wm-open");
-  $("wmLeg")?.classList.remove("open"); wmLand(false);
+  $("wmLeg")?.classList.remove("open"); wmLand(false); wmPlay(false);
   if(wmMap){ wmMap.dragging.disable(); wmMap.touchZoom.disable(); wmMap.doubleClickZoom.disable(); if(wmZoomC) wmZoomC.remove();
     if(wmFx) wmFx.stop(); setTimeout(() => { wmMap.invalidateSize(false); wmMap.setView(WM_BEACH, WM_ZOOM, {animate:false}); }, 0); }
   if(wasChart) setTimeout(() => { renderDayChart(); applySel(); }, 0);
