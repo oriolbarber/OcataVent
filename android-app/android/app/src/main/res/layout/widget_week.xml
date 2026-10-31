@@ -8,7 +8,7 @@
     android:paddingEnd="6dp"
     android:paddingTop="5dp"
     android:paddingBottom="5dp"
-    android:background="@drawable/widget_bg_none">
+    android:background="@android:color/transparent">
     <LinearLayout
         android:id="@+id/wWeek"
         android:layout_width="match_parent"
@@ -22,7 +22,10 @@
         android:layout_gravity="center_vertical"
         android:gravity="center"
         android:text="Obre l'app per veure la previsió"
-        android:textColor="#FFFFFF"
+        android:shadowColor="#B3000000"
+            android:shadowRadius="3"
+            android:shadowDy="1"
+            android:textColor="#FFFFFF"
         android:textSize="13sp"
         android:visibility="gone" />
 </FrameLayout>
