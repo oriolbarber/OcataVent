@@ -1132,7 +1132,7 @@ function renderWeek(){
 }
 // Llindars navegació: llista dels tipus d'embarcació (Configuració) i detall del tipus triat (critK)
 let critK = act;
-const critSum = k => { const c = crit[k]; return `Ideal ${c.iMin}–${c.iMax} kn · ratxa fins a ${c.gust} kn · onada fins a ${r1(c.wMax)} m${c.pMin ? ` · període mín. ${c.pMin} s` : ""}`; };
+const critSum = k => { const c = crit[k]; return `Ideal ${c.iMin}–${c.iMax} kn · ratxa fins a ${c.gust} kn · onada fins a ${r1(c.wMax)} m${c.pMin ? ` · període mín. ${c.pMin} s` : ""}${c.mn ? ` · fins a ${String(c.mn).replace(".", ",")} mn` : ""}`; };
 // Llista agrupada: primer les de la barra de dalt (interruptor encès), després la resta del catàleg per famílies.
 // Les de les meves embarcacions de la Base hi són sempre (interruptor bloquejat).
 function critRow(k, on){
@@ -1149,7 +1149,7 @@ function renderCritList(){
 }
 // Canvia l'embarcació triada (barra de dalt) i ho redibuixa tot
 function setAct(k){
-  if(!DEFAULTS[k]) return; act = k; store.set("ov2_act", act);
+  if(!DEFAULTS[k]) return; act = k; store.set("ov2_act", act); dispatchEvent(new Event("ov-limit"));
   if(DATA) applyModel(); render(); if(window.renderWindMap) renderWindMap(); if(window.renderPrep) renderPrep();
 }
 function barChanged(){ const B = barActs(); if(!B.includes(act)) setAct(B[0]); else renderSeg(); renderCritList(); }
@@ -1173,9 +1173,9 @@ function renderCrit(){
   const c = crit[critK];
   if(window.OV_CFG) OV_CFG.title("crit-det", DEFAULTS[critK].name);
   $("peekCrit").textContent = `${DEFAULTS[act].short} · ideal ${crit[act].iMin}–${crit[act].iMax} kn · onada fins a ${r1(crit[act].wMax)} m`;
-  const F = [["min","Vent mínim (kn)",1],["iMin","Ideal des de (kn)",1],["iMax","Ideal fins a (kn)",1],["max","Vent màxim (kn)",1],["gust","Ratxa màxima (kn)",1],["wOk","Onada còmoda (m)",0.1],["wMax","Onada màxima (m)",0.1],["pMin","Període mínim (s)",1]];
-  $("crit").innerHTML = F.map(([k,l,st]) => `<label for="c_${k}">${l}<input id="c_${k}" type="number" inputmode="decimal" step="${st}" min="0" value="${c[k] ?? ""}"${k === "pMin" ? ' placeholder="Indiferent"' : ""} data-k="${k}"></label>`).join("")
-    + `<p class="note crit-wide">Onada curta: buit = indiferent. Amb un període més curt (i 0,3 m o més), la nota baixa.</p>`;
+  const F = [["min","Vent mínim (kn)",1],["iMin","Ideal des de (kn)",1],["iMax","Ideal fins a (kn)",1],["max","Vent màxim (kn)",1],["gust","Ratxa màxima (kn)",1],["wOk","Onada còmoda (m)",0.1],["wMax","Onada màxima (m)",0.1],["pMin","Període mínim (s)",1],["mn","Distància màx. de la costa (mn)",0.5]];
+  $("crit").innerHTML = F.map(([k,l,st]) => `<label for="c_${k}">${l}<input id="c_${k}" type="number" inputmode="decimal" step="${st}" min="0" value="${c[k] ?? ""}"${k === "pMin" ? ' placeholder="Indiferent"' : k === "mn" ? ' placeholder="Sense límit"' : ""} data-k="${k}"></label>`).join("")
+    + `<p class="note crit-wide">Onada curta: buit = indiferent. Amb un període més curt (i 0,3 m o més), la nota baixa. Distància de la costa: es marca als mapes; buit = sense límit.</p>`;
 }
 function render(){
   renderSeg(); renderCrit();
@@ -1316,10 +1316,10 @@ function refreshAll(){ document.dispatchEvent(new Event("ov-pull")); return Prom
 })();
 $("src").addEventListener("click", () => { const L = LOC.stations; if(L.length < 2) return; stKey = L[(L.indexOf(stKey) + 1) % L.length]; store.set("ov2_station_v3", stKey); ST = null; renderNow(); loadStation(); loadObs(); });
 $("crit").addEventListener("change", e => { const k = e.target.dataset.k; if(!k) return; const v = parseFloat(String(e.target.value).replace(",", "."));
-  if(k === "pMin" && (isNaN(v) || v <= 0)){ crit[critK].pMin = null; store.set("ov2_crit", crit); renderCrit(); renderCritList(); if(DATA && critK === act){ applyModel(); renderNow(); renderHours(); renderWeek(); } return; }   // buit = indiferent
+  if((k === "pMin" || k === "mn") && (isNaN(v) || v <= 0)){ crit[critK][k] = null; dispatchEvent(new Event("ov-limit")); store.set("ov2_crit", crit); renderCrit(); renderCritList(); if(DATA && critK === act){ applyModel(); renderNow(); renderHours(); renderWeek(); } return; }   // buit = indiferent
   if(isNaN(v) || v < 0){ renderCrit(); return; }
-  crit[critK][k] = v; store.set("ov2_crit", crit); renderCrit(); renderCritList(); if(DATA && critK === act){ applyModel(); renderNow(); renderHours(); renderWeek(); } });
-$("resetCrit").addEventListener("click", () => { crit[critK] = JSON.parse(JSON.stringify(DEFAULTS[critK])); store.set("ov2_crit", crit); renderCritList(); render(); });
+  crit[critK][k] = v; store.set("ov2_crit", crit); if(k === "mn") dispatchEvent(new Event("ov-limit")); renderCrit(); renderCritList(); if(DATA && critK === act){ applyModel(); renderNow(); renderHours(); renderWeek(); } });
+$("resetCrit").addEventListener("click", () => { crit[critK] = JSON.parse(JSON.stringify(DEFAULTS[critK])); store.set("ov2_crit", crit); dispatchEvent(new Event("ov-limit")); renderCritList(); render(); });
 
 renderSeg(); renderCrit();
 load(); loadStation(); loadObs(); loadInfo(); loadBuoy(); loadEncerts();

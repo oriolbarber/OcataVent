@@ -290,7 +290,7 @@ function gapsOf(trip){
 /* ---------- mapes ---------- */
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#3cd0ff"; }
 // scroll:true → al mòbil un dit fa desplaçar l'app (el mapa només es mou amb dos dits / pessic)
-// cors:true → rajoles amb crossOrigin (cal per a la màscara del mar de fx.js); la capa base queda a m._ovBase
+// cors:true → zoom a baix a la dreta (pantalla completa). Rajoles sempre amb crossOrigin (màscara del mar de fx.js i límit de la costa de limit.js); la capa base queda a m._ovBase
 function baseMap(el, scroll, cors){
   if(!window.L) return null;
   el.innerHTML = "";
@@ -298,7 +298,8 @@ function baseMap(el, scroll, cors){
   const m = L.map(el, {zoomControl:!cors, attributionControl:true, dragging:!free, tap:!free}).setView(HOME, 14);
   m.attributionControl.setPrefix(false);
   if(cors) L.control.zoom({position:"bottomright"}).addTo(m);
-  m._ovBase = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", Object.assign({maxZoom:18, className:"base-tiles", attribution:"© OpenStreetMap contributors"}, cors ? {crossOrigin:"anonymous"} : {})).addTo(m);
+  m._ovBase = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, className:"base-tiles", attribution:"© OpenStreetMap contributors", crossOrigin:"anonymous"}).addTo(m);
+  if(window.OV_LIMIT) OV_LIMIT(m, m._ovBase);   // límit de distància a la costa (limit.js)
   L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {maxZoom:18, attribution:"© OpenSeaMap"}).addTo(m);
   return m;
 }

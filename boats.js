@@ -16,7 +16,8 @@ const FAMS = {
   motor: "Motor"
 };
 // pMin = període mínim de l'onada (s): per sota, «onada curta» i la nota baixa. null = indiferent (per defecte)
-const c = (min, iMin, iMax, max, gust, wOk, wMax, pMin) => ({min, iMin, iMax, max, gust, wOk, wMax, pMin: pMin || null});
+// mn = distància màxima de la costa (milles nàutiques; línia i mar més fosc als mapes, limit.js). 2 mn per a tothom de moment (llicència de navegació); null = sense límit
+const c = (min, iMin, iMax, max, gust, wOk, wMax, pMin) => ({min, iMin, iMax, max, gust, wOk, wMax, pMin: pMin || null, mn: 2});
 const LIST = {
   pati:       {n:"Patí català",          s:"Patí",       f:"vela",  ic:"pati",  l:5.60, w:1.60, sh:"pati",  c:c(5, 8, 16, 20, 24, 0.6, 1.2)},
   ilca:       {n:"ILCA / Làser",         s:"ILCA",       f:"vela",  ic:"vela1", l:4.23, w:1.42,               c:c(6, 9, 18, 22, 26, 0.7, 1.3)},
