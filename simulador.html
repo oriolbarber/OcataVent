@@ -557,7 +557,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v15</div>
+  <div id="versio">Versió v16</div>
 </div></div>
 
 <script>
@@ -1117,8 +1117,10 @@ function physics(dt){
   F.tack = tack;
 
   // --- Proximitat al límit de mar obert (0..1): esmorteeix empenta i escora ---
-  const softOut = CH.len*3.6, hardOut = CH.len*4.6;
-  const softSide= CH.len*3.2, hardSide= CH.len*4.2;
+  // El mateix límit mar endins i als costats, en metres. Només els últims metres
+  // frenen: abans començava a 173 m i es notava en una navegació normal.
+  const hardOut = LIMIT_MAR*L/5.6, softOut = (LIMIT_MAR - FRENA_MAR)*L/5.6;
+  const softSide = softOut, hardSide = hardOut;
   const overY = S.py < -softOut ? clamp((-softOut - S.py)/(hardOut-softOut),0,1) : 0;
   const overX = Math.abs(S.px)>softSide ? clamp((Math.abs(S.px)-softSide)/(hardSide-softSide),0,1) : 0;
   const edge  = Math.max(overX, overY);
@@ -2756,6 +2758,8 @@ function shoreFn(x){ return 16*Math.sin(x*0.0035) + 6*Math.sin(x*0.011+2); }
 // Canal de navegació: surt perpendicular a la platja, MÉS ESTRET A LA PLATJA
 // i s'obre MOLT suaument cap al mar (les línies de boies són gairebé paral·leles).
 const CH = { len:0, wBeach:0, wMouth:0 };
+const LIMIT_MAR = 5556;     // m: 3 milles nàutiques des de la platja i als costats
+const FRENA_MAR = 100;      // m abans del límit on el patí comença a perdre empenta
 const buoys = [];
 function buildChannel(){
   CH.len    = 8.6*L;      // llargada del canal (~8-9 eslores)
@@ -4933,7 +4937,7 @@ function updateHints(dt){
   if(S.mode==='platja'){ txt='Arrossega el patí i toca lluny per orientar-lo.'; }
   else if(S.mode==='final'){ txt='Maniobra acabada. Tornem a la platja…'; }
   else if(S.capsized>0){ to='perill'; txt='Has bolcat: massa escora. Compensa amb el pes a barlovent abans no sigui tard.'; }
-  else if(S.atEdge){ to='avis'; txt='Ets a mar obert: el patí perd empenta. Vira i posa rumb cap a la costa per tornar a navegar.'; }
+  else if(S.atEdge){ to='avis'; txt='Has arribat al límit de 3 milles: el patí perd empenta. Vira i posa rumb cap a la costa.'; }
   else if(F.neutral){ txt='POSICIÓ NEUTRA: pes a proa, peus a l\u2019aigua i vela amollada a tope. El patí s\u2019atura. Serveix per cedir el pas o evitar un xoc.'; }
   else if(F.easedOnly && S.speed>0.05){ txt='Vela amollada del tot: frenes. Per aturar-te de veritat, vés a proa i posa els peus a l\u2019aigua.'; }
   else if(Math.abs(S.roll) > 0.60){ to='perill'; txt='Massa escora! Mou el pes a barlovent (el costat d\u2019on ve el vent) o amolla escota.'; }
@@ -5033,7 +5037,8 @@ function taulaOnatge(){
   // L'onatge el genera el vent: amb més vent, ona més alta i més llarga.
   const T  = 3.4 + S.windKn*0.10;                 // període (s)
   const H0 = 0.18 + S.windKn*0.045;               // alçada en mar obert (m)
-  const g9 = 9.81, PAS = 3, DMAX = 780;
+  // Fins al límit de mar obert: amb 780 m, mar endins no hi havia ni una cresta
+  const g9 = 9.81, PAS = 3, DMAX = LIMIT_MAR + 300;
   const dist = [], fase = [], alt = [], tren = [];
   let acc = 0;
   const lam0 = g9*T*T/(2*Math.PI);                // longitud d'ona en fondària
