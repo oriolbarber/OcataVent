@@ -718,10 +718,18 @@ function updateWeight(dt){
    +0.14·hl, no y=0. Abans wf=0 deixava el patró massa a proa i la bancada de
    popa quedava inabastable: d'aquí la sensació d'haver de navegar sempre avançat. */
 const CREW_MID  = hl => hl*0.14;      // centre de la coberta (wf = 0)
-const CREW_HALF = hl => hl*0.46;      // fins on arriba el cos (wf = ±1)
+const CREW_HALF = hl => hl*0.46;      // cap a proa, fins on arriba el cos (wf = 1)
+// Cap a popa arriba més: de wf = -1 fa seure el patró a la bancada de popa, just
+// davant la barra. Només canvia ON es dibuixa: la física treballa amb wf de -1 a 1
+// i els coeficients estan calibrats així, de manera que -1 continua sent el màxim.
+const CREW_POPA = hl => hl*0.60;
+const crewY = wf => CREW_MID(L/2) - wf*(wf < 0 ? CREW_POPA(L/2) : CREW_HALF(L/2));
 // Lateralment, wx=±1 deixa el patró assegut SOBRE el flotador (posició normal
 // al patí). Més enllà, ja s'hi penja fora, agafat amb els peus.
 const CREW_X = () => L*0.155 + L*0.05*0.35;
+// Penjat del tot, els malucs surten de la regala. La física ja compta el patró a
+// 1,50 m del centre (ESC.bracPatro·1,55): és el dibuix el que es quedava curt.
+const penjat = () => clamp(((F.hike||0) - 0.35)/0.65, 0, 1);
 
 /* ------------------- GEOMETRIA DE L'APARELL (una sola font de veritat) -------
    Xifres MESURADES sobre la làmina de nomenclatura del patí, totes en fraccions
@@ -732,11 +740,13 @@ const CREW_X = () => L*0.155 + L*0.05*0.35;
    (sailGeoLimit i barY) són valors CALIBRATS contra temps de maniobra reals i
    no es toquen des d'aquí: això només és el que es DIBUIXA. */
 const RIG = {
-  peu:      -0.312,   // estació del pal des del centre (− = cap a proa)
+  // El pal s'assenta al punt mig de la bancada 1, que és on el té la física
+  // (tackY a sailGeoLimit). La làmina dona -0,312: 21 cm més a proa.
+  peu:      -0.275,   // estació del pal des del centre (− = cap a proa)
   alt:       1.190,   // alçada del pal sobre la coberta
   caiguda:   0.195,   // caiguda natural del pal cap a popa (tangent ≈ 11°)
   mordassa:  0.151,   // recorregut de les mordasses, en tangent (≈ ±8,6°)
-  amuraY:    0.035,   // el puny d'amura queda a popa del pal, sobre la cua d'ànec
+  amuraY:    0.012,   // el puny d'amura queda just a popa del pal, sobre la cua d'ànec
   amuraZ:    0.115,   // alçada del puny d'amura sobre la coberta
   escotaZ:   0.246,   // alçada del puny d'escota: el pujament PUJA cap a popa
   pujament:  0.620,   // llarg del pujament (amura → puny d'escota)
@@ -746,10 +756,13 @@ const RIG = {
   // per governar: s'escurça un 16%, com un escorç.
   escorcZen: 0.84,
   barra:     0.450,   // estació de les potes de la barra escotera
-  // L'arc surt de la FOTO de la barra (fletxa ≈ 8% de la llum), no de la làmina:
+  // L'arc surt de la FOTO de la barra (fletxa ≈ 8-11% de la llum), no de la làmina:
   // amb 0,086 i 0,123 la barra feia un pont del 45% i no s'hi assemblava.
-  barraDav:  0.015,   // com avança la barra escotera al centre
-  barraAlt:  0.021,   // alçada de l'arc de la barra escotera sobre la coberta
+  // Es CORBA ENFORA, cap a popa. Més recorregut enrere que amunt: a la zenital de
+  // popa l'alçada puja per la pantalla i es menjaria la corba; prou alçada perquè en
+  // perspectiva, on el recul gairebé no es veu, continuï semblant un arc.
+  barraRec:  0.028,   // quant recula la barra escotera al centre
+  barraAlt:  0.020,   // alçada de l'arc de la barra escotera sobre la coberta
   barraAmp:  0.155,   // mitja amplada: de crugia a la placa de cada buc
   cadenots: [-0.490, -0.312, -0.197],   // estai de proa · obenc mitjà · obenc de popa
   // LES CINC BANCADES, en fraccions d'eslora. Abans aquests mateixos números
@@ -791,7 +804,7 @@ const ABAST = L*0.29*0.56;     // llargada màxima d'un braç real
 // On s'agafa la mà lliure, segons la postura i on és el cos.
 function agafada(){
   const ap = aparell(), post = F.posture || 'assegut', g = -MANS.costat;
-  const x0 = S.wx*CREW_X(), y0 = CREW_MID(L/2) - S.wf*CREW_HALF(L/2);
+  const x0 = S.wx*CREW_X(), y0 = crewY(S.wf);
   const regala = (s, dins) => [s*(0.150 + 0.042*(dins ? -0.9 : 0.95))*L, y0 - L*0.03, ap.HULLH];
   // acompanyant la vela, el braç no s'agafa: l'aguanta
   if(F.accompanying) return [x0 + g*L*0.12, y0 + L*0.03, ap.HULLH];
@@ -838,8 +851,8 @@ function patroZen(){
   const P = L*0.306, shHalf = P*0.1225, torso = P*0.32, post = F.posture || 'assegut';
   const fora = post==='fora', dret = post==='dret', sgn = Math.sign(S.wx||1);
   const duck = F.accompanying ? 0.80 : 1.0;
-  const cx = S.wx*CREW_X(), cy = CREW_MID(L/2) - S.wf*CREW_HALF(L/2);
-  const out = fora ? -sgn*P*0.009 : (F.hike||0)*P*0.30*sgn;
+  const cx = S.wx*CREW_X(), cy = crewY(S.wf);
+  const out = fora ? sgn*(penjat()*L*0.036 - P*0.009) : (F.hike||0)*P*0.30*sgn;
   const shY = (dret ? torso*0.30 : torso*0.62 - P*0.03) - shHalf*0.20;
   return {
     shY, shX: shHalf*0.80,
@@ -865,7 +878,7 @@ function amuntPati(z){
 function aparell(){
   const HULLH = L*0.07;                                  // coberta sobre la flotació
   const alt   = RIG.alt*L;
-  const peu   = RIG.peu*L + (S.rake||0)*L*0.03;          // el peu gira una mica
+  const peu   = RIG.peu*L;           // les mordasses mouen el cap: el peu és el pivot
   const cai   = (RIG.caiguda + (S.rake||0)*RIG.mordassa) * alt;
   const amY   = RIG.peu*L + RIG.amuraY*L;
   const bd    = S.boomDir;
@@ -877,10 +890,10 @@ function aparell(){
     escota: [ Math.sin(bd)*RIG.pujament*L,
               amY + Math.cos(bd)*RIG.pujament*L,
               HULLH + RIG.escotaZ*L ],
-    // la barra escotera és un ARC: al centre puja i avança, i per això la
+    // la barra escotera és un ARC: al centre puja i recula, i per això la
     // politja mai s'hi queda (el centre és el punt alt del pont)
     barraX: u => u*RIG.barraAmp*L,
-    barraY: u => RIG.barra*L - RIG.barraDav*L*(1 - u*u),
+    barraY: u => RIG.barra*L + RIG.barraRec*L*(1 - u*u),
     barraZ: u => HULLH + RIG.barraAlt*L*(1 - u*u),
     // on és el carro sobre la barra. El recorregut físic (S.pulley, ±1) acaba
     // als topalls, un 7% abans de les plaques: el carro no pot entrar a la placa.
@@ -2276,7 +2289,7 @@ function render3D(dt){
     }
   });
   // ── BARRA ESCOTERA: arc d'acer que uneix les dues popes ──
-  // És un PONT: al centre puja i avança. Per això la politja no s'hi queda mai
+  // És un PONT: al centre puja i recula. Per això la politja no s'hi queda mai
   // al mig i sempre acaba caient cap a una banda (sistema biestable).
   const AP = aparell();
   {
@@ -2326,7 +2339,7 @@ function render3D(dt){
     }
     // CUA D'ÀNEC: la peça del peu del pal que aguanta el puny d'amura
     if(tackB){
-      const q=[mastB, tackB, pjB(0, (RIG.peu + RIG.amuraY*1.5)*L, HULLH)].filter(Boolean);
+      const q=[mastB, tackB, pjB(0, (RIG.peu + 0.05)*L, HULLH)].filter(Boolean);
       if(q.length===3){
         cx2d.beginPath(); cx2d.moveTo(q[0].x,q[0].y);
         cx2d.lineTo(q[1].x,q[1].y); cx2d.lineTo(q[2].x,q[2].y); cx2d.closePath();
@@ -2414,9 +2427,12 @@ function render3D(dt){
       const bancPt = pjB(AP.pulBanc[0], AP.pulBanc[1], AP.pulBanc[2]);
       if(pulPt){
         CAPA='escota';
+        // la panxa és de corda fluixa: caçada va tibant, i cada tram es llegeix
+        // anant recte d'una politja a l'altra
+        const panxa = 1 - clamp(S.sheet, 0, 1);
         cx2d.strokeStyle='rgba(240,235,215,.85)'; cx2d.lineWidth=1.6;
         cx2d.beginPath(); cx2d.moveTo(clewB.x, clewB.y);
-        cx2d.quadraticCurveTo((clewB.x+pulPt.x)/2, Math.max(clewB.y,pulPt.y)+10, pulPt.x, pulPt.y);
+        cx2d.quadraticCurveTo((clewB.x+pulPt.x)/2, Math.max(clewB.y,pulPt.y)+panxa*10, pulPt.x, pulPt.y);
         cx2d.stroke();
         escotaPt('persp','puny',  clewB);
         escotaPt('persp','barra', pulPt, AP.barraY(pulU)/L);
@@ -2431,7 +2447,7 @@ function render3D(dt){
         if(bancPt){
           // el tram de retorn va arran de coberta: amb prou feines fa panxa
           cx2d.beginPath(); cx2d.moveTo(pulPt.x, pulPt.y);
-          cx2d.quadraticCurveTo((pulPt.x+bancPt.x)/2, Math.max(pulPt.y,bancPt.y)+4,
+          cx2d.quadraticCurveTo((pulPt.x+bancPt.x)/2, Math.max(pulPt.y,bancPt.y)+panxa*4,
                                 bancPt.x, bancPt.y);
           cx2d.stroke();
           escotaPt('persp','banc', bancPt, AP.pulBanc[1]/L);
@@ -2452,7 +2468,7 @@ function render3D(dt){
   // Esquelet en coordenades del patí, projectat punt a punt. A ESCALA REAL:
   // un patí fa 5,60 m i un adult ~1,70 m → alçada = 0,29 eslores.
   {
-    const CREW_X3 = hb3 + hw3*0.35, CREW_MID3 = hl3*0.14, CREW_HALF3 = hl3*0.46;
+    const CREW_X3 = hb3 + hw3*0.35;
     const HS = L*0.29;                                   // alçada dret (escala real)
     const LEG = HS*0.46, TOR = HS*0.40, HR = HS*0.082;   // proporcions
     const U = HS;                                        // unitat per a offsets
@@ -2466,7 +2482,7 @@ function render3D(dt){
         if(b<0.5){ const u=b/0.5; bx=sideX*(hb3+hw3)*u; by=hl3*0.92-(hl3*0.92-hl3*0.30)*u; }
         else { const u=(b-0.5)/0.5; bx=sideX*((hb3+hw3)-hw3*0.65*u); by=hl3*0.30-hl3*0.30*u+hl3*0.14*u; }
       } else {
-        bx = S.wx*CREW_X3; by = CREW_MID3 - S.wf*CREW_HALF3; ground = HULLH;
+        bx = S.wx*CREW_X3; by = crewY(S.wf); ground = HULLH;
         post = F.posture || 'assegut';
       }
     }
@@ -2480,7 +2496,7 @@ function render3D(dt){
       hipW=U*0.095; shW=U*0.135; wAxis='x';
     } else if(post==='fora'){
       // penjat: peus a les CINTES, cos alineat cap enfora, cap sobre l'aigua
-      const strapX = sgn*L*0.045, hipX = sgn*(hb3 - hw3*0.1);
+      const strapX = sgn*L*0.045, hipX = sgn*(hb3 - hw3*0.1 + penjat()*L*0.055);
       hipC=[hipX, by, ground+U*0.14];
       shC=[hipX + sgn*TOR*0.92, by, ground+U*0.26];
       headC=[hipX + sgn*(TOR*0.92 + HR*1.7), by, ground+U*0.30];
@@ -2607,16 +2623,20 @@ function render3D(dt){
       drawArm(shldRest, handRestL);
       // L'ESCOTA A LA MÀ: el cap de corda va de la politja a la mà, i en penja
       // un trosset solt (el cap mort que el patró deixa anar quan amolla)
-      if(pHandSheet && !SIL && S.mode==='mar' && (!S.board || S.board>=1)){
+      // Si la vela tapa el patró el tram es veu a través de la tela, com la
+      // silueta: treure'l deixava l'escota acabada a la bancada.
+      if(pHandSheet && S.mode==='mar' && (!S.board || S.board>=1)){
         // El cap que el patró té a la mà ve de la politja de la BANCADA
         // CENTRAL, no de la barra de popa: aquell tram ja s'ha dibuixat.
         const pul2 = pjB(AP.pulBanc[0], AP.pulBanc[1], AP.pulBanc[2]);
         if(pul2){
           CAPA='escota';
           escotaPt('persp','ma', pHandSheet);
-          cx2d.strokeStyle='rgba(240,235,215,.85)'; cx2d.lineWidth=1.5;
+          cx2d.strokeStyle = SIL ? 'rgba(240,235,215,.40)' : 'rgba(240,235,215,.85)';
+          cx2d.lineWidth=1.5;
           cx2d.beginPath(); cx2d.moveTo(pul2.x, pul2.y);
-          cx2d.quadraticCurveTo((pul2.x+pHandSheet.x)/2, Math.max(pul2.y,pHandSheet.y)+8,
+          cx2d.quadraticCurveTo((pul2.x+pHandSheet.x)/2,
+                                Math.max(pul2.y,pHandSheet.y)+(1-clamp(S.sheet,0,1))*6,
                                 pHandSheet.x, pHandSheet.y);
           cx2d.stroke();
           const tail = Math.min(16, 22*scl);
@@ -2628,6 +2648,10 @@ function render3D(dt){
       }
       // CAP: pell + gorra blava (a 'fora', mira cap enfora)
       const hr = Math.max(2.2, HR*scl*1.15);
+      if(post==='fora'){                 // estirat, el cap queda lluny del tors: li cal coll
+        cx2d.strokeStyle=C.skin; cx2d.lineCap='round'; cx2d.lineWidth=Math.max(1.4, U*0.07*scl);
+        cx2d.beginPath(); cx2d.moveTo(pSh.x,pSh.y); cx2d.lineTo(pHead.x,pHead.y); cx2d.stroke();
+      }
       cx2d.beginPath(); cx2d.arc(pHead.x, pHead.y, hr, 0, TAU);
       cx2d.fillStyle=C.face; cx2d.fill();
       const capA = capOut ? (capOut>0 ? -Math.PI/2 : Math.PI/2) : Math.PI;
@@ -2936,8 +2960,10 @@ function renderWorld(dt){
       const prof = profund(dm, cam.x);
       const c = colorAigua(prof);
       const fons = veuFons(prof, S.terbolesa||0);
-      // mar endins el color fosc del fons ha de dominar; a la vora, el turquesa
-      const a = clamp(0.14 + 0.62*fons, 0.10, 0.86);
+      // mar endins el color fosc del fons ha de dominar; a la vora, el turquesa,
+      // però sense blanquejar: amb 0,86 els primers metres sortien lletosos i
+      // més clars que tot el que hi ha darrere el patí
+      const a = clamp(0.14 + 0.30*fons, 0.10, 0.44);
       cx2d.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a.toFixed(3)})`;
       cx2d.fillRect(vx0, yA, vx1-vx0, yB-yA);
     }
@@ -2946,7 +2972,7 @@ function renderWorld(dt){
       const [bx0, bh, bw] = b;
       if(bh <= 0.05) continue;
       const seg = 26, pas = (vx1-vx0)/seg;
-      cx2d.fillStyle = `rgba(236,222,178,${(0.10 + 0.16*bh).toFixed(3)})`;
+      cx2d.fillStyle = `rgba(236,222,178,${(0.04 + 0.07*bh).toFixed(3)})`;
       cx2d.beginPath();
       for(let k=0;k<=seg;k++){
         const x = vx0 + pas*k;
@@ -3598,8 +3624,6 @@ function drawBoat(){
   cx2d.restore();
 
   // --- BUCS (coberta), amb llum direccional coherent ---
-  // Component del sol perpendicular a l'eix del patí (en coords locals):
-  const sunLocal = SUN.x*Math.cos(-S.heading) - SUN.y*Math.sin(-S.heading);
   for(const sideX of [-1,1]){
     const submerged = (S.roll*sideX > 0) ? clamp(Math.abs(S.roll)*1.5, 0, 1) : 0;
     const cxh = sideX*hb;
@@ -3607,16 +3631,11 @@ function drawBoat(){
     const litL = litness(-1, 0), litR = litness(1, 0);
     const g = cx2d.createLinearGradient(cxh-hw,0,cxh+hw,0);
     g.addColorStop(0,   shadeWood(litL*0.9));
-    g.addColorStop(.5,  shadeWood((litL+litR)*0.5 + 0.22));   // llom del buc, brillant
+    // Fusta neta: el llom brillant feia semblar el buc un tub, i és una coberta plana
+    g.addColorStop(.5,  shadeWood((litL+litR)*0.5 + 0.06));
     g.addColorStop(1,   shadeWood(litR*0.9));
     cx2d.fillStyle = g;
     hullPath(cxh, hl, hw); cx2d.fill();
-    // reflex de vernís al llom, desplaçat cap al sol
-    cx2d.strokeStyle=`rgba(255,248,228,${0.20+0.28*Math.max(0,-sunLocal*sideX+0.5)})`;
-    cx2d.lineWidth=1.6;
-    cx2d.beginPath();
-    cx2d.moveTo(cxh - sunLocal*hw*0.35, -hl*0.9);
-    cx2d.lineTo(cxh - sunLocal*hw*0.35,  hl*0.85); cx2d.stroke();
     // vetes de fusta (suaus, per no competir amb els reblons)
     cx2d.strokeStyle='rgba(70,40,14,.10)'; cx2d.lineWidth=0.8;
     for(const f of [-0.35,0.35]){
@@ -3625,7 +3644,9 @@ function drawBoat(){
       cx2d.quadraticCurveTo(cxh+hw*f*0.4, 0, cxh+hw*f, hl*0.7);
       cx2d.stroke();
     }
-    cx2d.strokeStyle='rgba(45,22,6,.65)'; cx2d.lineWidth=1.5; hullPath(cxh, hl, hw); cx2d.stroke();
+    // la regala: és la vora que dibuixa la forma del buc damunt del mar
+    cx2d.strokeStyle='#8a5a2b'; cx2d.lineWidth=L*0.008; hullPath(cxh, hl, hw); cx2d.stroke();
+    cx2d.strokeStyle='rgba(45,22,6,.65)'; cx2d.lineWidth=1.2; hullPath(cxh, hl, hw); cx2d.stroke();
 
     if(submerged>0.05){
       cx2d.fillStyle=`rgba(19,106,140,${0.5*submerged})`;
@@ -3759,13 +3780,6 @@ function drawBoat(){
   cx2d.fillStyle='rgba(250,246,236,.92)';
   cx2d.fillText('PROA', 0, -hl*0.82);
 
-  // bolcada: pal a l'aigua
-  if(S.capsized>0){
-    cx2d.strokeStyle='#e8d9b8'; cx2d.lineWidth=4; cx2d.lineCap='round';
-    cx2d.beginPath(); cx2d.moveTo(0,-hl*0.30);
-    cx2d.lineTo(leeX*L*0.7, -hl*0.30 + L*0.15); cx2d.stroke();
-  }
-
   // --- ONADA DE PROA: aigua impactant i obrint-se a cada buc ---
   if(sp>0.1 && S.capsized<=0){
     for(const sideX of [-1,1]){
@@ -3812,7 +3826,7 @@ function drawPatro(){
 
   // Guia d'equilibri
   if(S.mode==='mar' && S.capsized<=0 && S.speed>0.08){
-    const by = CREW_MID(hl) - F.wfBal*CREW_HALF(hl);
+    const by = crewY(F.wfBal);
     cx2d.setLineDash([6,5]);
     cx2d.strokeStyle = F.balanced ? 'rgba(95,208,138,.85)' : 'rgba(242,193,78,.55)';
     cx2d.lineWidth = 2;
@@ -3849,7 +3863,7 @@ function drawPatro(){
     return;
   }
 
-  const cx0 = S.wx*CREW_X(), cy0 = CREW_MID(hl) - S.wf*CREW_HALF(hl);
+  const cx0 = S.wx*CREW_X(), cy0 = crewY(S.wf);
   const post = F.posture || 'assegut';
   const hike = F.hike || 0;
   const lee  = F.tack;
@@ -3894,7 +3908,7 @@ function drawPatro(){
   cx2d.fill();
 
   // quan es penja fora, tot el cos surt del casc
-  const out = (post==='fora') ? -sgn*P*0.009         // malucs al flotador; peus a la CINTA del mateix costat
+  const out = (post==='fora') ? sgn*(penjat()*L*0.036 - P*0.009)  // peus a la CINTA del mateix costat
                               : hike * P*0.30 * sgn;
   cx2d.translate(out, 0);
 
@@ -3909,7 +3923,7 @@ function drawPatro(){
   if(post==='fora'){
     // alineades amb el cos (que està girat 90°): gairebé rectes, amb un lleu
     // plec de genoll; els peus queden endins, enganxats a les cintes negres.
-    const reach = 0.78;
+    const reach = 0.78 + 0.24*penjat();                 // com més fora, més estirades
     for(const s of [-0.5, 0.5]){
       const hx = s*shHalf*0.55, hy = hipY;
       const kx = s*shHalf*0.70, ky = hy - thigh*reach;
@@ -4215,7 +4229,7 @@ function rigPoints(){
   const shroudML = rot(-hb, RIG.cadenots[1]*L), shroudMR = rot(hb, RIG.cadenots[1]*L);
   const shroudL  = rot(-hb, RIG.cadenots[2]*L), shroudR  = rot(hb, RIG.cadenots[2]*L);
   // POLITJA: corre per la barra escotera, que és un ARC de pont. El centre és
-  // el punt alt i el més avançat, així que la politja mai s'hi queda.
+  // el punt alt, així que la politja mai s'hi queda.
   // Surt dels mateixos punts que la barra: aquí hi havia una amplada pròpia
   // (hb + hw*0.2) que l'enviava més enllà de la punta de la barra.
   const pulU = ap.carroU();
@@ -4275,7 +4289,6 @@ function drawSailShadow(){
 // vela, escota, politja i pal, dibuixats per sobre de la coberta.
 // EL PATÍ NO TÉ BOTAVARA: la vela és de puny lliure.
 function drawRig(){
-  if(S.capsized>0) return;
   const R = rigPoints();
 
   // vela: degradat PERPENDICULAR a la panxa (cara de sotavent al sol)
@@ -4381,7 +4394,7 @@ function drawRig(){
 // popa i sempre és a sotavent, mai al mig) i d'allà a les MANS del patró,
 // que la té agafada de manera constant.
 function drawSheet(){
-  if(S.capsized>0 || S.mode!=='mar' && S.mode!=='platja') return;
+  if(S.mode!=='mar' && S.mode!=='platja') return;
   const R = rigPoints();
   const tension = clamp(S.sheet, 0, 1);
   // una escota molt caçada va tibant; amollada, fa una mica de panxa
@@ -4518,7 +4531,8 @@ function moveWeight(wpt){
   const lx = dx*ca - dy*sa, ly = dx*sa + dy*ca;
   const hl = L/2;
   S.wxT = clamp(lx/CREW_X(), -1, 1);
-  S.wfT = clamp((CREW_MID(hl) - ly)/CREW_HALF(hl), -1, 1);
+  const dy0 = CREW_MID(hl) - ly;
+  S.wfT = clamp(dy0/(dy0 < 0 ? CREW_POPA(hl) : CREW_HALF(hl)), -1, 1);
 }
 
 // mode platja: arrossegar mou el patí; tocar lluny orienta la proa cap al dit
