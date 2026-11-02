@@ -95,7 +95,7 @@
   #escotaBox{right:10px;top:52%;transform:translateY(-50%);pointer-events:auto;
     display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px}
   #escotaTrack{position:relative;width:52px;height:min(46vh,340px);border-radius:26px;
-    background:linear-gradient(to bottom,rgba(212,58,47,.35),rgba(232,217,184,.12));
+    background:linear-gradient(to top,rgba(212,58,47,.35),rgba(232,217,184,.12));
     border:1px solid rgba(232,217,184,.25);touch-action:none;cursor:grab}
   #escotaKnob{position:absolute;left:50%;transform:translate(-50%,-50%);
     width:46px;height:46px;border-radius:50%;background:var(--sorra);
@@ -425,9 +425,9 @@
 </div>
 
 <div id="escotaBox" class="hud panell">
-  <div class="escotaLbl">CAÇAR ▲</div>
+  <div class="escotaLbl">AMOLLAR ▲</div>
   <div id="escotaTrack"><div id="escotaKnob">✊</div></div>
-  <div class="escotaLbl">▼ AMOLLAR</div>
+  <div class="escotaLbl">▼ CAÇAR</div>
   <div id="btnMapa">🗺️</div>
 </div>
 
@@ -487,7 +487,7 @@
   <h2>Com funciona la partida</h2>
   <p>🏖️ Comences <b>a la sorra</b>: col·loca i orienta el patí, prem <b>ENTRAR AL MAR</b> i surt pel <b>canal de boies</b> (grogues; a la boca, verda a l'esquerra i vermella a la dreta). Després navega lliure i torna a entrar pel canal fins a la sorra per completar la partida.</p>
   <h2>Controls</h2>
-  <p>📱 <b>Mòbil:</b> arrossega el punt vermell (el teu pes) per les bancades. Barra de la dreta: amunt caça, avall amolla. 🗺️ obre el mapa de situació.<br>
+  <p>📱 <b>Mòbil:</b> arrossega el punt vermell (el teu pes) per les bancades. Barra de la dreta: avall caça, amunt amolla. 🗺️ obre el mapa de situació.<br>
   ⌨️ <b>PC:</b> <b>W/S</b> pes proa/popa · <b>A/D</b> pes babord/estribord (el pes es queda on el deixes) · <b>Espai</b> centra el pes · <b>← amollar</b> / <b>→ caçar</b> · <b>Q/E</b> escota tot amollada/caçada · <b>R/F</b> inclina el pal a popa/proa · <b>X</b> pal a la caiguda de sèrie · <b>Maj</b> control fi · <b>Z</b> zoom · <b>C</b> càmera · <b>M</b> mapa · <b>Enter</b> entrar al mar.<br>
   🟢 La <b>línia discontínua</b> a la coberta marca on ha d'anar el teu pes per mantenir el rumb: quan hi ets a sobre, el punt es torna verd.
   ⚙️ Amb l'engranatge canvies el <b>vent</b> i el <b>pes del navegant</b>. 🔍 canvia el zoom.</p>
@@ -557,7 +557,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v14</div>
+  <div id="versio">Versió v15</div>
 </div></div>
 
 <script>
@@ -4830,9 +4830,10 @@ rakeTrack.addEventListener('pointercancel', e=>{ if(e.pointerId===dragRake) drag
 const track = document.getElementById('escotaTrack');
 const knob  = document.getElementById('escotaKnob');
 let dragSheet = null;
+// Es caça tirant avall, com qui recull el cap cap al cos: dalt 0, baix 1.
 function setSheetFromY(clientY){
   const r = track.getBoundingClientRect();
-  S.sheet = clamp(1 - (clientY - r.top)/r.height, 0, 1);
+  S.sheet = clamp((clientY - r.top)/r.height, 0, 1);
 }
 track.addEventListener('pointerdown', e=>{
   dragSheet = e.pointerId; track.setPointerCapture(e.pointerId); setSheetFromY(e.clientY);
@@ -4912,7 +4913,7 @@ function updateHUD(){
   else if(F.stall){ v.textContent='SOBRECAÇADA'; v.style.color='#ff9b8f'; }
   else { v.textContent='EN POTÈNCIA'; v.style.color='#8ce8ae'; }
 
-  knob.style.top = (1-S.sheet)*100 + '%';
+  knob.style.top = S.sheet*100 + '%';
   // control del pal
   rakeKnob.style.top = ((1 - S.rake)/2)*100 + '%';
   const rk = $('rakeVal');
