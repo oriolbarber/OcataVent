@@ -92,14 +92,19 @@ function drawBg(){
   if(b.src === "img"){ g.innerHTML = b.img ? `<g transform="${bgTransform()}" opacity="${op}"><image href="${b.img}" x="${-b.imgW/2}" y="${-b.imgW*b.imgAR/2}" width="${b.imgW}" height="${b.imgW*b.imgAR}" preserveAspectRatio="none"/></g>` : ""; return; }
   // rajoles que cobreixen la vista (amb marge, pel gir i l'escala del fons)
   const mpp = view.w / Math.max(1, svg.getBoundingClientRect().width);
-  const z = Math.max(14, Math.min(S.max, Math.round(Math.log2(156543.03 * Math.cos(ORIGIN.lat*D2R) / mpp / Math.max(.2, b.s)))));
-  const pad = view.w * .6, vx0 = view.x - pad, vy0 = view.y - pad, vx1 = view.x + view.w + pad, vy1 = view.y + view.w * aspect() + pad;
+  let z = Math.max(14, Math.min(S.max, Math.round(Math.log2(156543.03 * Math.cos(ORIGIN.lat*D2R) / mpp / Math.max(.2, b.s)))));
+  const pad = view.w * .25, vx0 = view.x - pad, vy0 = view.y - pad, vx1 = view.x + view.w + pad, vy1 = view.y + view.w * aspect() + pad;
   const toLL = (x, y) => { const [ux, uy] = rot((x - b.dx)/b.s, (y - b.dy)/b.s, -b.r); return [ORIGIN.lat - uy/mPerLat, ORIGIN.lon + ux/mPerLon()]; };
   const P = [[vx0, vy0], [vx1, vy0], [vx1, vy1], [vx0, vy1]].map(([x, y]) => toLL(x, y));
   const lats = P.map(p => p[0]), lons = P.map(p => p[1]);
-  const tx0 = Math.floor(lon2t(Math.min(...lons), z)), tx1 = Math.floor(lon2t(Math.max(...lons), z));
-  const ty0 = Math.floor(lat2t(Math.max(...lats), z)), ty1 = Math.floor(lat2t(Math.min(...lats), z));
-  if((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 120){ g.innerHTML = ""; return; }
+  // Pantalla gran: massa rajoles al zoom màxim (l'ICGC arriba al 20) → es baixa el zoom fins que hi càpiguen, en lloc de no dibuixar res
+  let tx0, tx1, ty0, ty1;
+  for(;; z--){
+    tx0 = Math.floor(lon2t(Math.min(...lons), z)); tx1 = Math.floor(lon2t(Math.max(...lons), z));
+    ty0 = Math.floor(lat2t(Math.max(...lats), z)); ty1 = Math.floor(lat2t(Math.min(...lats), z));
+    if((tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= 160 || z <= 12) break;
+  }
+  if((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 160){ g.innerHTML = ""; return; }
   let h = "";
   for(let x = tx0; x <= tx1; x++) for(let y = ty0; y <= ty1; y++){
     const [ax, ay] = ll2m(t2lat(y, z), t2lon(x, z)), [bx, by] = ll2m(t2lat(y + 1, z), t2lon(x + 1, z));
