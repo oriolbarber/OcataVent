@@ -745,8 +745,11 @@ const RIG = {
   // per governar: s'escurça un 16%, com un escorç.
   escorcZen: 0.84,
   barra:     0.450,   // estació de les potes de la barra escotera
-  barraDav:  0.086,   // com avança la barra escotera al centre
-  barraAlt:  0.123,   // alçada de l'arc de la barra escotera sobre la coberta
+  // L'arc surt de la FOTO de la barra (fletxa ≈ 8% de la llum), no de la làmina:
+  // amb 0,086 i 0,123 la barra feia un pont del 45% i no s'hi assemblava.
+  barraDav:  0.015,   // com avança la barra escotera al centre
+  barraAlt:  0.021,   // alçada de l'arc de la barra escotera sobre la coberta
+  barraAmp:  0.155,   // mitja amplada: de crugia a la placa de cada buc
   cadenots: [-0.490, -0.312, -0.197],   // estai de proa · obenc mitjà · obenc de popa
   // LES CINC BANCADES, en fraccions d'eslora. Abans aquests mateixos números
   // estaven escrits dos cops, un a cada vista, i era qüestió de temps que
@@ -776,6 +779,9 @@ function calatRel(t){
 /* Punts de l'aparell en coordenades del PATÍ, compartits per les tres vistes:
    bx = través (+ estribord) · by = eix proa-popa (+ cap a popa) · z = alçada
    sobre la línia de flotació. */
+// Escorç de l'alçada a les zenitals. El fan servir el dibuix del buc i rigPoints():
+// si només l'aplica un dels dos, la politja s'aixeca i la barra es queda a coberta.
+const escorcZenital = () => (1 - 0.06*Math.abs(S.heel) - 0.06*Math.abs(S.rake)) * RIG.escorcZen;
 function aparell(){
   const HULLH = L*0.07;                                  // coberta sobre la flotació
   const alt   = RIG.alt*L;
@@ -793,8 +799,12 @@ function aparell(){
               HULLH + RIG.escotaZ*L ],
     // la barra escotera és un ARC: al centre puja i avança, i per això la
     // politja mai s'hi queda (el centre és el punt alt del pont)
+    barraX: u => u*RIG.barraAmp*L,
     barraY: u => RIG.barra*L - RIG.barraDav*L*(1 - u*u),
     barraZ: u => HULLH + RIG.barraAlt*L*(1 - u*u),
+    // on és el carro sobre la barra. El recorregut físic (S.pulley, ±1) acaba
+    // als topalls, un 7% abans de les plaques: el carro no pot entrar a la placa.
+    carroU: () => clamp(S.pulley, -1, 1)*0.93,
     // estació de la bancada i, i el punt on hi va fixada la politja de l'escota
     bancY:  i => (RIG.bancA + (RIG.bancB - RIG.bancA)*RIG.bancF[i]) * L,
     pulBanc: [0,
@@ -2140,7 +2150,7 @@ function render3D(dt){
         cx2d.beginPath(); let st=false;
         for(let i=0;i<=22;i++){
           const u=-1+2*i/22;
-          const p=pjB(u*(hb3+hw3*0.35), AP.barraY(u), AP.barraZ(u)+dz);
+          const p=pjB(AP.barraX(u), AP.barraY(u), AP.barraZ(u)+dz);
           if(!p){st=false;continue;}
           st?cx2d.lineTo(p.x,p.y):(cx2d.moveTo(p.x,p.y),st=true);
         }
@@ -2162,8 +2172,11 @@ function render3D(dt){
   const P3R = p => pjB(p[0], p[1], p[2]);
   const mastB = P3R(AP.peuPal), mastT = P3R(AP.capPal);
   const tackB = P3R(AP.amura),  clewB = P3R(AP.escota);
-  const pulU  = clamp(S.pulley, -1, 1);
-  const pulPt = pjB(pulU*(hb3 + hw3*0.2), AP.barraY(pulU), AP.barraZ(pulU));
+  const pulU  = AP.carroU();
+  const pulPt = pjB(AP.barraX(pulU), AP.barraY(pulU), AP.barraZ(pulU));
+  // carro d'acer: abraça la barra, i per això s'orienta amb el tram que té a sota
+  const carroA = pjB(AP.barraX(pulU-0.07), AP.barraY(pulU-0.07), AP.barraZ(pulU-0.07));
+  const carroB = pjB(AP.barraX(pulU+0.07), AP.barraY(pulU+0.07), AP.barraZ(pulU+0.07));
   if(mastB && mastT){
     // CORDAM: estai de proa i dos parells d'obencs (mitjà i de popa).
     // El patí NO porta estai de popa: la baluma de la vela hi va lliure.
@@ -2270,6 +2283,14 @@ function render3D(dt){
         cx2d.stroke();
         escotaPt('persp','puny',  clewB);
         escotaPt('persp','barra', pulPt, AP.barraY(pulU)/L);
+        if(carroA && carroB){
+          cx2d.strokeStyle='#aeb6bc'; cx2d.lineCap='round';
+          cx2d.lineWidth=clamp(9*FL/pulPt.d, 2.5, 8);
+          cx2d.beginPath(); cx2d.moveTo(carroA.x,carroA.y); cx2d.lineTo(carroB.x,carroB.y);
+          cx2d.stroke();
+        }
+        politja3D(pulPt);
+        cx2d.strokeStyle='rgba(240,235,215,.85)'; cx2d.lineWidth=1.6;
         if(bancPt){
           // el tram de retorn va arran de coberta: amb prou feines fa panxa
           cx2d.beginPath(); cx2d.moveTo(pulPt.x, pulPt.y);
@@ -3564,15 +3585,22 @@ function drawBoat(){
   // BARRA D'ACER CORBADA (arc de pont) darrere l'última bancada, unint els flotadors.
   // El seu punt més alt és el centre: la politja hi rellisca cap als costats.
   {
-    const half = hb;                          // la barra arriba al centre de cada flotador
     const apb = aparell();
+    // La barra és enlaire: s'aixeca cap amunt de pantalla igual que la politja
+    // a rigPoints(). L'alçada és de món i aquí estem en coordenades del patí.
+    const esc = escorcZenital(), ch = Math.cos(S.heading), sh = Math.sin(S.heading);
+    const upx = -Math.sin(cam.rot), upy = -Math.cos(cam.rot);
+    const barraPt = (u, dy) => {
+      const z = (apb.barraZ(u) - apb.HULLH)*esc;
+      return [apb.barraX(u) + (upx*ch + upy*sh)*z,
+              apb.barraY(u) + (upy*ch - upx*sh)*z + (dy||0)];
+    };
     const gb = cx2d.createLinearGradient(0, apb.barraY(0), 0, apb.barraY(1));
     gb.addColorStop(0,'#3a3a40'); gb.addColorStop(.5,'#17171b'); gb.addColorStop(1,'#000');
     cx2d.strokeStyle = gb; cx2d.lineWidth = L*0.018; cx2d.lineCap='round';
     cx2d.beginPath();
     for(let i=0;i<=24;i++){
-      const u = -1 + 2*i/24, x = u*half;
-      const y = apb.barraY(u);
+      const u = -1 + 2*i/24, [x, y] = barraPt(u);
       i===0 ? cx2d.moveTo(x,y) : cx2d.lineTo(x,y);
     }
     cx2d.stroke();
@@ -3580,8 +3608,7 @@ function drawBoat(){
     cx2d.strokeStyle = 'rgba(255,255,255,.22)'; cx2d.lineWidth = L*0.004;
     cx2d.beginPath();
     for(let i=0;i<=24;i++){
-      const u = -1 + 2*i/24, x = u*half;
-      const y = apb.barraY(u) - L*0.004;
+      const u = -1 + 2*i/24, [x, y] = barraPt(u, -L*0.004);
       i===0 ? cx2d.moveTo(x,y) : cx2d.lineTo(x,y);
     }
     cx2d.stroke();
@@ -3968,8 +3995,7 @@ function rigPoints(){
   // càmera pot estar girada (mode popa), cal compensar-ne la rotació: si no, el
   // pal s'inclinaria de biaix i deformaria tota la vela.
   const UPx = -Math.sin(cam.rot), UPy = -Math.cos(cam.rot);
-  const escorc = (1 - 0.06*Math.abs(S.heel) - 0.06*Math.abs(S.rake)) * RIG.escorcZen;
-  const zUp   = z => (z - ap.HULLH)*escorc;      // alçada sobre la coberta
+  const zUp   = z => (z - ap.HULLH)*escorcZenital();      // alçada sobre la coberta
   const amunt = (p, z) => ({ x:p.x + UPx*z, y:p.y + UPy*z });
   // El puny d'amura va sobre la cua d'ànec i el d'escota queda ALT: el
   // pujament puja cap a popa. Abans tots dos anaven arran de coberta i la vela
@@ -4000,12 +4026,15 @@ function rigPoints(){
   const shroudL  = rot(-hb, RIG.cadenots[2]*L), shroudR  = rot(hb, RIG.cadenots[2]*L);
   // POLITJA: corre per la barra escotera, que és un ARC de pont. El centre és
   // el punt alt i el més avançat, així que la politja mai s'hi queda.
-  const pulU = clamp(S.pulley, -1, 1);
-  const pulleyX = pulU * (hb + hw*0.2);
-  const pulleyPt = amunt(rot(pulleyX, ap.barraY(pulU)), zUp(ap.barraZ(pulU)));
+  // Surt dels mateixos punts que la barra: aquí hi havia una amplada pròpia
+  // (hb + hw*0.2) que l'enviava més enllà de la punta de la barra.
+  const pulU = ap.carroU();
+  const sobreBarra = u => amunt(rot(ap.barraX(u), ap.barraY(u)), zUp(ap.barraZ(u)));
+  const pulleyPt = sobreBarra(pulU);
+  const carroA = sobreBarra(pulU-0.07), carroB = sobreBarra(pulU+0.07);
   // politja de la bancada central: el cap hi torna des de la barra de popa
   const bancPt   = amunt(rot(ap.pulBanc[0], ap.pulBanc[1]), zUp(ap.pulBanc[2]));
-  const barA = rot(-hb - hw*0.35, ap.barraY(-1)), barB = rot(hb + hw*0.35, ap.barraY(1));
+  const barA = rot(ap.barraX(-1), ap.barraY(-1)), barB = rot(ap.barraX(1), ap.barraY(1));
   // MANS del patró (subjecta l'escota de manera constant). Han de coincidir
   // amb la mà que dibuixa drawPatro: espatlla + braç estirat cap a sotavent.
   // Mà de l'escota: ha de coincidir amb el braç curt que dibuixa drawPatro.
@@ -4029,7 +4058,7 @@ function rigPoints(){
   let belly = (0.10 + power*0.16)*L;
   if(F.flap) belly = Math.sin(S.time*15)*L*0.05;                    // flameig
   belly *= centred;      // amb la vela al mig (trasluixant) el drap no té panxa
-  return {tackPt, clewPt, headPt, peuPt, clewDeck, pulleyPt, bancPt, handsPt, barA, barB,
+  return {tackPt, clewPt, headPt, peuPt, clewDeck, pulleyPt, carroA, carroB, bancPt, handsPt, barA, barB,
           leeDir, belly, shroudL, shroudR, shroudML, shroudMR, forestay, headLocal, upH};
 }
 const lerpP = (a,b,t)=>({x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t});
@@ -4224,12 +4253,16 @@ function drawSheet(){
     cx2d.beginPath(); cx2d.arc(p.x, p.y, r*0.42, 0, TAU);
     cx2d.fillStyle = '#7d8a94'; cx2d.fill();
   };
+  // el carro va sota la politja: és la peça que la lliga a la barra
+  cx2d.strokeStyle = '#aeb6bc'; cx2d.lineWidth = L*0.022; cx2d.lineCap = 'round';
+  cx2d.beginPath(); cx2d.moveTo(R.carroA.x, R.carroA.y); cx2d.lineTo(R.carroB.x, R.carroB.y);
+  cx2d.stroke();
   politja(R.pulleyPt, pr);
   politja(R.bancPt,   pr*0.86);   // la de coberta es veu una mica més petita
 
   const ap0 = aparell();
   escotaPt(cam.mode, 'puny',  R.clewPt);
-  escotaPt(cam.mode, 'barra', R.pulleyPt, ap0.barraY(clamp(S.pulley,-1,1))/L);
+  escotaPt(cam.mode, 'barra', R.pulleyPt, ap0.barraY(ap0.carroU())/L);
   escotaPt(cam.mode, 'banc',  R.bancPt, ap0.pulBanc[1]/L);
   escotaPt(cam.mode, 'ma',    R.handsPt);
   CAPA='';
