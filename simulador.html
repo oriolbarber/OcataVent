@@ -288,6 +288,16 @@
   box-shadow:0 6px 18px rgba(0,0,0,.28);
 }
 #joy.visible{ display:block; }
+/* A les zenitals és opcional i va a baix a l'esquerra, damunt dels consells. La
+   mateixa peça: el bottom i el left els posa el JS, que hi depenen. */
+#joy.zen{ left:52px; transform:none; width:96px; height:96px; }
+#joy.zen #joyKnob{ width:36px; height:36px; margin:-18px 0 0 -18px; }
+#joy.zen .joyEt{ font-size:7px; }
+#btnJoy{ position:fixed; left:10px; width:36px; height:36px; z-index:7; display:none;
+  align-items:center; justify-content:center; cursor:pointer; color:var(--sorra);
+  border:1px solid rgba(232,217,184,.3); touch-action:manipulation }
+#btnJoy.visible{ display:flex; }
+#btnJoy.on{ color:var(--groc); border-color:var(--groc); }
 #joy .joyCreu{ position:absolute; background:rgba(232,217,184,.18); }
 #joy .joyV{ left:50%; top:14%; width:1px; height:72%; margin-left:-0.5px; }
 #joy .joyH{ top:50%; left:14%; height:1px; width:72%; margin-top:-0.5px; }
@@ -402,6 +412,11 @@
 <button id="btnEntrar">🌊 ENTRAR AL MAR</button>
 
 <!-- JOYSTICK del pes del patró (només a la vista en perspectiva) -->
+<div id="btnJoy" class="panell" title="Mostra o amaga el control del pes" aria-label="Control del pes" role="button">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+  </svg>
+</div>
 <div id="joy">
   <div class="joyCreu joyV"></div>
   <div class="joyCreu joyH"></div>
@@ -560,7 +575,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v18</div>
+  <div id="versio">Versió v19</div>
 </div></div>
 
 <script>
@@ -716,7 +731,9 @@ function updateWeight(dt){
   if(S.mode !== 'mar') return;
   // el pes real segueix l'objectiu de manera suau però directa
   const kr = Math.min(1, dt*7.5);   // el cos triga a desplaçar-se per les bancades
-  S.wx += (S.wxT - S.wx)*kr;
+  // de banda a banda camina per la coberta: triga, i mentre tant el buc no s'aixeca de cop
+  const pas = (S.wxT - S.wx)*kr, mPas = ESC.pasLateral*dt;
+  S.wx += clamp(pas, -mPas, mPas);
   S.wf += (S.wfT - S.wf)*kr;
 }
 
@@ -993,7 +1010,8 @@ const ESC = {
   manega:   1.736,   // m entre els centres dels bucs (L*0.31)
   bracPatro: 0.966,  // m del centre al patró assegut sobre el buc (CREW_X)
   zBuc:     0.45,    // alçada del centre de gravetat del buc
-  zAssegut: 0.75, zPenjat: 0.55,   // alçada del patró
+  zAssegut: 0.75, zPenjat: 0.55, zDret: 1.05,   // alçada del patró
+  pasLateral: 1.0,   // recorregut de wx per segon: de banda a banda, uns 2 s
   esmorteix: 700,    // N·m·s/rad: aigua i aire frenen l'escora
   bolca:    1.05,    // rad: d'aquí no es recupera
   guanyZenital: 1.3,   // exageració de l'escora a les zenitals
@@ -1001,7 +1019,7 @@ const ESC = {
 };
 function aixecaBuc(dt, tack, windN, edge){
   const b = ESC.manega, g = 9.81, mb = ESC.mesBuc, mc = S.crewKg;
-  const zc = F.hike > 0.35 ? ESC.zPenjat : ESC.zAssegut;
+  const zc = F.hike > 0.35 ? ESC.zPenjat : (F.posture === 'dret' ? ESC.zDret : ESC.zAssegut);
   const xm = S.wx*ESC.bracPatro*(1 + 0.55*F.hike);        // patró, m des del centre
   const r = S.roll, c = Math.cos(r), n = Math.sin(r);
   const vent = tack*ESC.moment*F.side*windN*windN*(1 - edge)*c*c
@@ -1114,10 +1132,14 @@ function physics(dt){
     // no el gir (que s'anul·la quan el patí frena en creuar el vent).
     const wAft = clamp(-S.wf, 0, 1);
     const tackGest = absT < 42*D2R && wAft > 0.12 && S.sheet > 0.22;
+    // El gest empeny la vela lluny de la banda on era en començar, a les dues amures.
+    // Es recorda fins que el deixes anar: si no, en passar la vela la tornaria enrere.
+    if(tackGest && !S.tackDir) S.tackDir = S.sailSide;
     if(tackGest) S.tacking = 1;
-    if(S.tacking && (S.pulley < -0.55 || wAft < 0.05 || S.sheet < 0.15 || absT > 60*D2R)) S.tacking = 0;
+    if(S.tacking && (S.pulley*S.tackDir < -0.55 || wAft < 0.05 || S.sheet < 0.15 || absT > 60*D2R)) S.tacking = 0;
+    if(!tackGest && !S.tacking) S.tackDir = 0;
     if(tackGest || S.tacking){
-      crew = -3.4 * (0.4 + 0.6*wAft);            // empeny cap a l'altra banda (negatiu)
+      crew = -3.4 * (0.4 + 0.6*wAft) * S.tackDir;   // empeny cap a l'altra banda
       F.tackTo = -1;
     } else if(nearRun && S.wx*S.sailSide > 0.28 && (S.jibeCd||0) <= 0){
       // trabutjada: cal un gest CLAR de pes a sotavent, i amb temps refractari
@@ -1355,6 +1377,16 @@ function physics(dt){
     const aback  = windN * 2.2 * contra * gest * (0.22 + 0.78*flow);
     torque += -tack * aback;
     F.culVela = contra * gest;
+  }
+
+  // CUL A LA VELA, DRET AL PAL. Abans de passar el vent: dret a proa i amb l'escota
+  // caçada al màxim, el patró empeny la vela amb el cul i hi fa bossa; el vent la
+  // premsa i la proa acaba de pujar. Només a la fula: abans la vela encara treballa.
+  F.culDret = !F.accompanying && S.wf > 0.5 && S.sheet > 0.85 && absT < 24*D2R;
+  if(F.culDret){
+    const contra = clamp(Math.sin(t + S.boomDir) * tack, 0, 1);
+    torque += -tack * windN * 2.2 * contra * 0.45 * (0.22 + 0.78*flow);
+    F.culVela = contra * 0.45;
   }
 
   // --- EN FULA, LA PROA SEMPRE ACABA CAIENT ---
@@ -4671,6 +4703,9 @@ addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 const joy = document.getElementById('joy'), joyKnob = document.getElementById('joyKnob');
 const JOY_R = 35;                       // recorregut màxim del botó, en px
 const joySt = { id:null, x:0, y:0 };
+// Plegat de sortida: a les zenitals el gest principal és tocar el patró i així el
+// mar queda lliure. Sense localStorage, l'estat dura fins que es recarrega.
+let joyZen = false;
 function joyKnobTo(nx, ny){             // nx,ny ∈ [-1,1]
   joyKnob.style.transform = `translate(${(nx*JOY_R).toFixed(1)}px, ${(-ny*JOY_R).toFixed(1)}px)`;
 }
@@ -4697,6 +4732,7 @@ function joyEnd(e){
   joySt.id = null; joySt.x = 0; joySt.y = 0; joy.classList.remove('agafat');
 }
 joy.addEventListener('pointerup', joyEnd);
+document.getElementById('btnJoy').addEventListener('click', ()=>{ joyZen = !joyZen; });
 joy.addEventListener('pointercancel', joyEnd);
 // doble toc al joystick = pes al centre
 joy.addEventListener('dblclick', e=>{ S.wxT = 0; S.wfT = 0; e.preventDefault(); });
@@ -4950,14 +4986,32 @@ function updateHUD(){
 
   // (el pes i l'escora ja no surten en pantalla: es llegeixen al patró mateix)
 
-  // el joystick només té sentit a la vista en perspectiva (a la platja serveix
-  // per orientar i moure el patí; navegant, per moure el pes del patró)
-  const joyOn = cam.mode === 'persp';
+  // A la perspectiva sempre hi és (a la platja serveix per orientar i moure el
+  // patí; navegant, per moure el pes del patró). A les zenitals es pot tocar el
+  // patró directament i el joystick és opcional: es treu amb la icona.
+  const zenMar = cam.mode !== 'persp' && S.mode === 'mar';
+  const joyOn = cam.mode === 'persp' || (zenMar && joyZen);
   joy.classList.toggle('visible', joyOn);
+  joy.classList.toggle('zen', zenMar);
+  const bJoy = $('btnJoy');
+  bJoy.classList.toggle('visible', zenMar);
+  bJoy.classList.toggle('on', joyZen);
+  if(zenMar){
+    // la barra de consells fa una o dues línies: es llegeix cada vegada
+    const baix = Math.round(innerHeight - PISTA_TOP + 6) + 'px';
+    joy.style.bottom = bJoy.style.bottom = baix;
+    // amb el control del pal desplegat en pantalla baixa, tot s'hi posa al costat
+    const ra = $('rakeBox').getBoundingClientRect();
+    const x0 = ra.bottom > PISTA_TOP - 110 ? ra.right + 6 : 10;
+    bJoy.style.left = x0 + 'px';
+    joy.style.left = (x0 + 42) + 'px';
+    // en apaïsat la VELA també és a baix a l'esquerra: es fa enllà
+    $('diag').style.left = (joyZen && innerHeight <= 560) ? (x0 + 146) + 'px' : '';
+  } else { joy.style.bottom = ''; joy.style.left = ''; $('diag').style.left = ''; }
   const bEnt = document.getElementById('btnEntrar');
   if(bEnt) bEnt.classList.toggle('amunt', joyOn && S.mode === 'platja');
   // quan no s'arrossega, el botó mostra ON ÉS realment el patró (retorn visual)
-  if(joySt.id === null && cam.mode === 'persp'){
+  if(joySt.id === null && joyOn){
     joyKnobTo(clamp(S.wx,-1,1), clamp(S.wf,-1,1));
   }
 
