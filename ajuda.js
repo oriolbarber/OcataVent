@@ -121,6 +121,7 @@ window.addEventListener("ov-cfg", e => { const k = e.detail && e.detail.pg;
   if(k === "help-fonts") renderFonts();
   if(k === "help-info"){ renderInfo(); loadVer().then(() => { if(window.OV_CFG?.current() === "help-info") renderInfo(); }); }
   // documents del mateix lloc, dins de l'app (es carreguen només el primer cop que s'obren)
+  if(k === "sim"){ const f = $("simFrame"); if(!f.src) f.src = "simulador.html"; }
   if(k === "help-guia"){ const f = $("helpGuia"); if(!f.src) f.src = "docs/guia.html"; }
   if(k === "help-priv"){ const f = $("helpPriv"); if(!f.src) f.src = "docs/legal/privacitat.html"; }
 });
