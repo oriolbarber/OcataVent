@@ -134,6 +134,9 @@
     font-size:12.5px;letter-spacing:.04em;white-space:nowrap}
   #repteBar.regata #regFila{display:flex}
   #repteBar.regata #repteProg{display:none}
+  /* A mar obert s'hi afegeix la distància i el rumb: sense això, la columna de
+     l'escota tapava l'última dada. És d'una sola volta i el rècord surt al final. */
+  #repteBar.marObert #regMillor{display:none}
   #regVolta{color:var(--sorra);font-weight:700}
   #regFita{color:var(--groc);font-weight:600}
   #regT{color:#fff;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
@@ -557,7 +560,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v16</div>
+  <div id="versio">Versió v17</div>
 </div></div>
 
 <script>
@@ -775,7 +778,7 @@ const RIG = {
   bancA:   -0.275,  // on comença la filera (la 1a bancada, d'on surt el pal)
   bancB:    0.430,  // on acaba (la de popa, a l'extrem)
   bancF:  [0, 0.25, 0.52, 0.76, 1],                 // estació de cada bancada
-  bancTh: [0.040, 0.040, 0.050, 0.052, 0.078],      // gruix de cada bancada
+  bancTh: [0.040, 0.040, 0.050, 0.052, 0.104],      // gruix: la de popa, el doble
   // L'escota passa per una politja damunt la BANCADA CENTRAL (la 3a). És el
   // retorn: de la barra de popa el cap torna endavant i puja a la mà.
   bancEsc:    2,
@@ -872,6 +875,22 @@ function patroZen(){
    sobre la línia de flotació. */
 // Escorç de l'alçada a les zenitals. El fan servir el dibuix del buc i rigPoints():
 // si només l'aplica un dels dos, la politja s'aixeca i la barra es queda a coberta.
+// Mitja amplada del buc a l'estació y (en eslores): la mateixa corba de hullPath().
+const AMPLE_BUC = [];
+function ampladaBuc(y){
+  if(!AMPLE_BUC.length){
+    const hl=0.5, hw=0.042, bz=(a,b,c,d,t)=>{ const u=1-t; return u*u*u*a+3*u*u*t*b+3*u*t*t*c+t*t*t*d; };
+    for(const [x0,y0,x1,y1,x2,y2,x3,y3] of [[0,-hl,hw*0.72,-hl*0.78,hw*1.10,-hl*0.30,hw*1.08,hl*0.20],
+                                            [hw*1.08,hl*0.20,hw*1.05,hl*0.62,hw*0.72,hl*0.90,0,hl]])
+      for(let i=0;i<=60;i++) AMPLE_BUC.push([bz(y0,y1,y2,y3,i/60), bz(x0,x1,x2,x3,i/60)]);
+  }
+  let k=1; while(k<AMPLE_BUC.length-1 && AMPLE_BUC[k][0]<y) k++;
+  const a=AMPLE_BUC[k-1], b=AMPLE_BUC[k];
+  return Math.max(0, a[1]+(b[1]-a[1])*(y-a[0])/((b[0]-a[0])||1));
+}
+// Una escota portant la tiba la vela, no la mà: va recta encara que estigui
+// amollada. Només fa panxa quan la vela flameja i no li fa força.
+const folgaEscota = () => F.flap ? 0.5 + 0.5*(1 - clamp(S.sheet,0,1)) : 0.06;
 // L'alçada també gira amb l'escora: un pal tombat no pot continuar fent el mateix.
 const escorcZenital = () => (1 - 0.06*Math.abs(S.heel) - 0.06*Math.abs(S.rake)) * RIG.escorcZen
                             * Math.cos(rollVisual());
@@ -916,6 +935,9 @@ function aparell(){
     carroU: () => clamp(S.pulley, -1, 1)*0.93,
     // estació de la bancada i, i el punt on hi va fixada la politja de l'escota
     bancY:  i => (RIG.bancA + (RIG.bancB - RIG.bancA)*RIG.bancF[i]) * L,
+    // Les bancades van fixades DAMUNT dels bucs i fan tota la mànega: acaben a la
+    // vora exterior, que segueix la forma del buc en cada punt.
+    vora:   y => L*(0.150 + ampladaBuc(y/L)),
     pulBanc: [0,
               (RIG.bancA + (RIG.bancB - RIG.bancA)*RIG.bancF[RIG.bancEsc]) * L,
               HULLH + RIG.pulBancAlt*L],
@@ -1045,7 +1067,10 @@ function physics(dt){
     S.roll = lerp(S.roll, (Math.sign(S.roll)||1)*1.5, dt*2);    // acaba de tombar-se
     if(S.capsized <= 0){
       resetToBeach();
-      banner('Bolcada', 'Tornem a començar des de la platja', 'mal');
+      if(REG.curs && REG.curs.mar !== undefined && REG.fase !== 'acabada'){
+        colocaALinia();                  // la platja és a més d'un quilòmetre
+        banner('Bolcada', 'Tornem a la línia: el cronòmetre no s\u2019atura', 'mal');
+      } else banner('Bolcada', 'Tornem a començar des de la platja', 'mal');
     }
     return;
   }
@@ -1707,6 +1732,12 @@ function render3D(dt){
       if(!trams.length) continue;
       capes.push({ ordre: Math.abs((d0+d1)/2 - camD), trams, c:colorDe((d0+d1)/2) });
     }
+    // Més enllà de l'última franja no hi havia res prop de la càmera, i la franja
+    // anterior, tancada cap avall, tallava el mar en vertical i el partia en dos tons.
+    for(let d=dMax; d<camD+400; d+=300){
+      const trams = liniaA(d+300);
+      if(trams.length) capes.push({ ordre: Math.abs(d+150 - camD), trams, c:colorDe(d+150) });
+    }
     capes.sort((a,b)=> b.ordre - a.ordre);           // de la més llunyana a la més propera
     for(const capa of capes){
       cx2d.fillStyle = `rgb(${capa.c[0]},${capa.c[1]},${capa.c[2]})`;
@@ -1718,6 +1749,13 @@ function render3D(dt){
         cx2d.closePath();
         cx2d.fill();
       }
+    }
+    // Sota la càmera, les franges queden tallades pel pla de visió i hi deixaven
+    // una ratlla fosca. Mar endins tot té el mateix color: es tapa d'una sola peça.
+    if(camD > dMax + 100){
+      const c = colorDe(camD), y0 = HOR + (H-HOR)*0.3;
+      cx2d.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      cx2d.fillRect(0, y0, W, SOTA - y0);
     }
   }
 
@@ -2130,8 +2168,9 @@ function render3D(dt){
     REG.marques.forEach((mk,i)=>{
       const base = pj(mk.p[0], mk.p[1], 0);
       if(!base || base.d < NEAR) return;
-      const h = 2.0*M3*FL/base.d, w = 1.1*M3*FL/base.d;
-      if(h < 1) return;
+      // Mai més petites que 6 px: a 400 m una boia real faria menys d'1 píxel
+      const k = Math.max(1, 6/(2.0*M3*FL/base.d));
+      const h = 2.0*M3*FL/base.d*k, w = 1.1*M3*FL/base.d*k;
       const col = mk.c==='taronja' ? '#e8702a' : mk.c==='verd' ? '#2e9e5b'
                 : mk.c==='vermell' ? '#d43a2f' : '#f2c14e';
       cx2d.beginPath();
@@ -2294,14 +2333,16 @@ function render3D(dt){
       poly(st,'#17171b',null);
     }
   }
+  const AP0 = aparell();
   BAN3.forEach(([f,th],i)=>{
     const y=bY3[i];
-    const q=[pjB(dx0,y-th/2,HULLH+1),pjB(dx1,y-th/2,HULLH+1),pjB(dx1,y+th/2,HULLH+1),pjB(dx0,y+th/2,HULLH+1)].filter(Boolean);
+    const v0=AP0.vora(y-th/2), v1=AP0.vora(y+th/2);
+    const q=[pjB(-v0,y-th/2,HULLH+1),pjB(v0,y-th/2,HULLH+1),pjB(v1,y+th/2,HULLH+1),pjB(-v1,y+th/2,HULLH+1)].filter(Boolean);
     poly(q,'#cf9a5c','rgba(90,45,14,.8)',1.2);
     const nl=(i===BAN3.length-1)?2:1;
     for(let k=0;k<nl;k++){
       const off=(nl===1)?0:(k===0?-th*0.24:th*0.24);
-      const a=pjB(dx0,y+off,HULLH+1.5), b=pjB(dx1,y+off,HULLH+1.5);
+      const v=AP0.vora(y+off), a=pjB(-v,y+off,HULLH+1.5), b=pjB(v,y+off,HULLH+1.5);
       if(a&&b){ cx2d.strokeStyle='rgba(74,40,16,.9)'; cx2d.lineWidth=1.6;
         cx2d.beginPath(); cx2d.moveTo(a.x,a.y); cx2d.lineTo(b.x,b.y); cx2d.stroke(); }
     }
@@ -2445,12 +2486,12 @@ function render3D(dt){
       const bancPt = pjB(AP.pulBanc[0], AP.pulBanc[1], AP.pulBanc[2]);
       if(pulPt){
         CAPA='escota';
-        // la panxa és de corda fluixa: caçada va tibant, i cada tram es llegeix
-        // anant recte d'una politja a l'altra
-        const panxa = 1 - clamp(S.sheet, 0, 1);
+        // Amb el punt de control al mig de la corda i no a l'alçada de la punta més
+        // baixa: si no, cada tram feia una panxa del 20-30% encara que anés tibant.
+        const panxa = folgaEscota()*L*0.05*FL/(pulPt.d||FL);
         cx2d.strokeStyle='rgba(240,235,215,.85)'; cx2d.lineWidth=1.6;
         cx2d.beginPath(); cx2d.moveTo(clewB.x, clewB.y);
-        cx2d.quadraticCurveTo((clewB.x+pulPt.x)/2, Math.max(clewB.y,pulPt.y)+panxa*10, pulPt.x, pulPt.y);
+        cx2d.quadraticCurveTo((clewB.x+pulPt.x)/2, (clewB.y+pulPt.y)/2+panxa, pulPt.x, pulPt.y);
         cx2d.stroke();
         escotaPt('persp','puny',  clewB);
         escotaPt('persp','barra', pulPt, AP.barraY(pulU)/L);
@@ -2465,7 +2506,7 @@ function render3D(dt){
         if(bancPt){
           // el tram de retorn va arran de coberta: amb prou feines fa panxa
           cx2d.beginPath(); cx2d.moveTo(pulPt.x, pulPt.y);
-          cx2d.quadraticCurveTo((pulPt.x+bancPt.x)/2, Math.max(pulPt.y,bancPt.y)+panxa*4,
+          cx2d.quadraticCurveTo((pulPt.x+bancPt.x)/2, (pulPt.y+bancPt.y)/2+panxa*0.25,
                                 bancPt.x, bancPt.y);
           cx2d.stroke();
           escotaPt('persp','banc', bancPt, AP.pulBanc[1]/L);
@@ -2654,7 +2695,7 @@ function render3D(dt){
           cx2d.lineWidth=1.5;
           cx2d.beginPath(); cx2d.moveTo(pul2.x, pul2.y);
           cx2d.quadraticCurveTo((pul2.x+pHandSheet.x)/2,
-                                Math.max(pul2.y,pHandSheet.y)+(1-clamp(S.sheet,0,1))*6,
+                                (pul2.y+pHandSheet.y)/2+folgaEscota()*L*0.03*FL/(pul2.d||FL),
                                 pHandSheet.x, pHandSheet.y);
           cx2d.stroke();
           const tail = Math.min(16, 22*scl);
@@ -3763,16 +3804,24 @@ function drawBoat(){
   drawStraps(bancY[3] + BANCADES[3].th/2, bancY[4] - BANCADES[4].th/2);
 
   // les bancades, dibuixades a ras (sense cantell fosc)
+  const apV = aparell();
   BANCADES.forEach((b,i)=>{
-    drawPlank(dx0, bancY[i] - b.th/2, dx1-dx0, b.th, true);
+    const y0 = bancY[i] - b.th/2, y1 = bancY[i] + b.th/2;
+    const v0 = apV.vora(y0), v1 = apV.vora(y1), vm = Math.max(v0, v1);
+    cx2d.save();                                 // les puntes segueixen la vora del buc
+    cx2d.beginPath(); cx2d.moveTo(-v0,y0); cx2d.lineTo(v0,y0); cx2d.lineTo(v1,y1); cx2d.lineTo(-v1,y1);
+    cx2d.closePath(); cx2d.clip();
+    drawPlank(-vm, y0, 2*vm, b.th, true);
+    cx2d.restore();
     // LÍNIA MARRÓ FOSC al mig de cada bancada; DUES a la darrera (més ampla)
     cx2d.strokeStyle = 'rgba(74,40,16,.9)'; cx2d.lineWidth = Math.max(1.4, L*0.006);
     const nlines = (i === BANCADES.length-1) ? 2 : 1;
     for(let k=0;k<nlines;k++){
       const off = (nlines===1) ? 0 : (k===0 ? -b.th*0.24 : b.th*0.24);
       cx2d.beginPath();
-      cx2d.moveTo(dx0, bancY[i] + off);
-      cx2d.lineTo(dx1, bancY[i] + off);
+      const v = apV.vora(bancY[i] + off);
+      cx2d.moveTo(-v, bancY[i] + off);
+      cx2d.lineTo( v, bancY[i] + off);
       cx2d.stroke();
     }
   });
@@ -4445,7 +4494,7 @@ function drawSheet(){
   const R = rigPoints();
   const tension = clamp(S.sheet, 0, 1);
   // una escota molt caçada va tibant; amollada, fa una mica de panxa
-  const sag = (1 - tension) * L*0.05;
+  const sag = folgaEscota() * L*0.05;
 
   const rope = (a, b, sagAmt) => {
     const mx = (a.x+b.x)/2 + SUN.x*sagAmt, my = (a.y+b.y)/2 + SUN.y*sagAmt;
@@ -5059,6 +5108,13 @@ function taulaOnatge(){
 /* ------------------- REGATES ------------------- */
 // Recorreguts definits SEMPRE respecte del vent (com a la vela real): la boia
 // de barlovent queda vent amunt de la línia de sortida.
+// Circuits de mar obert, en metres. El vent pot venir de qualsevol banda, i per això
+// el que es garanteix és el cercle que els conté: l'equilàter fa 267 m de radi i el
+// rectangle 232, de manera que entre vores sempre hi ha 500 m i mai s'acosten a menys
+// d'1 km de la platja. La línia de sortida és més enllà de la boia 3, i d'aquí el marge.
+const CIRC_D = 463;      // m: la cama de barlovent, 0,25 milles
+const CIRC_X = 500;      // m: el centre de cada circuit, a cada banda
+const CIRC_Y = 1290;     // m: el centre, des de la costa
 const CURSES = [
   { id:'basto',    nom:'Bastó (barlovent–sotavent)', voltes:2,
     desc:'El recorregut olímpic: puges cenyint fins a la boia de barlovent i baixes d’empopada fins a la porta. 2 voltes.' },
@@ -5066,6 +5122,10 @@ const CURSES = [
     desc:'Cenyida, través i llarg: passa per les tres boies i posa a prova totes les maniobres. 2 voltes.' },
   { id:'costaner', nom:'Recorregut costaner', voltes:1,
     desc:'Dues boies paral·leles a la costa: anada i tornada de través, el rumb més ràpid del patí.' },
+  { id:'equilater', nom:'Triangle equilàter (60-60-60)', voltes:1, mar:-CIRC_X,
+    desc:'A 1 km de la costa. Tres cames iguals de 0,25 milles: cenyida i dos trams de llarg. Boies per babord. 1 volta.' },
+  { id:'rectangle', nom:'Triangle rectangle (45-90-45)', voltes:1, mar:CIRC_X,
+    desc:'A 1 km de la costa. Cenyida de 0,25 milles i dos trams de llarg. Boies per babord. 1 volta.' },
 ];
 // Estat de la regata
 const REG = {
@@ -5086,12 +5146,24 @@ function muntaRegata(curs){
   const amunt = versor(S.windFrom);                 // cap a on hi ha el vent
   const trav  = [-amunt[1], amunt[0]];              // perpendicular (línia de sortida)
   const y0 = shoreFn(0) - 100*(L/5.6);              // línia de sortida a ~100 m de la costa
-  const P0 = [0, y0];
+  let P0 = [0, y0];
   const semi = 2.6*L;                                // mitja línia de sortida (~29 m)
   const puja = (p, d) => [p[0] + amunt[0]*d, p[1] + amunt[1]*d];
   const mou  = (p, d) => [p[0] + trav[0]*d,  p[1] + trav[1]*d];
   const marques = [];
-  if(curs.id === 'basto'){
+  if(curs.mar !== undefined){
+    // L'eix és el vent: B3 → B1 és vent amunt. B2 queda a l'esquerra de qui puja,
+    // i per això totes les boies es deixen per babord. El gir que surt és de 120°
+    // a l'equilàter i de 135° i 90° al rectangle, amb el vèrtex recte a B2.
+    const M = L/5.6, D = CIRC_D*M, eq = curs.id==='equilater';
+    const cx = curs.mar*M, C = [cx, shoreFn(cx) - CIRC_Y*M];
+    const mig = mou(C, eq ? D/(2*Math.sqrt(3)) : 0);        // centre de l'eix B3-B1
+    const b3 = puja(mig, -D/2);
+    marques.push({n:'B1', p:puja(mig, D/2),                          c:'taronja', txt:'barlovent'});
+    marques.push({n:'B2', p:mou(mig, -(eq ? Math.sqrt(3)/2 : 0.5)*D), c:'verd',    txt:'de costat'});
+    marques.push({n:'B3', p:b3,                                      c:'groc',    txt:'sotavent'});
+    P0 = puja(b3, -1.0*L);
+  } else if(curs.id === 'basto'){
     marques.push({n:'B1', p:puja(P0, 9.0*L), c:'taronja', txt:'barlovent'});
     marques.push({n:'P',  p:puja(P0, 1.0*L), c:'groc',    txt:'porta de sotavent'});
   } else if(curs.id === 'triangle'){
@@ -5108,6 +5180,22 @@ function muntaRegata(curs){
   REG.mostres = []; REG.fantasma = null; REG.tFan = 0;
   REG.linia = { p0:P0, amunt, trav, semi };
   REG.sPrev = (S.py - P0[1])*amunt[1] + (S.px - P0[0])*amunt[0];
+}
+// Els circuits de mar obert són massa lluny per anar-hi navegant des de la platja:
+// el patí surt directament a la línia, cenyint amura babord.
+function colocaALinia(){
+  const Ln = REG.linia;
+  S.mode = 'mar'; S.everInWater = true; S.beyondMouth = true; S.board = 1;
+  S.px = Ln.p0[0] - Ln.amunt[0]*3*L; S.py = Ln.p0[1] - Ln.amunt[1]*3*L;
+  S.heading = normA(S.windFrom + 50*D2R); S.speed = 0.5; S.vLat = 0; S.angVel = 0;
+  S.heel = 0; S.roll = 0; S.rollV = 0; S.capsized = 0; S.heelTime = 0;
+  S.sailSide = 1; S.pulley = 1; S.pulleyV = 0; S.boomDir = 0.6; S.tacking = 0;
+  S.sheet = 0.85; S.wx = S.wxT = -0.75; S.wf = S.wfT = 0;
+  landingLock = false; trail.length = 0;
+  REG.sPrev = (S.py - Ln.p0[1])*Ln.amunt[1] + (S.px - Ln.p0[0])*Ln.amunt[0];
+  cam.x = S.px; cam.y = S.py;
+  const b = document.getElementById('btnEntrar');
+  if(b) b.style.display = 'none';
 }
 function aturaRegata(){ REG.fase='off'; REG.curs=null; REG.marques=[]; REG.fantasma=null; }
 
@@ -5391,13 +5479,18 @@ function actualitzaBarraRegata(){
   const bar = $('repteBar');
   if(REG.fase==='off'){ bar.classList.remove('regata'); if(repte.id==='lliure') bar.classList.remove('on'); return; }
   bar.classList.add('on','regata');
+  bar.classList.toggle('marObert', REG.curs.mar !== undefined);
   $('repteTitol').textContent = '🏁 ' + REG.curs.nom;
   const seg = REG.marques[REG.fita];
   $('regVolta').textContent  = REG.fase==='preparats' ? 'a la línia'
                              : REG.fase==='acabada'   ? 'acabada'
                              : `Volta ${REG.volta}/${REG.voltes}`;
+  // Lluny de la costa la boia no es veu des del patí: distància i rumb per trobar-la
+  const dest = seg ? seg.p : REG.linia.p0, dd = [dest[0]-S.px, dest[1]-S.py];
+  const guia = REG.curs.mar === undefined ? '' :
+    ` · ${Math.round(Math.hypot(dd[0],dd[1])/(L/5.6))} m · ${Math.round(rumbVer(Math.atan2(dd[0],-dd[1]))*R2D)%360}°`;
   $('regFita').textContent   = REG.fase==='preparats' ? 'creua per sortir'
-                             : seg ? ('cap a ' + seg.n) : 'creua la línia';
+                             : (seg ? ('cap a ' + seg.n) : 'creua la línia') + guia;
   $('regT').textContent      = REG.fase==='navegant' ? fmtT(REG.tVolta) : (REG.millor!==null?fmtT(REG.millor):'—');
   $('regMillor').textContent = REG.millor!==null ? ('millor ' + fmtT(REG.millor)) : 'millor —';
 }
@@ -5609,6 +5702,9 @@ requestAnimationFrame(()=> requestAnimationFrame(muntaGuia));   // primera pinta
 $('btnReptes').addEventListener('click', ()=> obreNomes('ovReptes'));
 $('btnALinia').addEventListener('click', ()=>{
   $('ovCircuit').classList.remove('on');
+  if(REG.fase==='preparats' && REG.curs.mar !== undefined){
+    colocaALinia(); banner('A la línia', 'Creua-la per començar'); return;
+  }
   banner('Ves a la línia', 'Creua-la per començar');
 });
 // tocar la barra de la regata torna a mostrar l'esquema del circuit
