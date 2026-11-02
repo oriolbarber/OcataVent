@@ -557,7 +557,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v13</div>
+  <div id="versio">Versió v14</div>
 </div></div>
 
 <script>
@@ -872,12 +872,24 @@ function patroZen(){
    sobre la línia de flotació. */
 // Escorç de l'alçada a les zenitals. El fan servir el dibuix del buc i rigPoints():
 // si només l'aplica un dels dos, la politja s'aixeca i la barra es queda a coberta.
-const escorcZenital = () => (1 - 0.06*Math.abs(S.heel) - 0.06*Math.abs(S.rake)) * RIG.escorcZen;
+// L'alçada també gira amb l'escora: un pal tombat no pot continuar fent el mateix.
+const escorcZenital = () => (1 - 0.06*Math.abs(S.heel) - 0.06*Math.abs(S.rake)) * RIG.escorcZen
+                            * Math.cos(rollVisual());
 // Com es desplaça una alçada a les zenitals, en coordenades del patí.
 function amuntPati(z){
   const zz = z*escorcZenital(), ch = Math.cos(S.heading), sh = Math.sin(S.heading);
   const ux = -Math.sin(cam.rot), uy = -Math.cos(cam.rot);
   return [(ux*ch + uy*sh)*zz, (uy*ch - ux*sh)*zz];
+}
+// Gir rígid del patí sobre el buc que és a l'aigua (perspectiva). Sense escurçar
+// el través, la mànega s'estirava fins a un 40% en bolcar.
+function rollX(bx, z){
+  const p = (Math.sign(S.roll)||1)*L*0.155;
+  return p + (bx - p)*Math.cos(S.roll) + z*Math.sin(S.roll);
+}
+function rollZ(bx, z){
+  const pv = Math.sign(S.roll)||1;
+  return z*Math.cos(S.roll) + (L*0.155 - pv*bx)*Math.abs(Math.sin(S.roll));
 }
 function aparell(){
   const HULLH = L*0.07;                                  // coberta sobre la flotació
@@ -962,7 +974,7 @@ const ESC = {
   zAssegut: 0.75, zPenjat: 0.55,   // alçada del patró
   esmorteix: 700,    // N·m·s/rad: aigua i aire frenen l'escora
   bolca:    1.05,    // rad: d'aquí no es recupera
-  guanyZenital: 1.3,   // exageració de l'alçada a les zenitals
+  guanyZenital: 1.3,   // exageració de l'escora a les zenitals
 };
 function aixecaBuc(dt, tack, windN, edge){
   const b = ESC.manega, g = 9.81, mb = ESC.mesBuc, mc = S.crewKg;
@@ -1508,16 +1520,13 @@ function render3D(dt){
   const swell = (F.marAgitada||0) * clamp(hOna/0.6, 0.3, 1.6) *
                 (Math.sin(S.time*1.45) * 0.5 + Math.sin(S.time*2.31 + 1.1) * 0.32);
   const lean = ((S.mastLean||0) + swell*0.022)*L*4;    // escora visual del pal
-  const sinRoll = Math.sin(S.roll), cosRoll = Math.cos(S.roll);
-  const absRoll = Math.abs(sinRoll), pivotRoll = Math.sign(S.roll)||1;
   function pjB(bx, by, z){
-    const tilt = bx + lean*((z||0)/MASTH) + (z||0)*sinRoll;
+    const tilt = rollX(bx, z||0) + lean*((z||0)/MASTH);
     const wx = S.px + tilt*ch - by*sh;
     const wy = S.py + tilt*sh + by*ch;
     // capcineig: la proa puja i baixa amb el pas de l'onada (més sobre la barra)
     const capc = (F.marAgitada||0) * Math.sin(S.time*2.05 + 0.6) * (by/(L/2)) * L*0.006;
-    // el patí gira sobre el buc de l'aigua: el de barlovent puja
-    return pj(wx, wy, (z||0)*cosRoll + capc + Math.max(0, L*0.155 - pivotRoll*bx)*absRoll);
+    return pj(wx, wy, rollZ(bx, z||0) + capc);
   }
   // Un punt tan fora de pantalla és invisible: talla el tram. Evita camins
   // gegants quan la costa es veu de biaix a 20 km (angles rasants).
@@ -4180,19 +4189,24 @@ function ombraBucs(){
   }
   cx2d.restore();
 }
-// El patí sencer, escorat, a les zenitals. Com que aquestes vistes dibuixen
-// l'alçada cap amunt de pantalla (2,5D), l'escora és una deformació afí en
-// coordenades del patí: el buc de l'aigua no es mou i el de barlovent s'hi
-// acosta i puja. El guany és una exageració declarada, com RIG.escorcZen: des de
-// dalt, l'alçada real amb prou feines es veu.
+// L'escora que es dibuixa a les zenitals. Des de dalt l'alçada real amb prou
+// feines es veu, i per això el gir porta una exageració declarada. S'atura abans
+// dels 90° perquè la plataforma de perfil no quedi reduïda a una ratlla.
+function rollVisual(){
+  const r = Math.abs(S.roll||0)*ESC.guanyZenital;
+  return (Math.sign(S.roll)||1)*Math.min(r, 1.25);
+}
+// El patí sencer, escorat, a les zenitals: un GIR RÍGID al voltant del buc que és
+// a l'aigua, vist des de dalt, que és escurçar el través. Abans l'alçada es
+// projectava cap amunt de pantalla: era un cisallament, i les bancades s'obrien
+// fins a 45° respecte dels bucs i la mànega canviava amb el rumb.
 function escoraZenital(dibuixa){
-  const r = clamp(S.roll, -0.6, 0.6);
+  const r = rollVisual();
   if(Math.abs(r) < 0.002){ dibuixa(); return; }
-  const sg = Math.sign(r), k = Math.abs(Math.sin(r))*ESC.guanyZenital*sg;
-  const xp = sg*L*0.155, c = Math.cos(r), [ux, uy] = amuntPati(1);
+  const xp = Math.sign(r)*L*0.155, c = Math.cos(r);
   cx2d.save();
   cx2d.translate(S.px, S.py); cx2d.rotate(S.heading);
-  cx2d.transform(c - ux*k, -uy*k, 0, 1, xp - xp*c + ux*k*xp, uy*k*xp);
+  cx2d.transform(c, 0, 0, 1, xp - xp*c, 0);
   cx2d.rotate(-S.heading); cx2d.translate(-S.px, -S.py);
   dibuixa();
   cx2d.restore();
@@ -4229,8 +4243,11 @@ function rigPoints(){
   // El puny d'amura va sobre la cua d'ànec i el d'escota queda ALT: el
   // pujament puja cap a popa. Abans tots dos anaven arran de coberta i la vela
   // semblava estirada damunt l'aigua.
-  const tackPt = amunt(rot(ap.amura[0],  ap.amura[1]),  zUp(ap.amura[2]));
-  const clewPt = amunt(rot(ap.escota[0], ap.escota[1]), zUp(ap.escota[2]));
+  // Amb l'escora, com més alt és un punt més cau a sotavent. S'hi divideix pel
+  // cosinus perquè escoraZenital() ja escurça el través de tot el conjunt.
+  const inclina = z => (z - ap.HULLH)*RIG.escorcZen*Math.tan(rollVisual());
+  const tackPt = amunt(rot(ap.amura[0] + inclina(ap.amura[2]),  ap.amura[1]),  zUp(ap.amura[2]));
+  const clewPt = amunt(rot(ap.escota[0] + inclina(ap.escota[2]), ap.escota[1]), zUp(ap.escota[2]));
   const peuPt  = rot(ap.peuPal[0], ap.peuPal[1]);                   // peu del pal
   const clewDeck = rot(ap.escota[0], ap.escota[1]);                 // a ras de coberta
   // direcció de sotavent per al drap: la marca l'angle REAL de la vela (continu),
@@ -4245,7 +4262,7 @@ function rigPoints(){
   // l'ESTAI de proa. Amb prou feines cedeix de costat (S.mastLean), però el
   // patró sí que en pot regular la CAIGUDA proa-popa (S.rake).
   // joc lateral (molt petit) més l'escora real, escurçada com la resta de la zenital
-  const leanLocal = S.mastLean * L + Math.sin(S.roll)*RIG.alt*L*RIG.escorcZen;
+  const leanLocal = S.mastLean * L + inclina(ap.capPal[2]);
   const headLocal = rot(leanLocal, ap.capPal[1]);
   const upH = zUp(ap.capPal[2]);
   const headPt = amunt(headLocal, upH);
