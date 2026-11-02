@@ -560,7 +560,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v17</div>
+  <div id="versio">Versió v18</div>
 </div></div>
 
 <script>
@@ -997,6 +997,7 @@ const ESC = {
   esmorteix: 700,    // N·m·s/rad: aigua i aire frenen l'escora
   bolca:    1.05,    // rad: d'aquí no es recupera
   guanyZenital: 1.3,   // exageració de l'escora a les zenitals
+  fregament: 0.20,   // el buc fora de l'aigua treu aquesta part del fregament
 };
 function aixecaBuc(dt, tack, windN, edge){
   const b = ESC.manega, g = 9.81, mb = ESC.mesBuc, mc = S.crewKg;
@@ -1217,7 +1218,8 @@ function physics(dt){
   // --- Velocitat d'avanç ---
   // resistència: quadràtica (casc) + lineal (fricció; fa que s'aturi de veritat)
   let acc = drive*0.52*windN*(1 - edge*0.70)
-          - S.speed*S.speed*0.44 - S.speed*0.07
+          - (S.speed*S.speed*0.44 + S.speed*0.07)
+            *(1 - ESC.fregament*Math.max(bucFora(1), bucFora(-1)))
           - (flap?0.03:0) - sandDrag;
   if(absT < 34*D2R) acc -= 0.09*(1-noGo)*clamp(S.speed/0.25, 0, 1);   // vora morta: frena progressivament
   if(feetIn) acc -= S.speed*3.4 + 0.22;         // peus a l'aigua: fre potent
