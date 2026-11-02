@@ -43,11 +43,16 @@ async function start(){
       F.getDocs(F.query(F.collection(db, "embarcacions"), F.where("clubId", "==", club))),
       F.getDocs(F.query(F.collection(db, "perfils"), F.where("clubId", "==", club))).catch(() => ({docs:[]})),
       F.getDoc(F.doc(db, "clubs", club)).catch(() => null)]);
-    const plan = pd && pd.exists() ? pd.data() : {};
+    const plan = pd && pd.exists() ? pd.data() : {}, cx = cd && cd.exists() ? cd.data() : {};
+    // Logo del club a la capçalera (fora de la web de gestió, que ja el porta); sense logo propi, cap
+    const lg = document.getElementById("plLogo");
+    if(lg && cx.logo && !document.body.classList.contains("embed")){ lg.querySelector("img").src = cx.logo; lg.style.display = "flex"; }
+    // Plànol nou: centrat a la base del lloc del club (clubs.js), no a la d'Ocata Vent
+    const H = (window.OV_CLUBS || {})[cx.lloc || (club === "ocatavent" ? "masnou" : "")]?.home, org0 = H ? {lat:H[0], lon:H[1]} : {lat:41.479804, lon:2.324024};
     const boats = bq.docs.map(d => Object.assign({id:d.id}, d.data()));
     if(can.boats) await Promise.all(boats.filter(b => b.ocult).map(async b => {   // nom ocult: el llegeix qui gestiona les embarcacions
       const pv = await F.getDoc(F.doc(db, "embarcacions", b.id, "privat", "p")).catch(() => null); if(pv && pv.exists()) b.prop = pv.data().prop || ""; }));
-    const doc = {v:1, origin:plan.origin || {lat:41.479804, lon:2.324024}, vista:plan.vista || null, costa:typeof plan.costa === "number" ? plan.costa : null, bg:Object.assign({src:"icgc", dx:0, dy:0, s:1, r:0, op:.75}, plan.bg || {}), objs:window.OV_PLAN.fromStore(plan.objs).concat(boats.map(b => {
+    const doc = {v:1, origin:plan.origin || org0, vista:plan.vista || null, costa:typeof plan.costa === "number" ? plan.costa : null, bg:Object.assign({src:"icgc", dx:0, dy:0, s:1, r:0, op:.75}, plan.bg || {}), objs:window.OV_PLAN.fromStore(plan.objs).concat(boats.map(b => {
       const o = {k:"boat", id:b.id}; BOAT_F.forEach(k => o[k] = b[k] ?? (k === "estat" ? "lloc" : k === "ocult" || k === "pendent" ? false : k === "place" ? null : "")); o.historial = b.historial || []; return o; }))};
     last = clean(doc);
     const members = pq.docs.map(d => ({uid:d.id, nom:d.data().nom || ""})).sort((x, y) => x.nom.localeCompare(y.nom, "ca"));

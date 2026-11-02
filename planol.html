@@ -73,7 +73,7 @@ a.tb{text-decoration:none;color:inherit}
 <body>
 <script>if(new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");</script>
 <header>
-  <a href="./" title="Torna a l'app" style="display:flex"><img src="icons/logo.svg?v=3" alt="" width="32" height="32"></a>
+  <a href="./" title="Torna a l'app" id="plLogo" style="display:none"><img alt="" width="32" height="32"></a>
   <h1>Plànol de la base</h1><span id="cloudSt" class="note" style="margin-right:8px"></span>
   <div class="grp" role="toolbar" aria-label="Eines">
     <button class="tb" data-tool="sel" title="Selecciona i mou (V)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 3l14 8-6 2-3 6z"/></svg><span>Selecciona</span></button>
@@ -120,7 +120,7 @@ a.tb{text-decoration:none;color:inherit}
 <script src="clubs.js?v=1"></script>
 <script src="boats.js?v=2"></script>
 <script src="planol-core.js?v=6"></script>
-<script src="planol-cloud.js?v=5"></script>
+<script src="planol-cloud.js?v=6"></script>
 <script src="planol.js?v=14"></script>
 </body>
 </html>
