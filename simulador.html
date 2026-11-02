@@ -945,6 +945,7 @@ const ESC = {
   zAssegut: 0.75, zPenjat: 0.55,   // alçada del patró
   esmorteix: 700,    // N·m·s/rad: aigua i aire frenen l'escora
   bolca:    1.05,    // rad: d'aquí no es recupera
+  guanyZenital: 1.3,   // exageració de l'alçada a les zenitals
 };
 function aixecaBuc(dt, tack, windN, edge){
   const b = ESC.manega, g = 9.81, mb = ESC.mesBuc, mc = S.crewKg;
@@ -3063,10 +3064,8 @@ function renderWorld(dt){
   CAPA='boies'; drawBuoys();
   drawRegata2D();
   CAPA='pati'; drawSailShadow();
-  drawBoat();
-  drawRig();
-  drawPatro();
-  drawSheet();
+  ombraBucs();
+  escoraZenital(()=>{ drawBoat(); drawRig(); drawPatro(); drawSheet(); });
   drawGulls();
 
   cx2d.restore();
@@ -3580,17 +3579,16 @@ function drawBoat(){
   cx2d.translate(S.px, S.py);
   cx2d.rotate(S.heading);
 
-  // ombra sota tot el conjunt (projectada en la direcció del sol)
-  cx2d.save(); cx2d.translate(SUN.x*L*0.05, SUN.y*L*0.05);
-  cx2d.fillStyle='rgba(0,0,0,.20)';
+  // el buc alçat ensenya el fons mullat cap a barlovent
   for(const sideX of [-1,1]){
-    // amb el buc alçat, la seva ombra s'hi separa: és el que es llegeix des de dalt
-    const alt = (S.roll*sideX < 0) ? Math.abs(Math.sin(S.roll))*L*0.31 : 0;
-    cx2d.save(); cx2d.translate(SUN.x*alt, SUN.y*alt);
-    hullPath(sideX*hb, hl, hw); cx2d.fill();
+    if(S.roll*sideX >= 0) continue;
+    const fons = Math.min(0.5, Math.abs(Math.sin(S.roll)))*L*0.13;
+    cx2d.save(); cx2d.translate(sideX*fons, 0);
+    cx2d.fillStyle = '#4a2c18'; hullPath(sideX*hb, hl, hw); cx2d.fill();
+    cx2d.strokeStyle = 'rgba(190,225,240,.45)'; cx2d.lineWidth = 1.5;
+    hullPath(sideX*hb, hl, hw); cx2d.stroke();
     cx2d.restore();
   }
-  cx2d.restore();
 
   // --- COSTATS DELS BUCS (gruix 2.5D, extrudit cap al costat oposat al sol) ---
   cx2d.save(); cx2d.translate(dwx*depth, dwy*depth);
@@ -3638,8 +3636,8 @@ function drawBoat(){
   // escuma al llarg del buc de sotavent quan escora (llepa l'aigua)
   if(Math.abs(S.roll) > 0.12 && S.capsized<=0){
     const cxh = leeX*hb + leeX*hw*0.95;
-    cx2d.strokeStyle = `rgba(255,255,255,${0.35*clamp(Math.abs(S.roll)*2,0,1)})`;
-    cx2d.lineWidth = 3;
+    cx2d.strokeStyle = `rgba(255,255,255,${0.75*clamp(Math.abs(S.roll)*2.5,0,1)})`;
+    cx2d.lineWidth = 3 + 7*clamp(Math.abs(S.roll)*2,0,1);
     cx2d.beginPath();
     for(let i=0;i<=8;i++){
       const t=i/8, y=-hl*0.7 + t*hl*1.35;
@@ -3771,6 +3769,7 @@ function drawBoat(){
   // --- ONADA DE PROA: aigua impactant i obrint-se a cada buc ---
   if(sp>0.1 && S.capsized<=0){
     for(const sideX of [-1,1]){
+      if(bucFora(sideX) >= 1) continue;      // fora de l'aigua no fa bigotis
       const bx=sideX*hb, by=-hl;
       // dues llengües d'aigua blanques que s'obren cap enrere
       for(const [k,wdt] of [[1,2.6],[0.6,1.6]]){
@@ -4115,6 +4114,49 @@ function shadeLerp(hex, t){
 }
 
 // buc llarg i prim, proa punxeguda i popa amb petit mirall
+// L'ombra va a part del patí: es queda a l'aigua mentre el buc puja, i aquest
+// buit entre tots dos és el que fa llegir l'alçada des de dalt.
+function ombraBucs(){
+  const hl = L/2, hb = L*0.150, hw = L*0.042;
+  cx2d.save();
+  cx2d.translate(S.px, S.py); cx2d.rotate(S.heading);
+  cx2d.translate(SUN.x*L*0.05, SUN.y*L*0.05);
+  for(const sideX of [-1,1]){
+    const alt = (S.roll*sideX < 0) ? Math.abs(Math.sin(S.roll))*L*0.31 : 0;
+    cx2d.save(); cx2d.translate(SUN.x*alt*1.6, SUN.y*alt*1.6);
+    cx2d.fillStyle = `rgba(0,0,0,${alt>0 ? 0.30 : 0.20})`;
+    hullPath(sideX*hb, hl, hw); cx2d.fill();
+    cx2d.restore();
+    // regalims: el buc que surt de l'aigua degota
+    if(alt > 0 && S.capsized <= 0){
+      const fora = bucFora(sideX);
+      cx2d.fillStyle = `rgba(255,255,255,${(0.55*fora).toFixed(3)})`;
+      for(let i=0;i<9;i++){
+        const y = -hl*0.8 + i/8*hl*1.6;
+        const r = (1.2 + ((i*7)%3))*(0.6 + 0.4*Math.sin(S.time*7 + i*2.3));
+        if(r > 0){ cx2d.beginPath(); cx2d.arc(sideX*(hb + hw*Math.sin(i*1.9)), y, r, 0, TAU); cx2d.fill(); }
+      }
+    }
+  }
+  cx2d.restore();
+}
+// El patí sencer, escorat, a les zenitals. Com que aquestes vistes dibuixen
+// l'alçada cap amunt de pantalla (2,5D), l'escora és una deformació afí en
+// coordenades del patí: el buc de l'aigua no es mou i el de barlovent s'hi
+// acosta i puja. El guany és una exageració declarada, com RIG.escorcZen: des de
+// dalt, l'alçada real amb prou feines es veu.
+function escoraZenital(dibuixa){
+  const r = clamp(S.roll, -0.6, 0.6);
+  if(Math.abs(r) < 0.002){ dibuixa(); return; }
+  const sg = Math.sign(r), k = Math.abs(Math.sin(r))*ESC.guanyZenital*sg;
+  const xp = sg*L*0.155, c = Math.cos(r), [ux, uy] = amuntPati(1);
+  cx2d.save();
+  cx2d.translate(S.px, S.py); cx2d.rotate(S.heading);
+  cx2d.transform(c - ux*k, -uy*k, 0, 1, xp - xp*c + ux*k*xp, uy*k*xp);
+  cx2d.rotate(-S.heading); cx2d.translate(-S.px, -S.py);
+  dibuixa();
+  cx2d.restore();
+}
 function hullPath(cxh, hl, hw){
   // Forma segons el dibuix: cos AMPLE i arrodonit al mig, amb la proa i la
   // popa que s'estiren en PUNTA llarga i afilada (com una fulla).
