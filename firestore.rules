@@ -25,6 +25,11 @@ service cloud.firestore {
     function canBoats(club) { return isAdmin() || (isApproved() && club == myClub() && (hasPerm('embarcacions') || inComissio('manteniment'))); }
     // Gestionar un soci (o un club): l'administració, qualsevol; la resta, només el seu club
     function sameClub(club) { return isAdmin() || club == myClub(); }
+    // Alta nova: al Club Ocata Vent sempre; a un altre club, si és al directori i accepta altes
+    function clubObert(club) {
+      let d = /databases/$(database)/documents/directori/$(club);
+      return club is string && (club == 'ocatavent' || (exists(d) && get(d).data.get('oberta', false) == true));
+    }
     function comsOf(club) {
       let p = /databases/$(database)/documents/clubs/$(club);
       return exists(p) ? get(p).data.comissions.keys() : ['junta', 'manteniment', 'economica'];
@@ -102,7 +107,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['userId', 'clubId', 'email', 'nom', 'estat', 'consentVersio', 'consentAt', 'creat'])
         && request.resource.data.keys().hasAll(['userId', 'clubId', 'email', 'nom', 'estat', 'consentVersio', 'consentAt', 'creat'])
         && request.resource.data.userId == me()
-        && request.resource.data.clubId == 'ocatavent'
+        && clubObert(request.resource.data.clubId)
         && request.resource.data.email == request.auth.token.get('email', '')
         && request.resource.data.nom is string && request.resource.data.nom.size() > 0 && request.resource.data.nom.size() <= 80
         && (request.resource.data.estat == 'pendent' || (request.resource.data.estat == 'aprovat' && isAdmin()))
@@ -377,7 +382,9 @@ service cloud.firestore {
     match /clubs/{club} {
       allow read: if isAdmin() || (isApproved() && club == myClub());
       allow create, update: if (isAdmin() || (hasPerm('rols') && club == myClub()))
-        && request.resource.data.keys().hasOnly(['nom', 'titol', 'logo', 'comissions', 'rols', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.keys().hasOnly(['nom', 'titol', 'logo', 'lloc', 'oberta', 'comissions', 'rols', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.get('lloc', '') is string && request.resource.data.get('lloc', '').size() <= 60
+        && request.resource.data.get('oberta', false) is bool
         && request.resource.data.get('titol', '') is string && request.resource.data.get('titol', '').size() <= 24
         && request.resource.data.get('logo', '') is string && request.resource.data.get('logo', '').size() <= 150000
         && (request.resource.data.get('logo', '') == '' || request.resource.data.get('logo', '').matches('^data:image/(png|jpeg|webp|svg[+]xml);base64,[A-Za-z0-9+/=]+$'))
@@ -386,6 +393,18 @@ service cloud.firestore {
         && request.resource.data.comissions is map && request.resource.data.comissions.size() <= 20
         && 'junta' in request.resource.data.comissions.keys()
         && request.resource.data.actualitzatPer == me() && request.resource.data.actualitzat == request.time;
+    }
+
+    // ---------- directori públic de clubs (multiclub): el llegeix la pantalla d'alta abans d'entrar ----------
+    // Còpia petita de clubs/{id} (nom, títol, lloc, oberta), sense logo ni rols. L'escriu qui pot editar el club.
+    match /directori/{club} {
+      allow read: if true;
+      allow write: if (isAdmin() || (hasPerm('rols') && club == myClub()))
+        && request.resource.data.keys().hasOnly(['nom', 'titol', 'lloc', 'oberta', 'actualitzat'])
+        && request.resource.data.get('nom', '') is string && request.resource.data.get('nom', '').size() <= 80
+        && request.resource.data.get('titol', '') is string && request.resource.data.get('titol', '').size() <= 24
+        && request.resource.data.get('lloc', '') is string && request.resource.data.get('lloc', '').size() <= 60
+        && request.resource.data.get('oberta', false) is bool;
     }
 
     // ---------- plànol de la base i embarcacions ----------

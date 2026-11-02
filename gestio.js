@@ -102,7 +102,7 @@ async function loadAll(){
     clubs = {}; qc.docs.forEach(d => clubs[d.id] = Object.assign({nom:"", comissions:COMS0}, d.data()));
     members.forEach(m => { if(m.clubId && !clubs[m.clubId]) clubs[m.clubId] = {nom:"", comissions:COMS0}; });
     if(!clubs.ocatavent) clubs.ocatavent = {nom:"Club Ocata Vent", comissions:COMS0};
-    say("");
+    say(""); syncDir();
   }catch(e){ say(errText(e)); }
 }
 
@@ -239,7 +239,10 @@ function brandCard(){
     <input class="field g-up" id="gClubTit" type="text" maxlength="24" placeholder="${TITOL0}" value="${esc(c.titol || "")}">
     <label class="lbl" for="gClubNom">Nom complet del club</label>
     <input class="field" id="gClubNom" type="text" maxlength="80" value="${esc(c.nom || clubName(club))}">
-    <p class="note">El títol surt en majúscules a dalt de l'app de tots els socis, amb el logo; a sota hi continua el club on naveguen. Buit = «${TITOL0}». El logo es retalla en un cercle: millor quadrat, amb el motiu al centre (PNG, JPG, WebP o SVG). Es desa en sortir del camp.</p></article>`;
+    <label class="lbl" for="gClubLloc">Lloc a l'app</label>
+    ${llocSel("gClubLloc", c.lloc || (club === "ocatavent" ? "masnou" : ""))}
+    <label class="g-ck"><input type="checkbox" id="gClubObert"${club === "ocatavent" || c.oberta ? " checked" : ""}${club === "ocatavent" ? " disabled" : ""}> Accepta altes noves des de l'app</label>
+    <p class="note">El títol surt en majúscules a dalt de l'app de tots els socis, amb el logo; a sota hi continua el club on naveguen. Buit = «${TITOL0}». Lloc: platja, previsió, estacions i webcams que veuen els socis en entrar (després cadascú pot mirar-ne d'altres). Amb «Accepta altes», el club surt a la llista de l'alta nova de l'app. El logo es retalla en un cercle: millor quadrat, amb el motiu al centre (PNG, JPG, WebP o SVG). Es desa en sortir del camp.</p></article>`;
 }
 // Imatge → data URL petit: SVG tal qual (≤ 60 kB); la resta, retallada quadrada i reduïda a 256 px
 async function logoData(f){
@@ -269,8 +272,10 @@ function renderGlobal(){
         <span class="g-tags"><i class="g-tag">${L.filter(m => m.estat === "aprovat").length} amb alta</i>${p ? `<i class="g-tag st-pendent">${p} pendents</i>` : ""}<i class="g-tag prem">${L.filter(m => m.premium).length} premium</i></span></button></article>`; }).join("")}</div>
     <article class="card g-card"><span class="lbl">Nou club</span>
       <input class="field" id="gNewClub" type="text" maxlength="80" placeholder="Nom del club (p. ex. Club Nàutic Badalona)">
+      ${llocSel("gNewLloc", "")}
+      <label class="g-ck"><input type="checkbox" id="gNewObert"> Accepta altes noves des de l'app</label>
       <button class="btn cl-pri g-wide" type="button" id="gAddClub">Crea el club</button>
-      <p class="note">Les altes noves de l'app entren de moment al Club Ocata Vent. Per passar algú a un altre club, obre la seva fitxa.</p></article>
+      <p class="note">A l'alta nova de l'app, cada persona tria el club entre els que accepten altes; l'aprova la gestió d'aquell club. Per passar algú a un altre club, obre la seva fitxa.</p></article>
     <span class="lbl">Plantilles de rol · ${Object.keys(tpl).length}</span>
     <p class="note">Són els rols amb què comença cada club nou. Cada club després els pot canviar.</p>
     ${roleEditor(tpl, "tpl")}
@@ -367,13 +372,28 @@ async function recalc(id){
 
 /* ---------- comissions, rols i clubs ---------- */
 async function saveClub(id, patch){
-  const cur = clubs[id] || {nom:"", comissions:COMS0}, next = {nom:cur.nom || clubName(id), titol:cur.titol || "", logo:cur.logo || "", comissions:cur.comissions || COMS0, rols:cur.rols || tpl, ...patch};
-  const doc = {nom:next.nom, comissions:next.comissions, rols:next.rols, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid};
-  if(next.titol) doc.titol = next.titol; if(next.logo) doc.logo = next.logo;
-  try{ await F.setDoc(F.doc(db, "clubs", id), doc); clubs[id] = next; say(""); if(patch.rols) await recalc(id); render(); return true; }
+  const cur = clubs[id] || {nom:"", comissions:COMS0}, next = {nom:cur.nom || clubName(id), titol:cur.titol || "", logo:cur.logo || "", lloc:cur.lloc || "", oberta:!!cur.oberta, comissions:cur.comissions || COMS0, rols:cur.rols || tpl, ...patch};
+  const doc = {nom:next.nom, comissions:next.comissions, rols:next.rols, oberta:!!next.oberta, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid};
+  if(next.titol) doc.titol = next.titol; if(next.logo) doc.logo = next.logo; if(next.lloc) doc.lloc = next.lloc;
+  try{ await F.setDoc(F.doc(db, "clubs", id), doc); clubs[id] = next; say(""); saveDir(id); if(patch.rols) await recalc(id); render(); return true; }
   catch(e){ say(errText(e)); return false; }
 }
 
+// Directori públic (directori/{id}): el que veu la pantalla d'alta de l'app abans d'entrar
+const dirOf = id => { const c = clubs[id] || {}; return {nom:c.nom || clubName(id), titol:c.titol || "", lloc:c.lloc || (id === "ocatavent" ? "masnou" : ""), oberta:id === "ocatavent" || !!c.oberta}; };
+async function saveDir(id){ try{ await F.setDoc(F.doc(db, "directori", id), {...dirOf(id), actualitzat:F.serverTimestamp()}); }catch(e){} }
+async function syncDir(){   // administració: posa al dia el directori de tots els clubs
+  try{ const qs = await F.getDocs(F.collection(db, "directori")), cur = {}; qs.docs.forEach(d => cur[d.id] = d.data());
+    for(const id of Object.keys(clubs)){ const w = dirOf(id), h = cur[id] || {};
+      if(["nom", "titol", "lloc", "oberta"].some(k => (h[k] ?? (k === "oberta" ? false : "")) !== w[k])) await saveDir(id); } }catch(e){}
+}
+// Selector del lloc (clubs.js): per comarca
+function llocSel(idAttr, sel){
+  const L = window.OV_CLUBS || {}, by = {};
+  Object.entries(L).forEach(([k, c]) => (by[c.com || "Altres"] = by[c.com || "Altres"] || []).push([k, c]));
+  return `<select class="field" id="${idAttr}"><option value="">Tria el lloc…</option>${Object.keys(by).sort((a, b) => a.localeCompare(b, "ca")).map(g =>
+    `<optgroup label="${esc(g)}">${by[g].sort((a, b) => a[1].name.localeCompare(b[1].name, "ca")).map(([k, c]) => `<option value="${esc(k)}"${k === sel ? " selected" : ""}>${esc(c.name)} · ${esc(c.muni || "")}</option>`).join("")}</optgroup>`).join("")}</select>`;
+}
 async function saveTpl(next){
   try{ await F.setDoc(F.doc(db, "config", "global"), {plantilles:next, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid}); tpl = next; say(""); render(); }
   catch(e){ say(errText(e)); }
@@ -451,7 +471,7 @@ document.addEventListener("click", async e => {
   if(b.dataset.comdel){ const k = b.dataset.comdel, box = document.querySelector(`[data-combox="${CSS.escape(k)}"]`), C = comsOf(club);
     if(box) slideConfirm(box, "Llisca per eliminar " + (C[k] || ""), () => { const n = Object.assign({}, C); delete n[k]; saveClub(club, {comissions:n}); }); return; }
   if(b.id === "gAddClub"){ const n = ($("gNewClub")?.value || "").trim(); if(!n) return; let k = slug(n) || "club", i = 2; while(clubs[k]) k = (slug(n) || "club") + "-" + i++;
-    b.disabled = true; clubs[k] = {nom:n.slice(0, 80), comissions:COMS0, rols:JSON.parse(JSON.stringify(tpl))}; if(!await saveClub(k, {})){ delete clubs[k]; render(); } return; }
+    b.disabled = true; clubs[k] = {nom:n.slice(0, 80), lloc:$("gNewLloc")?.value || "", oberta:!!$("gNewObert")?.checked, comissions:COMS0, rols:JSON.parse(JSON.stringify(tpl))}; if(!await saveClub(k, {})){ delete clubs[k]; render(); } return; }
 });
 document.addEventListener("change", e => {
   const t = e.target; if(t.closest && t.closest("#gSheet")) return;
@@ -462,6 +482,8 @@ document.addEventListener("change", e => {
   if(t.id === "gClubTit"){ const v = t.value.trim().replace(/\s+/g, " ").slice(0, 24); if(v !== (clubs[club]?.titol || "")) saveClub(club, {titol:v}); }
   if(t.id === "gLogoFile" && t.files && t.files[0]){ const f = t.files[0]; t.value = "";
     logoData(f).then(d => saveClub(club, {logo:d})).catch(err => say(err.message || "No s'ha pogut fer servir aquesta imatge.")); }
+  if(t.id === "gClubLloc"){ if(t.value !== (clubs[club]?.lloc || "")) saveClub(club, {lloc:t.value}); }
+  if(t.id === "gClubObert"){ saveClub(club, {oberta:t.checked}); }
   if(t.id === "gClubNom"){ const v = t.value.trim().slice(0, 80); if(v && v !== clubs[club]?.nom) saveClub(club, {nom:v}); }
 });
 document.addEventListener("input", e => {

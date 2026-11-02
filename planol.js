@@ -222,7 +222,7 @@ const TIPS = {
 /* ---------- orientació del mar (doc.costa, graus; null = la calculada per al club a clubs.js) ---------- */
 const WN = ["Tramuntana", "Gregal", "Llevant", "Xaloc", "Migjorn", "Garbí", "Ponent", "Mestral"];
 const angD = (a, b) => { const x = Math.abs(((a - b) % 360 + 360) % 360); return x > 180 ? 360 - x : x; };
-const coastDef = () => { const C = window.OV_CLUBS || {}, k = ({ocatavent:"masnou"})[cl && cl.club] || (cl && cl.club) || "masnou"; return (C[k] && C[k].coast) ?? 135; };
+const coastDef = () => { const C = window.OV_CLUBS || {}, k = (() => { try{ return JSON.parse(localStorage.getItem("ov2_club_lloc"))[cl && cl.club]; }catch(e){ return null; } })() || ({ocatavent:"masnou"})[cl && cl.club] || (cl && cl.club) || "masnou"; return (C[k] && C[k].coast) ?? 135; };
 let costaLive = null;   // mentre s'arrossega el control lliscant
 const coastNow = () => costaLive != null ? costaLive : typeof doc.costa === "number" ? doc.costa : coastDef();
 const kindOf = (a, c) => angD(a, c + 180) <= 75 ? "t" : angD(a, c) <= 60 ? "m" : "l";   // terral · de mar · lateral (com isOffshore/isOnshore de l'app)

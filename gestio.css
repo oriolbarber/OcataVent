@@ -70,3 +70,6 @@ body.g-lock{overflow:hidden}
 .g-prev .t span{font-size:.8rem;color:var(--muted);font-weight:600}
 .g-up{text-transform:uppercase;font-family:var(--f-head);font-weight:700;letter-spacing:.04em}
 .g-top img{object-fit:cover;border-radius:50%}
+/* casella en línia (multiclub: «Accepta altes noves») */
+.g-ck{display:flex;align-items:center;gap:10px;margin:12px 0 4px;font-weight:600;cursor:pointer}
+.g-ck input{width:22px;height:22px;accent-color:var(--accent,#0a7)}

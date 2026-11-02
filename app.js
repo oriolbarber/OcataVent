@@ -1356,7 +1356,8 @@ if("serviceWorker" in navigator && location.protocol === "https:") navigator.ser
 // El selector (mapa + cerca) és a llocs.js. Canviar de lloc recarrega l'app: així totes les dades són del club triat.
 // Orientació del mar definida pel club al plànol (club.js): si canvia, es desa i es torna a calcular tot
 window.OV_SET_COAST = (club, v) => {
-  if(({ocatavent:"masnou"})[club] !== locKey && club !== locKey) return;   // només per al club que es mira
+  const lk = (store.get("ov2_club_lloc") || {})[club] || ({ocatavent:"masnou"})[club] || club;
+  if(lk !== locKey) return;   // només per al club que es mira (club → lloc: ov2_club_lloc, el desa club.js)
   const nv = typeof v === "number" ? norm(Math.round(v)) : COAST0; if(nv === COAST) return;
   COAST = nv; try{ if(typeof v === "number") localStorage.setItem("ov2_costa_" + locKey, JSON.stringify(nv)); else localStorage.removeItem("ov2_costa_" + locKey); }catch(e){}
   if(DATA){ applyModel(); renderNow(); renderHours(); renderWeek(); }

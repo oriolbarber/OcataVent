@@ -16,7 +16,7 @@ const FB_CONFIG = {
 };
 const OWNER_UID = "aHjoROUH3aQsHh6ksS3Tt1p5soF2";   // administrador inicial (també fixat a firestore.rules)
 const CLUB_ID = "ocatavent";
-const CONSENT_V = "2026-10-18";                      // canvia-la si canvia el text de consentiment
+const CONSENT_V = "2026-11-02";                      // canvia-la si canvia el text de consentiment
 const CHUNK = 400000;                                // caràcters per tros (Firestore: màx. 1 MiB per document)
 const MAX_TRAMS = 20;
 
@@ -25,6 +25,26 @@ let user = null, member = null, isAdm = false, ready = false, offline = false;
 let pendingLink = null, syncing = false, syncAgain = false, syncErr = "", lastSync = 0, lastRefresh = 0, delStep = false;
 let flash = {t:"", err:false};
 
+// Multiclub: clubs que accepten altes (directori/{id}, públic). Es llegeix per REST, sense descarregar Firebase.
+const DIR_URL = "https://firestore.googleapis.com/v1/projects/" + FB_CONFIG.projectId + "/databases/(default)/documents/directori?pageSize=200";
+let dir = null, dirLoading = null;
+function loadDir(){
+  if(dir || dirLoading) return dirLoading;
+  dirLoading = fetch(DIR_URL).then(r => r.ok ? r.json() : {}).then(j => {
+    const v = f => f ? (f.stringValue ?? f.booleanValue ?? "") : "";
+    dir = (j.documents || []).map(d => ({id:d.name.split("/").pop(), nom:v(d.fields?.nom), lloc:v(d.fields?.lloc), oberta:v(d.fields?.oberta) === true}))
+      .filter(c => c.oberta || c.id === CLUB_ID);
+  }).catch(() => { dir = []; }).finally(() => { dirLoading = null; if(!dir.some(c => c.id === CLUB_ID)) dir.unshift({id:CLUB_ID, nom:"Club Ocata Vent", lloc:"masnou", oberta:true});
+    dir.sort((a, b) => a.nom.localeCompare(b.nom, "ca"));
+    const el = $("accClub"); if(el) el.closest("label").outerHTML = clubPick(); });   // sense repintar: no es perd el que s'ha escrit
+  return dirLoading;
+}
+// Club per defecte: el triat abans, si no el del lloc que es mira, si no Ocata Vent
+function defClub(){
+  const c = store.get("ov2_consent")?.club; if(c && dir && dir.some(x => x.id === c)) return c;
+  const lk = store.get("ov2_loc") || "masnou", m = (dir || []).find(x => x.lloc === lk);
+  return m ? m.id : CLUB_ID;
+}
 const approved = () => !!(user && member && member.estat === "aprovat");
 const say = (t, err) => { flash = {t, err:!!err}; document.querySelectorAll("[data-accmsg]").forEach(m => { m.textContent = t; m.hidden = !t; m.classList.toggle("err", !!err); if(t && m.closest(".cfg-pg.on")) m.scrollIntoView({block:"nearest", behavior:"smooth"}); }); };
 // Firestore no avisa si no arriba al servidor: espera indefinidament. Amb això, al cap de 15 s hi ha un missatge.
@@ -127,7 +147,8 @@ async function saveDades(){
 async function createMember(nom){
   const f = await fs(), mail = user.email || "";
   const n = String(nom || user.displayName || mail.split("@")[0] || "Persona sòcia").trim().slice(0, 80);
-  await T(f.setDoc(f.doc(db, "members", user.uid), {userId:user.uid, clubId:CLUB_ID, email:mail, nom:n,
+  const cl = store.get("ov2_consent")?.club || CLUB_ID;
+  await T(f.setDoc(f.doc(db, "members", user.uid), {userId:user.uid, clubId:cl, email:mail, nom:n,
     estat: isAdm ? "aprovat" : "pendent", consentVersio:CONSENT_V, consentAt:f.serverTimestamp(), creat:f.serverTimestamp()}));
   store.del("ov2_consent");
   await readMember();
@@ -139,7 +160,7 @@ function consentFromForm(){
   if(accMode === "entra") return true;   // si no té fitxa de soci, després d'entrar se li demana l'alta
   const ck = $("accConsent");
   if(!ck || !ck.checked){ say("Per crear el compte cal marcar la casella d'acceptació.", true); return false; }
-  store.set("ov2_consent", {v:CONSENT_V, nom:($("accName")?.value || "").trim()});
+  store.set("ov2_consent", {v:CONSENT_V, nom:($("accName")?.value || "").trim(), club:$("accClub")?.value || CLUB_ID});
   return true;
 }
 
@@ -320,7 +341,7 @@ async function relink(){
 
 /* ---------- interfície: secció «Compte» de la configuració ---------- */
 const CONSENT_HTML = `
-  <p><b>Responsable:</b> Club Ocata Vent (El Masnou).</p>
+  <p><b>Responsable:</b> el club on demanes l'alta; Ocata Vent en porta el funcionament tècnic.</p>
   <p><b>Què es desa:</b> el teu nom, el correu i la data d'aquesta acceptació, perquè l'administració del club pugui aprovar l'alta; el telèfon, només si el poses (el veuen la Junta i qui té el permís «Seguretat»); i les sortides que hi pugis (ruta GPS, hores, velocitats i vent).</p>
   <p><b>Qui ho veu:</b> les sortides són privades, només les veus tu. El que publiques (mur, «Qui surt», anuncis), on ets i els avisos de seguretat ho veu qui triïs a ⋮ ▸ Privadesa: tothom, el club, les teves amistats o ningú. La gent del club veu el teu nom per poder-te afegir com a amistat. L'administració veu el nom i el correu de cada persona sòcia.</p>
   <p><b>On ets:</b> només mentre ets a la base o navegant, i ho veu qui hagis triat (per defecte, el club). Navegant, inclou la posició. S'esborra en acabar, en marxar o al cap de 24 h.</p>
@@ -330,10 +351,17 @@ const CONSENT_HTML = `
   <p><b>Edat:</b> només per a majors de 18 anys.</p>
   <p><b>Avís:</b> l'app no substitueix el VHF (canal 16) ni el 112.</p>`;
 const consentBlock = (withName) => `
+  ${withName ? clubPick() : ""}
   ${withName ? `<label class="tn-name"><span class="lbl">Nom i cognoms</span><input class="field" id="accName" type="text" autocomplete="name" maxlength="80" style="font-family:var(--f-body)" value="${esc(user?.displayName || store.get("ov2_consent")?.nom || "")}"></label>` : ""}
   <div class="acc-ck"><input type="checkbox" id="accConsent"><label for="accConsent">Tinc 18 anys o més i accepto el tractament de dades que s'explica a la (i).</label>
     <button class="ib-i" type="button" data-info="iConsent" aria-label="Com es tracten les dades" aria-expanded="false">i</button></div>
   <div class="vp-info" id="iConsent" hidden>${CONSENT_HTML}</div>`;
+// Selector del club on es demana l'alta
+function clubPick(){
+  if(!dir){ loadDir(); return `<label class="acc-f"><span class="lbl">Club</span><select class="field" id="accClub" disabled><option>Carregant clubs…</option></select></label>`; }
+  const sel = defClub();
+  return `<label class="acc-f"><span class="lbl">Club</span><select class="field" id="accClub">${dir.map(c => `<option value="${esc(c.id)}"${c.id === sel ? " selected" : ""}>${esc(c.nom || c.id)}</option>`).join("")}</select></label>`;
+}
 const delBlock = () => `
   <details class="acc-del"><summary>Esborra el compte</summary>
     <p class="note">S'esborraran el compte, la teva fitxa, les sortides del núvol i tot el que hagis publicat o marcat al club (publicacions, reaccions, avisos, anuncis i presència). No es pot desfer. Les sortides d'aquest mòbil s'hi queden.</p>
@@ -384,7 +412,7 @@ function render(){
     peek.textContent = estatT + (member && member.estat === "aprovat" ? " · " + (member.nom || user.email || "") : "");
     if(!member){
       unreg = true;
-      h = who + `<p class="note">Has entrat, però encara no has demanat l'alta al club.</p>${consentBlock(true)}
+      h = who + `<p class="note">Has entrat, però encara no has demanat l'alta a cap club.</p>${consentBlock(true)}
         <button class="btn acc-wide" type="button" id="accJoin">Sol·licita l'alta</button>`;
     } else if(member.estat === "pendent"){
       h = who + `<div class="warnbox">Sol·licitud enviada: l'administració del club l'ha d'aprovar. Mentrestant, les sortides es desen només en aquest mòbil.</div>`;

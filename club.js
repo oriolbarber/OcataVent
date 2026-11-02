@@ -1195,10 +1195,20 @@ function ctaUpdate(){ const b = $("ctaTrip"); if(b) b.hidden = !isRec() && !C; }
 document.addEventListener("click", e => { if(!e.target.closest("#ctaTrip")) return; if(isRec()) go("trip"); else if(C) intentSheet(); });
 // Marca del club (logo i títol de la capçalera, web de gestió): sense compte aprovat, la d'Ocata Vent
 // (clear = en canviar la sessió; en obrir sense connexió no es toca la que hi ha desada)
+// Multiclub: cada club té el seu lloc (clau de clubs.js). Es desa el mapa club → lloc (orientació del mar, plànol)
+// i, la primera vegada que el soci entra a un club (o el club canvia de lloc), aquest passa a ser «el meu club» i s'hi va.
+function clubLloc(club, lloc){
+  const L = window.OV_CLUBS || {}; if(!lloc || !L[lloc]) return;
+  const map = store.get("ov2_club_lloc") || {}; if(map[club] !== lloc){ map[club] = lloc; store.set("ov2_club_lloc", map); }
+  const k = club + ":" + lloc; if(store.get("ov2_club_home") === k) return;
+  store.set("ov2_club_home", k); store.set("ov2_home_loc", lloc);
+  if(typeof setLoc === "function" && store.get("ov2_loc") !== lloc && !(typeof LIVE !== "undefined" && LIVE)) setLoc(lloc);   // recarrega (no mentre es grava)
+}
 async function loadBrand(clear){
   if(!C){ if(clear) window.OV_BRAND?.(null, true); return; }
   try{ const d = await C.F.getDoc(ref("clubs", C.member.clubId)); const x = d.exists() ? d.data() : {};
-    window.OV_BRAND?.(x.logo || x.titol ? {logo:x.logo || "", titol:x.titol || "", nom:x.nom || ""} : null, true); }catch(e){}
+    window.OV_BRAND?.(x.logo || x.titol ? {logo:x.logo || "", titol:x.titol || "", nom:x.nom || ""} : null, true);
+    clubLloc(C.member.clubId, x.lloc); }catch(e){}
 }
 window.addEventListener("ov-cloud", async () => {
   await ctx(); loadBrand(true); tabBtn(); ctaUpdate(); autoTick(true); loadAlerts(); if(C) loadEvents(); else { navDot(); window.OV_EVENTS = []; window.dispatchEvent(new CustomEvent("ov-events")); }
