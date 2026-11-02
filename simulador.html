@@ -575,7 +575,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v19</div>
+  <div id="versio">Versió v20</div>
 </div></div>
 
 <script>
@@ -694,6 +694,7 @@ const S = {
   pulley: 1,          // posició de la politja al llarg de la barra: -1 babord … +1 estribord
   pulleyV: 0,         // velocitat de la politja al llarg de la barra
   tacking: 0,         // 1 mentre una virada està en curs (auto-sostinguda)
+  tackDir: 0,         // banda on era la vela en començar el gest de virar
   jibeCd: 0,          // refractari de la trasluixada (evita canvis de banda seguits)
   terbolesa: 0,       // 0 = mar plana i transparent · 1 = després d'un temporal
   arrancada: 0,       // memòria de la velocitat: permet completar la virada
@@ -734,7 +735,8 @@ function updateWeight(dt){
   // de banda a banda camina per la coberta: triga, i mentre tant el buc no s'aixeca de cop
   const pas = (S.wxT - S.wx)*kr, mPas = ESC.pasLateral*dt;
   S.wx += clamp(pas, -mPas, mPas);
-  S.wf += (S.wfT - S.wf)*kr;
+  const pasL = (S.wfT - S.wf)*kr, mPasL = ESC.pasLlarg*dt;
+  S.wf += clamp(pasL, -mPasL, mPasL);
 }
 
 /* ------------------- RECORREGUT DEL PATRÓ SOBRE LA COBERTA -------------------
@@ -1011,6 +1013,7 @@ const ESC = {
   bracPatro: 0.966,  // m del centre al patró assegut sobre el buc (CREW_X)
   zBuc:     0.45,    // alçada del centre de gravetat del buc
   zAssegut: 0.75, zPenjat: 0.55, zDret: 1.05,   // alçada del patró
+  pasLlarg: 0.9,     // de wf per segon: del pal a la bancada 3, més d'un segon
   pasLateral: 1.0,   // recorregut de wx per segon: de banda a banda, uns 2 s
   esmorteix: 700,    // N·m·s/rad: aigua i aire frenen l'escora
   bolca:    1.05,    // rad: d'aquí no es recupera
@@ -1131,15 +1134,18 @@ function physics(dt){
     // Sortir de la fula: escota AMOLLADA del tot. El discriminant és l'escota,
     // no el gir (que s'anul·la quan el patí frena en creuar el vent).
     const wAft = clamp(-S.wf, 0, 1);
-    const tackGest = absT < 42*D2R && wAft > 0.12 && S.sheet > 0.22;
+    // La proa ja ha passat el vent i la vela encara és a la banda vella: en caminar
+    // cap a popa (bancada 3) la vela passa per sobre del patró.
+    const creuat = S.sailSide*t < 0 && t*S.angVel > 0;
+    const tackGest = absT < 42*D2R && S.sheet > 0.22 && (wAft > 0.12 || (creuat && S.wf < 0.85));
     // El gest empeny la vela lluny de la banda on era en començar, a les dues amures.
     // Es recorda fins que el deixes anar: si no, en passar la vela la tornaria enrere.
     if(tackGest && !S.tackDir) S.tackDir = S.sailSide;
     if(tackGest) S.tacking = 1;
-    if(S.tacking && (S.pulley*S.tackDir < -0.55 || wAft < 0.05 || S.sheet < 0.15 || absT > 60*D2R)) S.tacking = 0;
+    if(S.tacking && (S.pulley*S.tackDir < -0.55 || (wAft < 0.05 && !creuat) || S.sheet < 0.15 || absT > 60*D2R)) S.tacking = 0;
     if(!tackGest && !S.tacking) S.tackDir = 0;
     if(tackGest || S.tacking){
-      crew = -3.4 * (0.4 + 0.6*wAft) * S.tackDir;   // empeny cap a l'altra banda
+      crew = -3.4 * (0.4 + 0.6*(creuat ? 1 : wAft)) * S.tackDir;   // empeny cap a l'altra banda
       F.tackTo = -1;
     } else if(nearRun && S.wx*S.sailSide > 0.28 && (S.jibeCd||0) <= 0){
       // trabutjada: cal un gest CLAR de pes a sotavent, i amb temps refractari
@@ -1154,6 +1160,8 @@ function physics(dt){
     S.pulleyV += (push + arch + crew)*dt*3.2;
     S.pulleyV *= Math.max(0, 1 - 7.5*dt);
     S.pulley = clamp(S.pulley + S.pulleyV*dt, -1, 1);
+    // Abans de passar el vent, amb l'escota caçada la vela s'aguanta però no canvia de banda.
+    if(S.tackDir && S.sheet > 0.7 && S.tackDir*t > 0 && S.pulley*S.tackDir < 0.15){ S.pulley = 0.15*S.tackDir; S.pulleyV = 0; }
     if(Math.abs(S.pulley) >= 1) S.pulleyV *= 0.2;   // topalls de la barra
     // el costat de la vela és el de la politja (mai al mig)
     const prevSide3 = S.sailSide;
@@ -2869,7 +2877,7 @@ function resetToBeach(){
   S.wx = 0; S.wf = 0; S.wxT = 0; S.wfT = 0; S.sheet = 0.45;
   S.everInWater = false; S.beyondMouth = false;
   S.pulley = 1; S.pulleyV = 0; S.sailSide = 1; S.boomDir = 0.6; S.mastLean = 0;
-  S.rake = 0; S.rakeT = 0; S.tacking = 0; S.board = 0;
+  S.rake = 0; S.rakeT = 0; S.tacking = 0; S.tackDir = 0; S.board = 0;
   trail.length = 0;
   cam.x = S.px; cam.y = S.py - L*0.4;
   const b = document.getElementById('btnEntrar');
@@ -5245,7 +5253,7 @@ function colocaALinia(){
   S.px = Ln.p0[0] - Ln.amunt[0]*3*L; S.py = Ln.p0[1] - Ln.amunt[1]*3*L;
   S.heading = normA(S.windFrom + 50*D2R); S.speed = 0.5; S.vLat = 0; S.angVel = 0;
   S.heel = 0; S.roll = 0; S.rollV = 0; S.capsized = 0; S.heelTime = 0;
-  S.sailSide = 1; S.pulley = 1; S.pulleyV = 0; S.boomDir = 0.6; S.tacking = 0;
+  S.sailSide = 1; S.pulley = 1; S.pulleyV = 0; S.boomDir = 0.6; S.tacking = 0; S.tackDir = 0;
   S.sheet = 0.85; S.wx = S.wxT = -0.75; S.wf = S.wfT = 0;
   landingLock = false; trail.length = 0;
   REG.sPrev = (S.py - Ln.p0[1])*Ln.amunt[1] + (S.px - Ln.p0[0])*Ln.amunt[0];
