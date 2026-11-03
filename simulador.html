@@ -576,7 +576,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v21</div>
+  <div id="versio">Versió v22</div>
 </div></div>
 
 <script>
@@ -704,7 +704,8 @@ const S = {
   mastLean: 0,        // capcineig lateral del pal: molt petit (l'aguanten els obencs)
   rake: 0,            // inclinació del pal: -1 cap a PROA … +1 cap a POPA
   rakeT: 0,           // objectiu de la inclinació (mordasses)
-  boomDir: 0.6,       // angle dibuixat de la vela / puny d'escota (suavitzat)
+  boomDir: 0.6,       // angle de la corda amura → puny d'escota, en planta (suavitzat).
+                      // El nom és històric: el patí no té botavara.
   capsized: 0,        // temps restant de bolcada
   atEdge: false,      // a prop del límit de mar obert
   everInWater: false, // ja ha entrat del tot a l'aigua (per detectar encallades reals)
@@ -782,7 +783,10 @@ const RIG = {
   // l'alçada real la vela taparia mitja coberta i la vista deixaria de servir
   // per governar: s'escurça un 16%, com un escorç.
   escorcZen: 0.84,
-  barra:     0.450,   // estació de les potes de la barra escotera
+  // L'Oriol la vol 20 cm més a popa que la làmina (0,450): les potes queden a 8 cm de
+  // l'extrem dels bucs, just darrere la bancada de popa. Només és el DIBUIX: la
+  // barra de la física (SB_Y, calibrada) no es mou.
+  barra:     0.486,   // estació de les potes de la barra escotera
   // L'arc surt de la FOTO de la barra (fletxa ≈ 8-11% de la llum), no de la làmina:
   // amb 0,086 i 0,123 la barra feia un pont del 45% i no s'hi assemblava.
   // Es CORBA ENFORA, cap a popa. Més recorregut enrere que amunt: a la zenital de
@@ -911,6 +915,18 @@ function ampladaBuc(y){
 // Una escota portant la tiba la vela, no la mà: va recta encara que estigui
 // amollada. Només fa panxa quan la vela flameja i no li fa força.
 const folgaEscota = () => F.flap ? 0.5 + 0.5*(1 - clamp(S.sheet,0,1)) : 0.06;
+// FORMA DE LA VELA, la mateixa a les tres vistes (en eslores). Sense botavara: amollada
+// fa més bossa i la baluma s'obre (el gir que calcula physics()); caçada s'aplana.
+// Flameja de la vora del davant cap enrere, segons F.luff.
+function formaVela(){
+  const sh = clamp(S.sheet, 0, 1), luff = F.luff || 0;
+  const carrega = clamp((F.cl || 0)/VELA.clMax, 0, 1);
+  return {
+    panxa:   (0.07 + 0.06*(1 - sh) + 0.05*carrega)*(1 - 0.7*luff),
+    flameig: luff*0.05*Math.sin(S.time*13),
+    obre:    0.30*Math.sin((F.twist || 0)*0.5),      // la baluma, cap enfora
+  };
+}
 // L'alçada també gira amb l'escora: un pal tombat no pot continuar fent el mateix.
 const escorcZenital = () => (1 - 0.06*Math.abs(S.heel) - 0.06*Math.abs(S.rake)) * RIG.escorcZen
                             * Math.cos(rollVisual());
@@ -970,6 +986,56 @@ function aparell(){
    Caçar escurça el cap i tanca la vela; amollar el deixa córrer. A més, la vela
    no pot passar mai per davant del través (màxim ~80° de la línia de crugia). */
 const SAIL_MAX = 80*D2R;
+/* AERODINÀMICA DE LA VELA, respecte del vent aparent. La sustentació creix amb
+   l'angle d'atac fins a l'òptim i després cau a poc a poc (pèrdua progressiva, sense
+   esglaó); la resistència és la d'una placa plana, màxima amb la vela de través al
+   vent (empopada). */
+const VELA = {
+  opt:   20*D2R,   // angle d'atac de màxima sustentació
+  clMax: 1.0,
+  cd0:   0.06,     // resistència de la tela ben orientada
+  cdi:   0.15,     // resistència induïda (∝ sustentació²): és la que castiga cenyir
+  cdPla: 1.70,     // resistència de placa plana a 90°
+  cdExp: 3,        // la de placa plana creix de debò en passar l'òptim (sin^cdExp)
+  residu: 0.80,    // sustentació de placa plana que queda passat l'òptim (× sin 2a)
+  luff:  8*D2R,    // per sota d'aquí la vora del davant comença a flamejar
+  flap:  4*D2R,    // per sota d'aquí flameja tota
+  sobre: 35*D2R,   // passat d'aquí, sobrecaçada (només per al marcador)
+  empenta: 0.70,   // força d'avanç → acceleració
+  // Força lateral → escora, buc alçat i deriva. Escala que manté el calibratge de
+  // l'Oriol (barlovent a través s'alça cap als 12 kn): amb el model anterior, a
+  // través i escota a 0,85, la força lateral valia 0,61.
+  lateral: 0.80,
+  // gir de la vela en alçada (de baix a dalt): caçada a fons gairebé plana, amollada
+  // la baluma s'obre
+  twist0: 3*D2R,
+  twistK: 22*D2R,
+  twistQ: 34*D2R,  // gir afegit per cada unitat de pressió per sobre de pressio0
+  pressio0: 0.7,
+  twistQmax: 23*D2R,   // el puny no pot pujar indefinidament
+  aplana: 0.30,    // caçada a fons, la sustentació màxima baixa aquesta part
+};
+// PLA LATERAL DELS BUCS: velocitat de deriva = força lateral / resistència.
+const DERIVA = {
+  forma:     9,      // resistència de forma dels bucs en V (no s'anul·la a poc a poc)
+  velocitat: 0,      // la que hi afegeix la marxa
+  enfonsa:   1.5,    // per cada radiant d'escora, el buc de sotavent n'aguanta tant més
+};
+// franges de la vela: [alçada relativa del centre, part de l'àrea] (triangle: 5:3:1)
+const FRANGES = [[1/6, 5/9], [1/2, 3/9], [5/6, 1/9]];
+const FRANGES_H = FRANGES.reduce((s, [h, w]) => s + h*w, 0);
+// 0 … 1 … 0: corba suau amb el màxim a VELA.opt. A 90° val zero i passats els 90° el
+// vent entra per la baluma i la sustentació canvia de sentit, sense salt.
+const CL_K = (()=>{ const k = 1.13; let m = 0;      // k: el cos() avança el màxim; es compensa
+  for(let a = 0; a < Math.PI/2; a += 0.002){ const x = a/(VELA.opt*k); m = Math.max(m, x*Math.exp(1-x)*Math.cos(a)); }
+  return {k, m}; })();
+function corbaCL(a){
+  if(a <= 0) return 0;
+  const x = a/(VELA.opt*CL_K.k);
+  // passat l'òptim la tela encara sustenta una mica, com una placa plana (sin 2a):
+  // caçar de més costa velocitat a poc a poc, no de cop
+  return Math.max(x*Math.exp(1 - x)*Math.cos(a)/CL_K.m, VELA.residu*Math.sin(2*a));
+}
 function sailGeoLimit(){
   if(!L) return SAIL_MAX;
   const hl = L/2, hb = L*0.155, hw = L*0.05;
@@ -1006,7 +1072,7 @@ function sailGeoLimit(){
    navegar-hi és que la vela escorada descarrega (ESC.descarrega). Però amb el
    patró a sotavent el parell és tan petit que no n'hi ha prou: bolca. */
 const ESC = {
-  moment:   3800,   // N·m del vent a 12 kn amb F.side = 1
+  moment:   3800,   // N·m del vent a 12 kn amb F.sideEsc = 1 (moment de la vela)
   descarrega: 1.35,   // la vela perd força amb l'escora (1/rad)
   mesBuc:   85,      // kg del conjunt del patí per a l'escora; amb menys, un patró de
                      // 100 kg penjat alçaria el buc de sotavent sense vent
@@ -1026,7 +1092,7 @@ function aixecaBuc(dt, tack, windN, edge){
   const zc = F.hike > 0.35 ? ESC.zPenjat : (F.posture === 'dret' ? ESC.zDret : ESC.zAssegut);
   const xm = S.wx*ESC.bracPatro*(1 + 0.55*F.hike);        // patró, m des del centre
   const r = S.roll, c = Math.cos(r), n = Math.sin(r);
-  const vent = tack*ESC.moment*F.side*windN*windN*(1 - edge)*c*c
+  const vent = tack*ESC.moment*F.sideEsc*windN*windN*(1 - edge)*c*c
              * Math.max(0, 1 - ESC.descarrega*Math.abs(r));
   // parell cap a estribord amb el pivot al buc s (+1 estribord, -1 babord)
   const parell = s => vent + g*( mb*(-s*b/2*c + ESC.zBuc*n)
@@ -1166,7 +1232,7 @@ function physics(dt){
     if(Math.abs(S.pulley) >= 1) S.pulleyV *= 0.2;   // topalls de la barra
     // el costat de la vela és el de la politja (mai al mig)
     const prevSide3 = S.sailSide;
-    if(S.pulley >  0.10) S.sailSide =  1;          // histèresi: la botavara ha de
+    if(S.pulley >  0.10) S.sailSide =  1;          // histèresi: la politja ha de
     else if(S.pulley < -0.10) S.sailSide = -1;     // creuar CLARAMENT el centre
     if(S.sailSide !== prevSide3 && nearRun) S.jibeCd = 1.2;
   }
@@ -1188,32 +1254,55 @@ function physics(dt){
   // politja, i el topall de 80° (la vela no passa mai per davant del través).
   const maxSail = sailGeoLimit();
   F.maxSail = maxSail;
-  let flap=false, sailAng, aoa;
-  if(maxSail >= absT - 6*D2R){
-    flap = true;
-    sailAng = Math.min(absT, maxSail);       // flamejant, però mai més enllà del límit
-    aoa = 0;
-  } else {
-    sailAng = maxSail;
-    aoa = absT - maxSail;
-  }
+  // VENT APARENT: la vela no veu el vent real sinó el que li arriba amb el patí en
+  // marxa. Ve més de proa i, cenyint, més fort; a l'empopada, més fluix.
+  // Unitats de S.speed: 1 = 6 kn.
+  const Wv = S.windKn/6;
+  const awX = Wv*Math.cos(absT) + S.speed, awY = Wv*Math.sin(absT);
+  const awa = Math.atan2(awY, awX);                          // 0 = de proa … π = de popa
+  const awsN = Wv > 1e-6 ? Math.hypot(awX, awY)/Wv : 0;      // relatiu al vent real
+  F.awa = awa; F.awsN = awsN;
+  // La vela s'obre fins on la deixa l'escota; si el vent aparent ve de més a proa
+  // que això, s'hi alinea i flameja.
+  let sailAng = Math.min(awa, maxSail);
   // VORA MORTA PROGRESSIVA: la vela no perd la força de cop als 30°. Entre 34°
   // i 18° l'empenta es va apagant fins a zero. Sense això el patí es queda
   // oscil·lant damunt de l'esglaó, sense arrencar mai.
   const noGo = clamp((absT - 18*D2R)/(16*D2R), 0, 1);   // 0 a 18° … 1 a 34°
-  if(absT < 22*D2R){ flap = true; aoa = 0; sailAng = Math.min(absT, maxSail); }
-  const aoaE = Math.min(aoa, Math.PI/2);
-  const stall = aoa > 62*D2R && absT < 115*D2R;
-
-  // --- Forces ---
-  let drive = 0, side = 0;
-  if(!flap){
-    drive = Math.sin(aoaE)*Math.sin(absT)
-          + Math.max(0,-Math.cos(absT))*(sailAng/(Math.PI/2))*1.02;   // empopada amb més empenta
-    if(stall) drive *= 0.35;
-    side = Math.sin(aoaE)*Math.max(0.12, Math.cos(absT*0.55));
+  // GIR DE LA VELA EN ALÇADA. Sense botavara, el puny d'escota només el baixa l'escota:
+  // amollada, el puny puja, la baluma s'obre i la part alta treballa més oberta que la
+  // baixa. sailGeoLimit() continua donant l'angle de baix; el gir s'hi suma cap amunt.
+  // I sota pressió s'obre sola (el puny cedeix): és el que descarrega les ratxes.
+  const pressio = (awX*awX + awY*awY)/4;                   // 1 = 12 kn de vent aparent
+  const twist = VELA.twist0 + VELA.twistK*(1 - clamp(S.sheet, 0, 1))
+              + Math.min(VELA.twistQmax, VELA.twistQ*Math.max(0, pressio - VELA.pressio0));
+  F.twist = twist;
+  // --- Forces --- respecte del vent aparent i amb la seva pressió, en tres franges
+  // (baix, mig, dalt; el pes és l'àrea de cada franja d'una vela triangular).
+  // Sustentació contínua amb l'òptim a VELA.opt i pèrdua progressiva; resistència
+  // induïda i de placa plana.
+  const q = awsN*awsN;
+  // Caçar a fons aplana la vela (el puny tiba el pujament): menys sustentació màxima.
+  const plana = 1 - VELA.aplana*Math.pow(clamp(S.sheet, 0, 1), 3);
+  let drive = 0, side = 0, momEsc = 0, aoa = 0, luff = 0, cl = 0;
+  for(const [h, w] of FRANGES){
+    const ang = Math.min(awa, sailAng + twist*h);
+    const a = absT < 22*D2R ? 0 : awa - ang;               // angle d'atac de la franja
+    const c = VELA.clMax*plana*corbaCL(a);
+    const d = VELA.cd0 + VELA.cdi*c*c + VELA.cdPla*Math.pow(Math.sin(a), VELA.cdExp);
+    const lat = Math.max(0, c*Math.cos(awa) + d*Math.sin(awa));
+    drive += w*(c*Math.sin(awa) - d*Math.cos(awa));
+    side += w*lat; momEsc += w*h*lat;                      // la de dalt escora més
+    aoa += w*a; luff += w*clamp(1 - a/VELA.luff, 0, 1); cl += w*c;
   }
-  if(absT < 34*D2R){ drive *= noGo; side *= noGo; }   // transició suau
+  drive *= q; side *= q*VELA.lateral;
+  // escora: moment respecte del d'una vela sense gir (centre vèlic a FRANGES_H)
+  let sideEsc = momEsc/FRANGES_H*q*VELA.lateral;
+  // Flameja de la vora del davant cap enrere (i de dalt cap avall, pel gir).
+  const flap = aoa < VELA.flap;
+  const stall = aoa > VELA.sobre;                          // passat de l'òptim: sobrecaçada
+  F.cl = cl; F.luff = luff;
+  if(absT < 34*D2R){ drive *= noGo; side *= noGo; sideEsc *= noGo; }   // transició suau
   const windN = S.windKn/12;
   // El patí té massa pròpia (~62 kg): el patró només desplaça una part del
   // centre de masses del conjunt. Per això el seu moment té rendiment decreixent.
@@ -1226,7 +1315,7 @@ function physics(dt){
   // Serveix per aturar el patí del tot (prevenció, cedir el pas). ---
   const feetIn = (S.wf > 0.55 && S.sheet < 0.15);
   F.neutral = feetIn;
-  if(feetIn){ drive *= 0.2; side *= 0.3; }      // el cos i els peus desventen la vela
+  if(feetIn){ drive *= 0.2; side *= 0.3; sideEsc *= 0.3; }      // el cos i els peus desventen la vela
   F.easedOnly = (!feetIn && S.sheet < 0.15);     // només amollada: frena, no atura
 
   // --- Sorra: en sortir, el patró empeny el patí caminant fins que sura.
@@ -1248,7 +1337,7 @@ function physics(dt){
 
   // --- Velocitat d'avanç ---
   // resistència: quadràtica (casc) + lineal (fricció; fa que s'aturi de veritat)
-  let acc = drive*0.52*windN*(1 - edge*0.70)
+  let acc = drive*VELA.empenta*windN*(1 - edge*0.70)
           - (S.speed*S.speed*0.44 + S.speed*0.07)
             *(1 - ESC.fregament*Math.max(bucFora(1), bucFora(-1)))
           - (flap?0.03:0) - sandDrag;
@@ -1263,10 +1352,18 @@ function physics(dt){
   // --- Deriva (velocitat lateral cap a sotavent) ---
   // Els dos flotadors ofereixen molta superfície lateral: la deriva és petita
   // i disminueix quan el patí té velocitat (el pla antideriva «treballa»).
+  // El patí no té orsa: el pla lateral són els bucs en V. Fan resistència de forma
+  // encara que vagin a poc a poc, i amb escora el buc de sotavent s'enfonsa i n'aguanta
+  // més. Abans la resistència només creixia amb la velocitat i, caçat de més i lent,
+  // el patí derivava 25-30°.
+  const enfonsa = Math.max(0, S.heel) + Math.abs(S.roll);
   let vLatTgt = (flap || feetIn) ? 0 :
-    side*windN*0.16*(1.15 - 0.55*clamp(S.speed/0.9,0,1))*(1 + 0.4*Math.max(0,S.heel));
-  S.vLat += (vLatTgt - S.vLat)*Math.min(1, dt*2);
-  if(Math.abs(S.vLat) < 0.004) S.vLat = 0;
+    side*windN/(DERIVA.forma + DERIVA.velocitat*S.speed)/(1 + DERIVA.enfonsa*enfonsa);
+  // Aproximació exponencial (no depèn dels fotogrames per segon). Abans s'arrodonia
+  // a zero tot el que era < 0,004: a 60 Hz el primer pas ja hi quedava i la deriva
+  // no arrencava mai; a 20 Hz sí. Ara només s'arrodoneix quan no hi ha força lateral.
+  S.vLat += (vLatTgt - S.vLat)*(1 - Math.exp(-2*dt));
+  if(vLatTgt === 0 && Math.abs(S.vLat) < 0.004) S.vLat = 0;
 
   // --- COS DISTRIBUÏT DEL PATRÓ ---
   // El navegant no és una massa puntual: va assegut o estirat i el seu cos
@@ -1289,7 +1386,7 @@ function physics(dt){
   // L'escora té dues fonts: la força lateral del VENT i el pes del patró.
   // El pes tot sol no pot bolcar el patí (la flotabilitat del buc l'aguanta):
   // per això la seva contribució està acotada. Només el vent el pot passar.
-  const heelWind = side*0.80*windN;
+  const heelWind = sideEsc*0.80*windN;
   // Els dos flotadors separats donen una enorme estabilitat de forma: seure
   // sobre un flotador (el normal al patí) escora poc i no ha de fer girar.
   const heelCrew = clamp(-counter*0.35*crewF, -0.75, 0.42);
@@ -1391,7 +1488,7 @@ function physics(dt){
   // CUL A LA VELA, DRET AL PAL. Abans de passar el vent: dret a proa i amb l'escota
   // caçada al màxim, el patró empeny la vela amb el cul i hi fa bossa; el vent la
   // premsa i la proa acaba de pujar. Només a la fula: abans la vela encara treballa.
-  F.culDret = !F.accompanying && S.wf > 0.5 && S.sheet > 0.85 && absT < 24*D2R;
+  F.culDret = !F.accompanying && S.wf > 0.5 && S.sheet > 0.85 && F.flap && absT < 40*D2R;
   if(F.culDret){
     const contra = clamp(Math.sin(t + S.boomDir) * tack, 0, 1);
     torque += -tack * windN * 2.2 * contra * 0.45 * (0.22 + 0.78*flow);
@@ -1500,7 +1597,7 @@ function physics(dt){
   }
   if(S.py < -CH.len - L*0.6) S.beyondMouth = true;
 
-  F.sailAng=sailAng; F.aoa=aoa; F.flap=flap; F.stall=stall; F.drive=drive; F.side=side;
+  F.sailAng=sailAng; F.aoa=aoa; F.flap=flap; F.stall=stall; F.drive=drive; F.side=side; F.sideEsc=sideEsc;
 
   // Suavitza l'angle dibuixat de la vela → la trasluixada és un gir, no un salt.
   // La vela no pot girar més ràpid del que el drap i l'escota permeten, ni
@@ -2449,18 +2546,19 @@ function render3D(dt){
       }
     }
     if(clewB && tackB){
-      // La tela s'infla cap on l'empeny el vent, no cap on és la botavara.
-      // Amb la vela A LA CONTRA (virada), la botavara és a una banda però el
+      // La tela s'infla cap on l'empeny el vent, no cap on és el puny d'escota.
+      // Amb la vela A LA CONTRA (virada), el puny és a una banda però el
       // vent premsa l'altra cara: la panxa ha d'anar a l'inrevés.
       const tRel = normA(S.windFrom - S.heading);
       const sideS = -Math.sign(Math.sin(tRel + S.boomDir) || 0.001) || (S.sailSide || 1);
-      const flapW = F.flap ? Math.sin(S.time*11)*L*0.02 : 0;
-      const bellyPx = sideS*(L*0.09 + (F.flap?0:L*0.05) + flapW) * FL/clewB.d;
+      const fv = formaVela();
+      const bellyPx = sideS*(fv.panxa + fv.flameig)*L * FL/clewB.d;
+      const obrePx = Math.sign(S.boomDir)*fv.obre*L * FL/clewB.d;   // la baluma oberta
       // la BALUMA és lleugerament CÒNCAVA: el punt de control tira cap al pal
       const hx=(mastT.x+clewB.x)/2, hy=(mastT.y+clewB.y)/2;
       const vx=tackB.x-hx, vy=tackB.y-hy, vl=Math.hypot(vx,vy)||1;
       const buit = RIG.buit*L*FL/clewB.d;
-      const midX = hx + bellyPx + vx/vl*buit, midY = hy + vy/vl*buit;
+      const midX = hx + bellyPx + obrePx + vx/vl*buit, midY = hy + vy/vl*buit;
       const ftX = (clewB.x+tackB.x)/2 + bellyPx*0.45, ftY = (clewB.y+tackB.y)/2;
       const velaPath = () => {
         cx2d.beginPath();
@@ -4349,7 +4447,7 @@ function rigPoints(){
   // direcció de sotavent per al drap: la marca l'angle REAL de la vela (continu),
   // no l'amura (que canvia de signe de cop). Així la panxa no fa cap salt.
   // costat cap on s'infla: el que premsa el vent (amb la vela a la contra és
-  // l'oposat al de la botavara)
+  // l'oposat al del puny d'escota)
   const tRel2 = normA(S.windFrom - S.heading);
   const sgnSail = -Math.sign(Math.sin(tRel2 + S.boomDir) || 0.001) || 1;
   const centred = clamp(Math.abs(S.boomDir)/(12*D2R), 0, 1);  // 0 = vela al mig
@@ -4382,20 +4480,23 @@ function rigPoints(){
   const Z = patroZen(), espE = Z.aPati(MANS.k*Z.shX, Z.shY);
   const mE = maEscota([espE[0], espE[1], ap.pulBanc[2]]);
   const handsPt = rot(mE[0], mE[1]);
-  const power = F.flap ? 0 : clamp(Math.sin(Math.min(F.aoa,Math.PI/2)),0,1);
-  let belly = (0.10 + power*0.16)*L;
-  if(F.flap) belly = Math.sin(S.time*15)*L*0.05;                    // flameig
-  belly *= centred;      // amb la vela al mig (trasluixant) el drap no té panxa
+  // la mateixa forma que la perspectiva (formaVela); amb la vela al mig (trasluixant)
+  // el drap no té panxa
+  const fv = formaVela();
+  const belly = (fv.panxa + fv.flameig)*L*centred;
+  const obre = fv.obre*L*centred;
+  const sgnB = Math.sign(S.boomDir) || 1;
+  const openDir = { x:Math.cos(h)*sgnB, y:Math.sin(h)*sgnB };
   return {tackPt, clewPt, headPt, peuPt, clewDeck, pulleyPt, carroA, carroB, bancPt, handsPt, barA, barB,
-          leeDir, belly, shroudL, shroudR, shroudML, shroudMR, forestay, headLocal, upH};
+          leeDir, belly, obre, openDir, shroudL, shroudR, shroudML, shroudMR, forestay, headLocal, upH};
 }
 const lerpP = (a,b,t)=>({x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t});
 
 function sailPath3D(R){
   const luffC  = { x:lerpP(R.tackPt,R.headPt,.5).x + R.leeDir.x*R.belly*0.15,
                    y:lerpP(R.tackPt,R.headPt,.5).y + R.leeDir.y*R.belly*0.15 };
-  const leechC = { x:lerpP(R.headPt,R.clewPt,.5).x + R.leeDir.x*R.belly,
-                   y:lerpP(R.headPt,R.clewPt,.5).y + R.leeDir.y*R.belly - L*0.03 };
+  const leechC = { x:lerpP(R.headPt,R.clewPt,.5).x + R.leeDir.x*R.belly + R.openDir.x*R.obre,
+                   y:lerpP(R.headPt,R.clewPt,.5).y + R.leeDir.y*R.belly + R.openDir.y*R.obre - L*0.03 };
   const footC  = { x:lerpP(R.clewPt,R.tackPt,.5).x + R.leeDir.x*R.belly*0.45,
                    y:lerpP(R.clewPt,R.tackPt,.5).y + R.leeDir.y*R.belly*0.45 };
   cx2d.beginPath();
