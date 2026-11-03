@@ -576,7 +576,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v24</div>
+  <div id="versio">Versió v25</div>
 </div></div>
 
 <script>
@@ -808,18 +808,21 @@ const RIG = {
   // retorn: de la barra de popa el cap torna endavant i puja a la mà.
   bancEsc:    2,
   pulBancAlt: 0.015,   // la politja seu damunt la bancada: 8 cm, no un pal
-  // perfil del fons del buc (t de proa a popa, calat relatiu): entrada fina a
-  // proa, panxa llarga i popa que torna a pujar
-  rocaia: [[0,0],[0.06,0.48],[0.15,0.72],[0.30,0.88],[0.50,0.97],
-           [0.70,1.00],[0.88,0.97],[1,0.60]],
+  // PERFIL DEL FONS (quilla corbada), mesurat sobre una foto de perfil d'un patí a la
+  // platja: la regala és recta i el fons puja cap a les dues puntes. A proa, una corba
+  // llarga fins al 30% de l'eslora; a popa, el fons s'aixeca un 45% des del 62% i
+  // l'extrem tanca en un quart d'el·lipse (25 cm), sense mirall.
+  quilla: { proa: 0.30, popa0: 0.62, popaPuja: 0.45, tanca: 0.045 },
 };
-// calat relatiu del fons a la fracció d'eslora t (0 = proa, 1 = popa)
+// calat relatiu del fons a la fracció d'eslora t (0 = proa, 1 = popa): l'alçada del
+// costat, de la coberta al fons. Val 0 a les dues puntes, que tanquen arrodonides.
 function calatRel(t){
-  const R = RIG.rocaia;
+  const Q = RIG.quilla;
   t = clamp(t, 0, 1);
-  let i = 1; while(i < R.length && R[i][0] < t) i++;
-  const a = R[i-1], b = R[i];
-  return a[1] + (b[1]-a[1]) * (t-a[0]) / (b[0]-a[0]);
+  const proa = 1 - Math.pow(1 - Math.min(t/Q.proa, 1), 2);
+  const popa = 1 - Q.popaPuja*Math.pow(Math.max(0, t - Q.popa0)/(1 - Q.popa0), 2);
+  const te = 1 - Q.tanca, tanca = t < te ? 1 : Math.sqrt(Math.max(0, 1 - Math.pow((t - te)/Q.tanca, 2)));
+  return Math.sqrt(proa)*popa*tanca;
 }
 
 /* MANS DEL PATRÓ. Dues regles, com navega de debò: una mà sempre a l'escota, en
@@ -2383,9 +2386,9 @@ function render3D(dt){
   }
   // kLat: fracció d'amplada (1=coberta, ~0.35=quilla estreta)
   // kLon: fracció d'eslora (rodes de proa/popa inclinades cap endins a la quilla)
-  const HULL_PERSP = puntesRodones([[0,-1],[0.72,-0.78],[1.10,-0.30],[1.08,0.20],[1.05,0.62],[0.72,0.90],[0,1],
-      [-0.72,0.90],[-1.05,0.62],[-1.08,0.20],[-1.10,-0.30],[-0.72,-0.78]].map(([u,v]) => [u*0.042, v*0.5]))
-    .map(([x,y]) => [x/0.042, y/0.5]);
+  // El mateix contorn mostrejat de les zenitals (CONTORN_BUC): amb els 12 punts de control
+  // el buc es veia a facetes i la quilla corbada només tenia 6 estacions.
+  const HULL_PERSP = CONTORN_BUC.map(([x,y]) => [x/0.042, y/0.5]);
   function hullRaw(cxh, kLat=1, kLon=1){
     const w = f => cxh + f*hw3*kLat;
     const y = f => f*hl3*kLon;
@@ -2518,11 +2521,11 @@ function render3D(dt){
   // per estribord de pantalla): costat lluminós càlid, costat d'ombra fosc.
   for(const cxh of [-hb3, hb3]){
     const rawT = hullRaw(cxh, 1, 1);                 // coberta: contorn complet
-    const rawB = hullRaw(cxh, 0.36, 0.98);           // flotació: quilla estreta
+    const rawB = hullRaw(cxh, 0.36, 1);              // flotació: quilla estreta
     const raw  = rawT;                                // (les normals es calculen a coberta)
-    // ROCAIA: el fons no és pla. Puja a proa (entrada fina) i torna a pujar a
-    // popa, seguint el perfil mesurat sobre la làmina. Abans el fons era una
-    // planxa horitzontal i el buc semblava una caixa.
+    // QUILLA CORBADA: el fons puja cap a les dues puntes, i més cap a popa (calatRel),
+    // fins a tancar amb la coberta. Abans s'aturava al 98% de l'eslora i al 60% de
+    // l'alçada, i la popa acabava en un mirall pla.
     const bot = rawB.map(([bx,by])=>
       pjB(bx, by, HULLH*(1 - calatRel((by/hl3 + 1)/2))));
     const top = rawT.map(([bx,by])=>pjB(bx,by,HULLH));
@@ -2543,7 +2546,9 @@ function render3D(dt){
       cx2d.closePath();
       cx2d.fillStyle = mixc('#4a2c10', '#c98a4c', lit);
       cx2d.fill();
-      cx2d.strokeStyle = 'rgba(40,20,6,.25)'; cx2d.lineWidth=0.8; cx2d.stroke();
+      // la junta, del mateix color: amb el contorn mostrejat, una vora fosca a cada
+      // segment feia ratlles verticals al costat
+      cx2d.strokeStyle = cx2d.fillStyle; cx2d.lineWidth=0.8; cx2d.stroke();
     }
     // 2) línia de flotació (ancora el casc a l'aigua)
     {
@@ -3930,13 +3935,13 @@ function drawBoat(){
   // --- COSTATS DELS BUCS (gruix 2.5D, extrudit cap al costat oposat al sol) ---
   // El contorn s'escombra de l'aigua a la coberta, del mullat fosc a la fusta:
   // una sola còpia desplaçada es llegia com un pla amb una ombra a sota.
-  for(let k=9;k>=1;k--){
-    const u = k/9, p = L*0.075*u;
-    cx2d.save(); cx2d.translate(dwx*p, dwy*p);
+  // Cada punt baixa segons el calat del fons (calatRel): el costat es fa baix cap a les
+  // puntes i hi tanca arrodonit. Còpies senceres desplaçades feien un mirall a popa.
+  for(let k=12;k>=1;k--){
+    const u = k/12, p = L*0.075*u;
     cx2d.fillStyle = `rgb(${132-90*u|0},${82-58*u|0},${38-26*u|0})`;
-    hullPath(-hb, hl, hw); cx2d.fill();
-    hullPath( hb, hl, hw); cx2d.fill();
-    cx2d.restore();
+    hullPath(-hb, hl, hw, dwx*p, dwy*p); cx2d.fill();
+    hullPath( hb, hl, hw, dwx*p, dwy*p); cx2d.fill();
   }
 
   // --- BUCS (coberta), amb llum direccional coherent ---
@@ -4515,12 +4520,14 @@ function escoraZenital(dibuixa){
   dibuixa();
   cx2d.restore();
 }
-function hullPath(cxh, hl, hw){
+function hullPath(cxh, hl, hw, ox = 0, oy = 0){
   // Forma segons el dibuix: cos AMPLE i arrodonit al mig, amb la proa i la
   // popa que s'estiren en punta llarga (com una fulla), acabada en un arc petit.
+  // (ox, oy): desplaçament del fons, que es redueix amb el calat cap a les puntes.
   cx2d.beginPath();
   CONTORN_BUC.forEach(([x,y],i) => {
-    const px = cxh + x/0.042*hw, py = y/0.5*hl;
+    const c = (ox || oy) ? calatRel(y + 0.5) : 0;
+    const px = cxh + x/0.042*hw + ox*c, py = y/0.5*hl + oy*c;
     i ? cx2d.lineTo(px, py) : cx2d.moveTo(px, py);
   });
   cx2d.closePath();
