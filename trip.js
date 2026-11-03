@@ -543,8 +543,8 @@ async function backupOut(){
     const settings = {}; SETTINGS_KEYS.forEach(k => { const v = store.get(k); if(v != null) settings[k] = v; });
     const data = {app:"Ocata Vent", format:1, exportedAt:new Date().toISOString(), settings, trips};
     const d = new Date(), name = `ocata-vent-copia_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], {type:"application/json"})); a.download = name;
-    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    const err = await saveFile(name, JSON.stringify(data), "application/json");
+    if(err){ msg(err); return; }
     msg(`Còpia preparada: ${trips.length === 1 ? "1 sortida" : trips.length+" sortides"} i les preferències (${name}). Guarda-la al Drive o envia-te-la per correu.`);
   }catch(e){ msg("No s'ha pogut fer la còpia."); }
 }
@@ -671,14 +671,15 @@ async function showTrip(id, ask){
       <p class="note" style="margin-top:8px">Angle entre el rumb sobre el fons (GPS) i la direcció del vent: cenyida &lt; 60°, través 60–110°, llarg 110–150°, popa &gt; 150°. No té en compte el corrent ni l'abatiment.</p></article>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" type="button" id="expGpx">Exporta GPX</button><button class="btn" type="button" id="expCsv">Exporta CSV</button>
-</div>
+</div><p class="note" id="expMsg" hidden></p>
     <div class="tr-shares"><div id="clubShare"></div>${shareNow ? `<div id="trShare"></div>` : ""}</div>
     <div id="delTrip"></div>`;
   window.OV_CLUB?.shareBtn($("clubShare"), t);
   if(shareNow) window.OV_SHARE.button($("trShare"), t);
   $("backList").onclick = renderList;
-  $("expGpx").onclick = () => download(t, "gpx");
-  $("expCsv").onclick = () => download(t, "csv");
+  const expMsg = m => { const e = $("expMsg"); if(e){ e.textContent = m || ""; e.hidden = !m; } };
+  $("expGpx").onclick = async () => expMsg(await download(t, "gpx"));
+  $("expCsv").onclick = async () => expMsg(await download(t, "csv"));
   $("trMax").onclick = () => trFullOpen();
   slideConfirm($("delTrip"), "Llisca per esborrar", async () => { await DB.del(t.id); window.OV_CLOUD?.deleted(t); renderList(); });
   if(detailMap){ detailMap.remove(); detailMap = null; }
@@ -851,8 +852,25 @@ function download(t, kind){
     body = "hora,lat,lon,precisio_m,velocitat_kn,rumb,vent_kn,ratxa_kn,dir_vent\n" + t.pts.map(p => { const w = windNear(t, p.t) || {};
       return [new Date(p.t).toISOString(), p.lat, p.lon, p.acc, p.sog ?? "", p.cog ?? "", w.wind!=null?w.wind.toFixed(1):"", w.gust!=null?w.gust.toFixed(1):"", w.dir ?? ""].join(","); }).join("\n");
   }
-  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([body], {type})); a.download = base+"."+kind;
+  return saveFile(base + "." + kind, body, type);
+}
+/* Desa un fitxer de text. Navegador: descàrrega normal. APK: la WebView no descarrega (ni blob: ni a.download),
+   així que es desa a la memòria cau de l'app (@capacitor/filesystem) i s'obre el full de compartir d'Android
+   (@capacitor/share) per desar-lo a Fitxers o al Drive o enviar-lo. Torna el missatge per al soci («» si no cal). */
+async function saveFile(name, body, type){
+  const CAP = window.Capacitor;
+  if(CAP && CAP.isNativePlatform && CAP.isNativePlatform()){
+    const has = n => CAP.isPluginAvailable ? CAP.isPluginAvailable(n) : !!(CAP.Plugins && CAP.Plugins[n]);
+    if(!has("Filesystem") || !has("Share")) return "Aquesta versió de l'app no pot desar fitxers. Instal·la l'APK nou.";
+    try{
+      const w = await CAP.Plugins.Filesystem.writeFile({path:name, data:body, directory:"CACHE", encoding:"utf8"});
+      await CAP.Plugins.Share.share({files:[w.uri], title:name, dialogTitle:"Desa o envia " + name});
+      return "";
+    }catch(e){ const m = String(e && (e.message || e.errorMessage) || e); return /cancel/i.test(m) ? "" : "No s'ha pogut desar el fitxer: " + m; }
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([body], {type})); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  return "";
 }
 
 /* ---------- connexions ---------- */
