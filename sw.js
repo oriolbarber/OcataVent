@@ -1,5 +1,5 @@
 // Mar del Masnou: guarda l'app per obrir-la sense connexió. Les dades meteo sempre van a la xarxa.
-const CACHE = "ocatavent2-v179";
+const CACHE = "ocatavent2-v180";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./app.css?v=192", "./native.js?v=114", "./clubs.js?v=1", "./boats.js?v=3", "./app.js?v=151", "./cfg.js?v=6", "./ajuda.js?v=3", "./trip.js?v=134", "./share.js?v=4", "./maps.js?v=106", "./llocs.js?v=8", "./fx.js?v=1", "./limit.js?v=1", "./windmap.js?v=113", "./prep.js?v=106", "./cloud.js?v=125", "./amics.js?v=116", "./club.js?v=149", "./admin.js?v=115", "./avisos.js?v=208", "./planol-core.js?v=6", "./sos.js?v=2",
   "./icons/logo.svg?v=3", "./icons/icon-192.png?v=3", "./icons/icon-512.png?v=3", "./icons/apple-touch-icon.png?v=3"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, {cache:"reload"})))).then(() => self.skipWaiting())); });

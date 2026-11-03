@@ -290,10 +290,11 @@
 #joy.visible{ display:block; }
 /* A les zenitals és opcional i va a baix a l'esquerra, damunt dels consells. La
    mateixa peça: el bottom i el left els posa el JS, que hi depenen. */
-#joy.zen{ left:52px; transform:none; width:96px; height:96px; }
+#joy.zen{ left:52px; transform:none; width:96px; height:96px;
+  bottom:calc(10px + env(safe-area-inset-bottom)); }
 #joy.zen #joyKnob{ width:36px; height:36px; margin:-18px 0 0 -18px; }
 #joy.zen .joyEt{ font-size:7px; }
-#btnJoy{ position:fixed; left:10px; width:36px; height:36px; z-index:7; display:none;
+#btnJoy{ position:fixed; left:10px; bottom:calc(10px + env(safe-area-inset-bottom)); width:36px; height:36px; z-index:7; display:none;
   align-items:center; justify-content:center; cursor:pointer; color:var(--sorra);
   border:1px solid rgba(232,217,184,.3); touch-action:manipulation }
 #btnJoy.visible{ display:flex; }
@@ -575,7 +576,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v20</div>
+  <div id="versio">Versió v21</div>
 </div></div>
 
 <script>
@@ -4710,7 +4711,7 @@ addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 // El pes ES QUEDA on el deixes (com amb les tecles WASD).
 const joy = document.getElementById('joy'), joyKnob = document.getElementById('joyKnob');
 const JOY_R = 35;                       // recorregut màxim del botó, en px
-const joySt = { id:null, x:0, y:0 };
+const joySt = { id:null, x:0, y:0, cx:0, cy:0 };
 // Plegat de sortida: a les zenitals el gest principal és tocar el patró i així el
 // mar queda lliure. Sense localStorage, l'estat dura fins que es recarrega.
 let joyZen = false;
@@ -4718,9 +4719,9 @@ function joyKnobTo(nx, ny){             // nx,ny ∈ [-1,1]
   joyKnob.style.transform = `translate(${(nx*JOY_R).toFixed(1)}px, ${(-ny*JOY_R).toFixed(1)}px)`;
 }
 function joyFrom(e){
-  const r = joy.getBoundingClientRect();
-  const cx = r.left + r.width/2, cy = r.top + r.height/2;
-  let dx = (e.clientX - cx)/JOY_R, dy = (cy - e.clientY)/JOY_R;   // dy>0 = amunt
+  // El centre es fixa en tocar: llegir-lo a cada moviment convertia qualsevol canvi
+  // de la pantalla en un salt del pes, amb el dit quiet.
+  let dx = (e.clientX - joySt.cx)/JOY_R, dy = (joySt.cy - e.clientY)/JOY_R;   // dy>0 = amunt
   const m = Math.hypot(dx, dy);
   if(m > 1){ dx /= m; dy /= m; }                                   // dins del cercle
   joySt.x = dx; joySt.y = dy;
@@ -4731,6 +4732,8 @@ function joyFrom(e){
   }
 }
 joy.addEventListener('pointerdown', e=>{
+  const r = joy.getBoundingClientRect();
+  joySt.cx = r.left + r.width/2; joySt.cy = r.top + r.height/2;
   joySt.id = e.pointerId; joy.classList.add('agafat');
   joy.setPointerCapture(e.pointerId); joyFrom(e); e.preventDefault();
 });
@@ -4953,7 +4956,7 @@ function rumbName(absTdeg){
 // ── ZONA ÚTIL: fins on pot baixar el patí sense quedar tapat per la interfície.
 // Mesura els panells inferiors que trepitgen la columna central (joystick i
 // barra de consells). Es recalcula en redimensionar i de tant en tant.
-let UI_BOT = 0, uiTick = 0, PISTA_TOP = 0, SAFE_T = 0;
+let UI_BOT = 0, uiTick = 0, SAFE_T = 0;
 function calcUiBot(){
   const H2 = innerHeight, W2 = innerWidth;
   let y = H2*0.95;
@@ -4961,11 +4964,6 @@ function calcUiBot(){
     const b = document.getElementById('botons');
     const br = b && b.getBoundingClientRect();
     SAFE_T = (br && br.height > 4) ? br.top : 8;
-  }
-  {                                    // alçada real de la barra de consells
-    const p = document.getElementById('pista');
-    const pr = p && p.getBoundingClientRect();
-    PISTA_TOP = (pr && pr.height > 4) ? pr.top : H2 - 18;
   }
   for(const id of ['joy','pista']){
     const el = document.getElementById(id);
@@ -5004,18 +5002,15 @@ function updateHUD(){
   const bJoy = $('btnJoy');
   bJoy.classList.toggle('visible', zenMar);
   bJoy.classList.toggle('on', joyZen);
-  if(zenMar){
-    // la barra de consells fa una o dues línies: es llegeix cada vegada
-    const baix = Math.round(innerHeight - PISTA_TOP + 6) + 'px';
-    joy.style.bottom = bJoy.style.bottom = baix;
+  if(zenMar && joySt.id === null){      // agafat, res no el pot moure de sota el dit
     // amb el control del pal desplegat en pantalla baixa, tot s'hi posa al costat
     const ra = $('rakeBox').getBoundingClientRect();
-    const x0 = ra.bottom > PISTA_TOP - 110 ? ra.right + 6 : 10;
+    const x0 = ra.bottom > innerHeight - 116 ? ra.right + 6 : 10;
     bJoy.style.left = x0 + 'px';
     joy.style.left = (x0 + 42) + 'px';
     // en apaïsat la VELA també és a baix a l'esquerra: es fa enllà
     $('diag').style.left = (joyZen && innerHeight <= 560) ? (x0 + 146) + 'px' : '';
-  } else { joy.style.bottom = ''; joy.style.left = ''; $('diag').style.left = ''; }
+  } else if(!zenMar){ joy.style.left = ''; $('diag').style.left = ''; }
   const bEnt = document.getElementById('btnEntrar');
   if(bEnt) bEnt.classList.toggle('amunt', joyOn && S.mode === 'platja');
   // quan no s'arrossega, el botó mostra ON ÉS realment el patró (retorn visual)
@@ -5043,42 +5038,20 @@ function updateHUD(){
 }
 
 /* ------------------- PISTES ------------------- */
-let lastHint = '', hintHold = 0;
+// Navegant no hi ha text: no es pot llegir mentre es juga. Només queda on no s'està
+// navegant. El que cal saber a mar ho diu un cartell, i només quan passa.
+let lastHint = '';
+let avisLimit = false;
 function updateHints(dt){
-  hintHold -= dt;
-  let to='', txt='';
-  if(S.mode==='platja'){ txt='Arrossega el patí i toca lluny per orientar-lo.'; }
-  else if(S.mode==='final'){ txt='Maniobra acabada. Tornem a la platja…'; }
-  else if(S.capsized>0){ to='perill'; txt='Has bolcat: massa escora. Compensa amb el pes a barlovent abans no sigui tard.'; }
-  else if(S.atEdge){ to='avis'; txt='Has arribat al límit de 3 milles: el patí perd empenta. Vira i posa rumb cap a la costa.'; }
-  else if(F.neutral){ txt='POSICIÓ NEUTRA: pes a proa, peus a l\u2019aigua i vela amollada a tope. El patí s\u2019atura. Serveix per cedir el pas o evitar un xoc.'; }
-  else if(F.easedOnly && S.speed>0.05){ txt='Vela amollada del tot: frenes. Per aturar-te de veritat, vés a proa i posa els peus a l\u2019aigua.'; }
-  else if(Math.abs(S.roll) > 0.60){ to='perill'; txt='Massa escora! Mou el pes a barlovent (el costat d\u2019on ve el vent) o amolla escota.'; }
-  else if(F.absT < 36*D2R && F.absT > 20*D2R && S.speed < 0.35 && S.sheet > 0.6){
-    to='avis'; txt='Vas pinçat: massa a prop del vent amb l\u2019escota caçada. Amolla una mica o mou el pes a popa (segueix la línia verda) per agafar velocitat.';
-  }
-  else if(F.accompanying){ txt='Estàs acompanyant la vela amb el cos: aguanta el pes a popa i deixa que passi de banda. Després ajup-te i trima al nou bord!'; }
-  else if(F.escaping){ to='avis'; txt='Ets a la vora morta. Amolla l\u2019escota i vés a popa: el vent empeny la vela de costat i el patí gira. Quan surtis, caça per agafar velocitat.'; }
-  else if(F.absT < 30*D2R && S.speed < 0.15){ to='avis'; txt='Ets a la vora morta, proa al vent. Per sortir-ne: pes a popa i escota amollada (arribar).'; }
-  else if(F.flap && F.absT > 32*D2R){ to='avis'; txt='La vela flameja i no fa força: caça una mica l\u2019escota fins que agafi forma.'; }
-  else if(F.stall){ to='avis'; txt='Vela sobrecaçada per aquest rumb: frena i escora massa. Amolla fins que torni la potència.'; }
-  else if(S.roll*F.tack < -0.10){ to='avis'; txt='Escores a barlovent: torna el pes cap al centre o caça una mica.'; }
-  else if(Math.abs(S.rake) > 0.5 && S.speed > 0.15){
-    txt = S.rake>0 ? 'Pal inclinat a POPA: el patí tira sol cap al vent (orsador). Va bé amb poc vent.'
-                   : 'Pal inclinat a PROA: el patí tendeix a arribar. Útil amb molt vent, per no orsar de més.';
-  }
-  else if(F.torque > 0.35){ txt='Estàs orsant: pes a proa, escora a sotavent o vela caçada apropen la proa al vent.'; }
-  else if(F.torque < -0.35){ txt='Estàs arribant: pes a popa, patí pla o vela amollada allunyen la proa del vent.'; }
-  else { txt='Rumb estable. Juga amb el pes (punt vermell) i l\u2019escota per veure com gira el patí.'; }
-
-  if(txt !== lastHint && hintHold <= 0){
-    const p = $('pista');
-    p.classList.toggle('avis', to==='avis');
-    p.classList.toggle('perill', to==='perill');
-    $('pistaTxt').textContent = txt;
-    lastHint = txt; hintHold = 1.6;
-  }
+  if(S.atEdge && !avisLimit) banner('Límit de 3 milles', 'Vira i posa rumb cap a la costa', 'mal');
+  avisLimit = !!S.atEdge;
+  const quiet = S.mode==='platja' || S.mode==='final';
+  $('pista').style.display = quiet ? '' : 'none';
+  const txt = S.mode==='platja' ? 'Arrossega el patí i toca lluny per orientar-lo.'
+                                : 'Maniobra acabada. Tornem a la platja…';
+  if(quiet && txt !== lastHint){ $('pistaTxt').textContent = txt; lastHint = txt; }
 }
+
 
 
 
