@@ -548,7 +548,7 @@
   <h2>Xuleta del patró</h2>
   <div class="regla"><span class="ic">⬆️</span><span><b>Orsar:</b> pes a proa · escora a sotavent · caçar.</span></div>
   <div class="regla"><span class="ic">⬇️</span><span><b>Arribar:</b> pes a popa · patí pla · amollar.</span></div>
-  <div class="regla"><span class="ic">🪁</span><span>Si la vela <b>flameja</b>, no fa força: caça o arriba. Si va <b>sobrecaçada</b>, frena i escora: amolla.</span></div>
+  <div class="regla"><span class="ic">🪁</span><span>Si la vela <b>flameja</b>, no fa força: caça o arriba. Si va <b>sobrecaçada</b>, frena i escora: amolla. A l'empopada, amollada del tot, va <b>oberta al màxim</b> (OBERTA MÀX.): no es pot obrir més i està bé.</span></div>
   <div style="display:flex;gap:8px">
     <button class="btn sec" id="btnTornarMenu" style="flex:1">‹ MENÚ</button>
     <button class="btn sec" id="btnTancarReptes" style="flex:1">TANCAR</button>
@@ -592,7 +592,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v27</div>
+  <div id="versio">Versió v28</div>
 </div></div>
 
 <script>
@@ -1075,6 +1075,7 @@ const VELA = {
   // Marge per canviar d'estat: el flameig treu deriva i frena, i això torna a obrir
   // l'angle d'atac. Sense marge es quedava clavat al llindar canviant a cada pas.
   histeresi: 0.5*D2R,
+  topall: 2*D2R,   // a menys d'això dels 80°, la vela ja és al topall (només per al marcador)
   empenta: 0.70,   // força d'avanç → acceleració
   // Força lateral → escora, buc alçat i deriva. Escala que manté el calibratge de
   // l'Oriol (barlovent a través s'alça cap als 12 kn): amb el model anterior, a
@@ -1261,6 +1262,9 @@ function aeroVela(absT){
   const hi = VELA.histeresi;
   const flap = aoa < VELA.flap + (F.flap ? hi : -hi);
   const stall = aoa > VELA.sobre + (F.stall ? -hi : hi);   // passat de l'òptim: sobrecaçada
+  // AL TOPALL: l'escota ja deixa la vela als 80° i no es pot obrir més. Passat de l'òptim
+  // i al topall (l'empopada) no és culpa de l'escota: el rètol diu OBERTA MÀX., no SOBRECAÇADA.
+  F.topall = maxSail > SAIL_MAX - VELA.topall + (F.topall ? -hi : hi);
   F.cl = cl; F.luff = luff;
   if(absT < 34*D2R){ drive *= noGo; side *= noGo; sideEsc *= noGo; }   // transició suau
   return {maxSail, sailAng, noGo, drive, side, sideEsc, aoa, flap, stall};
@@ -5037,7 +5041,7 @@ addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 // El pes ES QUEDA on el deixes (com amb les tecles WASD).
 const joy = document.getElementById('joy'), joyKnob = document.getElementById('joyKnob');
 const JOY_R = 35;                       // recorregut màxim del botó, en px
-const joySt = { id:null, x:0, y:0, cx:0, cy:0 };
+const joySt = { id:null, x:0, y:0, cx:0, cy:0, px:0, py:0, vx:0, vy:0 };   // v: el dit, en el marc del patí
 // Plegat de sortida: a les zenitals el gest principal és tocar el patró i així el
 // mar queda lliure. Sense localStorage, l'estat dura fins que es recarrega.
 let joyZen = false;
@@ -5072,18 +5076,33 @@ function joyKnobTo(nx, ny){             // nx = banda, ny = proa(+)/popa(−), �
   joyKnob.style.left = (50 + nx*CREW_X()/L*100).toFixed(2) + '%';
   joyKnob.style.top  = (50 + crewY(ny)/L*100).toFixed(2) + '%';
 }
-function joyFrom(e){
+// Pantalla → marc del patí que es veu ara (dx cap a la dreta, dy cap amunt)
+function joyAlPati(dx, dy){
+  const a = angJoy(), ca = Math.cos(a), sa = Math.sin(a);
+  return [dx*ca - dy*sa, dx*sa + dy*ca];
+}
+// El gest es llegeix en el marc del patí que es veu (cap a la proa dibuixada, pes a
+// proa), però per PASSOS: en tocar, la posició del dit; després, cada moviment del dit
+// girat amb l'angle d'aquell moment. A la v27 es tornava a llegir tota la posició amb
+// l'angle nou: virant, el dit quiet a «popa» passava a voler dir «una banda» i el pes
+// se n'anava a barlovent (l'Oriol: el patí no orsava i la vela tornava). Ara el dit
+// quiet deixa el pes on és, i si el patí no gira és exactament el gest de sempre.
+function joyFrom(e, inici){
   // El centre es fixa en tocar: llegir-lo a cada moviment convertia qualsevol canvi
   // de la pantalla en un salt del pes, amb el dit quiet.
-  let dx = (e.clientX - joySt.cx)/JOY_R, dy = (joySt.cy - e.clientY)/JOY_R;   // dy>0 = amunt
+  if(inici){
+    [joySt.vx, joySt.vy] = joyAlPati((e.clientX - joySt.cx)/JOY_R, (joySt.cy - e.clientY)/JOY_R);
+  } else {
+    const [px, py] = joyAlPati((e.clientX - joySt.px)/JOY_R, (joySt.py - e.clientY)/JOY_R);
+    joySt.vx += px; joySt.vy += py;
+  }
+  joySt.px = e.clientX; joySt.py = e.clientY;
+  // el dit virtual (en el marc del patí) pot sortir del cercle; el pes, no
+  let dx = joySt.vx, dy = joySt.vy;
   const m = Math.hypot(dx, dy);
   if(m > 1){ dx /= m; dy /= m; }                                   // dins del cercle
-  // el gest es llegeix en el marc del patí que es veu: cap a la proa dibuixada, pes a proa
-  const a = angJoy(), ca = Math.cos(a), sa = Math.sin(a);
-  const bx = dx*ca - dy*sa, by = dx*sa + dy*ca;
-  joySt.x = bx; joySt.y = by;
-  joyKnobTo(bx, by);
-  dx = bx; dy = by;
+  joySt.x = dx; joySt.y = dy;
+  joyKnobTo(dx, dy);
   if(S.mode === 'mar'){                  // navegant: el joystick MOU EL PES
     S.wxT = clamp(dx, -1, 1);
     S.wfT = clamp(dy, -1, 1);
@@ -5093,7 +5112,7 @@ joy.addEventListener('pointerdown', e=>{
   const r = joy.getBoundingClientRect();
   joySt.cx = r.left + r.width/2; joySt.cy = r.top + r.height/2;
   joySt.id = e.pointerId; joy.classList.add('agafat');
-  joy.setPointerCapture(e.pointerId); joyFrom(e); e.preventDefault();
+  joy.setPointerCapture(e.pointerId); joyFrom(e, true); e.preventDefault();
 });
 joy.addEventListener('pointermove', e=>{ if(e.pointerId===joySt.id) joyFrom(e); });
 function joyEnd(e){
@@ -5469,7 +5488,7 @@ function updateHUD(){
   const [txt, col] = S.capsized>0 ? ['—', null]
                    : F.neutral ? ['NEUTRA', '#8ce8ae']
                    : F.flap    ? ['FLAMEJA', '#f2c14e']
-                   : F.stall   ? ['SOBRECAÇADA', '#ff9b8f']
+                   : F.stall   ? (F.topall ? ['OBERTA MÀX.', '#8ce8ae'] : ['SOBRECAÇADA', '#ff9b8f'])
                    :             ['EN POTÈNCIA', '#8ce8ae'];
   const ara = performance.now();
   if(txt !== retol.txt && (ara - retol.t >= RETOL_MS || txt === '—')){
