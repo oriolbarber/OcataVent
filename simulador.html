@@ -226,6 +226,23 @@
     text-align:center;line-height:1.15}
   #rakeVal{font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--groc)}
 
+  /* ---- zoom: lliscant vertical a la columna esquerra, sota el control del pal ---- */
+  /* L'alçada i el top els posa el JS: hi ha d'haver lloc entre el pal (que es
+     desplega) i el botó del joystick, i dins l'iframe d'OcataVent la pantalla és baixa. */
+  #zoomBox{left:10px;top:216px;pointer-events:auto;display:flex;flex-direction:column;
+    align-items:center;gap:4px;padding:5px 4px}
+  .zoomPas{width:28px;height:24px;border-radius:7px;display:flex;align-items:center;
+    justify-content:center;font-family:'Barlow Condensed';font-weight:700;font-size:19px;
+    line-height:1;color:var(--sorra);background:rgba(232,217,184,.12);cursor:pointer;
+    user-select:none;touch-action:manipulation}
+  #zoomTrack{position:relative;width:28px;height:160px;border-radius:14px;
+    background:linear-gradient(to bottom,rgba(232,217,184,.30),rgba(232,217,184,.06));
+    border:1px solid rgba(232,217,184,.25);touch-action:none;cursor:grab}
+  #zoomKnob{position:absolute;left:50%;transform:translate(-50%,-50%);
+    width:26px;height:26px;border-radius:50%;background:var(--sorra);
+    box-shadow:0 3px 9px rgba(0,0,0,.45), inset 0 -2px 0 rgba(0,0,0,.18);
+    display:flex;align-items:center;justify-content:center;font-size:12px}
+
   #btnMapa{margin-top:4px;width:44px;height:40px;border-radius:10px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;font-size:20px;
     background:rgba(232,217,184,.14);border:1px solid rgba(232,217,184,.3)}
@@ -469,6 +486,12 @@
   <div id="rakeVal" class="rakeFold">0°</div>
 </div>
 
+<div id="zoomBox" class="hud panell">
+  <div id="zoomMes" class="zoomPas" title="Més a prop" aria-label="Apropa">+</div>
+  <div id="zoomTrack" title="Zoom: amunt a prop, avall lluny"><div id="zoomKnob">🔍</div></div>
+  <div id="zoomMenys" class="zoomPas" title="Més lluny" aria-label="Allunya">−</div>
+</div>
+
 <div id="diag" class="hud panell">
   <div class="diagFila"><span class="etiq">VELA</span><span class="diagVal" id="velaVal">FLAMEJA</span></div>
 </div>
@@ -507,9 +530,9 @@
   <p>🏖️ Comences <b>a la sorra</b>: col·loca i orienta el patí, prem <b>ENTRAR AL MAR</b> i surt pel <b>canal de boies</b> (grogues; a la boca, verda a l'esquerra i vermella a la dreta). Després navega lliure i torna a entrar pel canal fins a la sorra per completar la partida.</p>
   <h2>Controls</h2>
   <p>📱 <b>Mòbil:</b> arrossega el punt vermell (el teu pes) per les bancades. Barra de la dreta: avall caça, amunt amolla. 🗺️ obre el mapa de situació.<br>
-  ⌨️ <b>PC:</b> <b>W/S</b> pes proa/popa · <b>A/D</b> pes babord/estribord (el pes es queda on el deixes) · <b>Espai</b> centra el pes · <b>← amollar</b> / <b>→ caçar</b> · <b>Q/E</b> escota tot amollada/caçada · <b>R/F</b> inclina el pal a popa/proa · <b>X</b> pal a la caiguda de sèrie · <b>Maj</b> control fi · <b>Z</b> zoom · <b>C</b> càmera · <b>M</b> mapa · <b>Enter</b> entrar al mar.<br>
+  ⌨️ <b>PC:</b> <b>W/S</b> pes proa/popa · <b>A/D</b> pes babord/estribord (el pes es queda on el deixes) · <b>Espai</b> centra el pes · <b>← amollar</b> / <b>→ caçar</b> · <b>Q/E</b> escota tot amollada/caçada · <b>R/F</b> inclina el pal a popa/proa · <b>X</b> pal a la caiguda de sèrie · <b>Maj</b> control fi · <b>Z</b> o la <b>roda</b> zoom · <b>C</b> càmera · <b>M</b> mapa · <b>Enter</b> entrar al mar.<br>
   🟢 La <b>línia discontínua</b> a la coberta marca on ha d'anar el teu pes per mantenir el rumb: quan hi ets a sobre, el punt es torna verd.
-  ⚙️ Amb l'engranatge canvies el <b>vent</b> i el <b>pes del navegant</b>. 🔍 canvia el zoom.</p>
+  ⚙️ Amb l'engranatge canvies el <b>vent</b> i el <b>pes del navegant</b>. El <b>zoom</b> és el lliscant de l'esquerra: amunt t'acostes fins que el patí omple la pantalla, avall t'allunyes fins a veure uns 600 m al voltant. També pots fer-ho amb dos dits damunt del mar. El botó 🔍 salta entre unes quantes distàncies fixes.</p>
     <button class="btn" id="btnTancarManual">TORNAR</button>
 </div></div>
 
@@ -576,7 +599,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v25</div>
+  <div id="versio">Versió v26</div>
 </div></div>
 
 <script>
@@ -623,27 +646,45 @@ addEventListener('resize', resize); resize();
 //  'nord' → vista zenital FIXA alineada amb la costa (mar amunt, terra avall).
 //  'popa' → la càmera es col·loca darrere el patí i el gira, suaument, perquè
 //           la proa apunti sempre cap amunt (vista des de la popa).
-const ZOOMS = [1, 0.8, 0.6, 0.4];
-const cam = { x:0, y:0, z:0.8, zt:0.8, zi:1, rot:0, mode:'popa' };
+// ZOOM continu i logarítmic (v26). cam.z és l'escala de les zenitals (1 = l'antic
+// 100 %). A 0,015 es veuen uns 600 m al mòbil (tot el camp de regates) i a 2,4 el
+// patí omple la pantalla. Les 4 posicions del botó 🔍 eren 1, 0,8, 0,6 i 0,4.
+const ZOOM = { min:0.015, max:2 };
+const ZOOMS = [2, 1.2, 0.8, 0.4, 0.12, 0.015];   // parades del botó i de la tecla Z
+const zoomDeS = s => ZOOM.min*Math.pow(ZOOM.max/ZOOM.min, clamp(s, 0, 1));
+const sDeZoom = z => Math.log(clamp(z, ZOOM.min, ZOOM.max)/ZOOM.min)/Math.log(ZOOM.max/ZOOM.min);
+const cam = { x:0, y:0, z:0.8, zt:0.8, rot:0, mode:'popa' };
 
 function updateCamera(dt){
   const fwdx = Math.sin(S.heading), fwdy = -Math.cos(S.heading);
-  const ahead = (S.mode==='mar') ? L*0.85*clamp(S.speed/0.5,0.3,1) : L*0.2;
+  // L'avançament mira endavant; de molt a prop treuria el patí de la pantalla
+  const aprop = clamp((cam.z - 1)/(ZOOM.max - 1), 0, 1);
+  const ahead = ((S.mode==='mar') ? L*0.85*clamp(S.speed/0.5,0.3,1) : L*0.2) * (1 - aprop);
   const tx = S.px + fwdx*ahead, ty = S.py + fwdy*ahead;
   const k = Math.min(1, dt*2.4);
   cam.x += (tx-cam.x)*k; cam.y += (ty-cam.y)*k;
-  cam.z += (cam.zt-cam.z)*Math.min(1, dt*4);
+  // apropament en escala logarítmica: el mateix ritme a prop que lluny
+  cam.z *= Math.pow(cam.zt/cam.z, Math.min(1, dt*4));
   // rotació objectiu: 0 en mode nord; -heading en mode popa (proa amunt)
   const rotT = (cam.mode==='popa' && S.mode==='mar') ? -S.heading : 0;
   const d = normA(rotT - cam.rot);
   // seguiment LENT: la càmera «busca» la popa a poc a poc
   cam.rot += d * Math.min(1, dt*(cam.mode==='popa'?1.8:3.0));
 }
-function cycleZoom(){
-  cam.zi = (cam.zi+1)%ZOOMS.length;
-  cam.zt = ZOOMS[cam.zi];
+// Tots els camins (lliscant, + i −, botó, tecla Z, roda) passen per aquí, i
+// aquí es posen al dia el lliscant i el botó.
+function posaZoom(z){
+  cam.zt = clamp(Number.isFinite(z) ? z : 0.8, ZOOM.min, ZOOM.max);
+  const kn = document.getElementById('zoomKnob');
+  // dalt = a prop; el botó (26 px) no surt de la pista ni als extrems
+  if(kn) kn.style.top = `calc(13px + ${(1 - sDeZoom(cam.zt)).toFixed(4)}*(100% - 26px))`;
   const b = document.getElementById('btnZoom');
-  if(b) b.textContent = '🔍 ' + Math.round(cam.zt*100) + '%';
+  const pc = cam.zt*100;
+  if(b) b.textContent = '🔍 ' + (pc < 9.5 ? pc.toFixed(1).replace('.', ',') : Math.round(pc)) + '%';
+}
+// El botó salta a la parada següent més llunyana, i de la més llunyana torna a prop
+function cycleZoom(){
+  posaZoom(ZOOMS.find(z => z < cam.zt*0.97) ?? ZOOMS[0]);
 }
 function toggleCamMode(){
   cam.mode = cam.mode==='popa' ? 'nord' : (cam.mode==='nord' ? 'persp' : 'popa');
@@ -1746,15 +1787,20 @@ function physics(dt){
 let camYaw3 = 0;
 function render3D(dt){
   const HOR = H*0.36;                         // horitzó
-  // El botó 🔍 també mana aquí: com més % menys distància (100% aprop, 40% panoràmic)
-  const zf   = clamp(cam.z, 0.35, 1.1);
-  const CAMH = L*0.90/Math.sqrt(zf), BACK = L*2.35/zf, NEAR = L*0.14;
+  // El zoom també mana aquí: com més %, menys distància. Entre el 40 % i el 100 %
+  // és la càmera de sempre. Més lluny, a més de recular s'enlaira (fins a uns 30°
+  // de picat), perquè des d'arran d'aigua el camp de regates no es veuria.
+  const zf   = clamp(cam.z, ZOOM.min, ZOOM.max);
+  const BACK = L*2.35/zf, NEAR = L*0.14;
+  const picat = 0.24 + 0.34*clamp(Math.log(0.4/zf)/Math.log(0.4/ZOOM.min), 0, 1);
+  const CAMH = Math.max(L*0.90/Math.sqrt(zf), BACK*picat);
   // FOCAL: limitada per GARANTIR que la popa (el punt més proper del patí)
   // queda sempre dins de pantalla amb marge, a qualsevol finestra i zoom.
   // Garanteix que la popa (el punt més proper i més baix del patí) queda dins
   // de la ZONA LLIURE d'interfície, no només dins de la pantalla.
   const yUtil = (UI_BOT > HOR + 40) ? UI_BOT : H*0.93;
   const FL = Math.min(W*0.86, H*1.15, (yUtil - HOR) * (BACK - L*0.52) / CAMH);
+  cam.p3 = { BACK, CAMH, FL };                 // només per a les proves (proves/zoom.mjs)
   // alçada del pal presa de la geometria compartida: igual a les tres vistes
   const HULLH = L*0.07, MASTH = L*0.07 + RIG.alt*L;
   // ESCALA REAL: el patí de vela fa 5,60 m d'eslora → M = unitats de món per
@@ -3038,6 +3084,7 @@ function render3D(dt){
     }
   }
 
+  { const pb = pjB(0, 0, HULLH); if(pb) marcaPati(pb.x, pb.y, L*FL/pb.d); }
 
   drawRosa();
 
@@ -3288,7 +3335,8 @@ function renderWorld(dt){
     for(const b of [[FONS.b1x, FONS.b1h, FONS.b1w], [FONS.b2x, FONS.b2h, FONS.b2w]]){
       const [bx0, bh, bw] = b;
       if(bh <= 0.05) continue;
-      const seg = 26, pas = (vx1-vx0)/seg;
+      // trams d'1,4 m com a molt: de lluny, amb 26 trams l'ondulació feia dents de serra
+      const seg = clamp(Math.ceil((vx1-vx0)/60), 26, 1200), pas = (vx1-vx0)/seg;
       cx2d.fillStyle = `rgba(236,222,178,${(0.04 + 0.07*bh).toFixed(3)})`;
       cx2d.beginPath();
       for(let k=0;k<=seg;k++){
@@ -3425,6 +3473,7 @@ function renderWorld(dt){
     cx2d.fillRect(0, 0, W, H);
   }
 
+  { const bs = w2s({x:S.px, y:S.py}); marcaPati(bs.x, bs.y, L*cam.z); }
   drawShoreIndicator();
   drawTendency();
   drawRosa();
@@ -3449,14 +3498,15 @@ function drawWaves(vx0, vx1, vy0, vy1){
              H: TB.alt[lo]  + (TB.alt[hi]-TB.alt[lo])*k,
              br: TB.tren[lo]+ (TB.tren[hi]-TB.tren[lo])*k };
   };
-  const n = 26, dx = (vx1-vx0)/n;
+  const n = clamp(Math.ceil((vx1-vx0)/200), 26, 300), dx = (vx1-vx0)/n;   // de lluny, més trams
   const t = S.time * w;
   const ph0 = 2*Math.PI - (t % (2*Math.PI));      // les crestes van cap a terra
   const kMax = Math.floor(faseMax/(2*Math.PI));
   cx2d.lineCap='round';
   for(let i=0;i<=kMax;i++){
     const info = buscaDist(2*Math.PI*i + ph0);
-    if(!info || info.d < 1) continue;
+    // a la vora la taula val 0/0 (fondària zero): aquella cresta no es pinta
+    if(!info || info.d < 1 || !Number.isFinite(info.br)) continue;
     const yBase = shoreFn(0) - info.d*M2;
     if(yBase > vy1 + L || yBase < vy0 - L) continue;         // fora de la vista
     const brk = clamp((info.br - 0.55)/0.23, 0, 1);
@@ -3531,6 +3581,10 @@ function drawWindArrows(vx0, vx1, vy0, vy1){
   const dir = S.windFrom + Math.PI;             // cap on VA el vent
   const dx = Math.sin(dir), dy = -Math.cos(dir);
   const px = -dy, py = dx;                       // perpendicular
+  // De molt lluny fan menys d'un píxel i, amb la retícula fixa, eren desenes de
+  // milers de traços per fotograma: s'esvaeixen i es deixen de pintar.
+  const esvai = clamp((cam.z - 0.08)/0.12, 0, 1);
+  if(esvai <= 0) return;
   const T = 230;                                 // retícula
   const x0 = Math.floor(vx0/T)*T, y0 = Math.floor(vy0/T)*T;
   cx2d.lineCap = 'round';
@@ -3545,7 +3599,7 @@ function drawWindArrows(vx0, vx1, vy0, vy1){
       const cyw = gy + dy*drift + py*h*T*0.7;
       const len = L*(0.10 + 0.22*h);             // llargades variades
       const gruix = L*(0.006 + 0.007*h);
-      const alfa  = 0.05 + 0.07*h;
+      const alfa  = (0.05 + 0.07*h)*esvai;
       const cur = (h-0.5)*len*0.35;              // traç lleugerament corbat
       cx2d.strokeStyle = `rgba(255,255,255,${alfa.toFixed(3)})`;
       cx2d.lineWidth = gruix;
@@ -4820,7 +4874,8 @@ function drawTendency(){
   const orsa = f > 0;
   const dirRot = -F.tack * Math.sign(f);        // sentit real de gir en pantalla
   const bs = w2s({x:S.px, y:S.py});
-  const r = L*0.72*cam.z;
+  // amb el zoom continu: ni un nus de 3 px de lluny ni un arc fora de pantalla a prop
+  const r = clamp(L*0.72*cam.z, 34, Math.min(W,H)*0.45);
   const a0 = S.heading + cam.rot - Math.PI/2;  // sobre la proa (amb rotació de càmera)
   const span = clamp(Math.abs(f),0.15,1)*0.9;
   const from = a0 - dirRot*span*0.1, to = a0 + dirRot*span;
@@ -4844,16 +4899,55 @@ function drawTendency(){
   // etiqueta
   const mid = (from+to)/2;
   cx2d.fillStyle = cx2d.fillStyle;
-  cx2d.font = `700 ${Math.max(12,L*0.06*cam.z)}px 'Barlow Condensed'`;
+  cx2d.font = `700 ${clamp(L*0.06*cam.z, 12, 20)}px 'Barlow Condensed'`;
   cx2d.textAlign='center'; cx2d.textBaseline='middle';
   cx2d.fillText(orsa?'ORSA':'ARRIBA', Math.cos(mid)*(r+22), Math.sin(mid)*(r+22));
+  cx2d.restore();
+}
+
+// De molt lluny el patí fa pocs píxels: una anella al voltant perquè no es perdi.
+// mida = eslora en píxels de pantalla; per sota de 30 px apareix, i a 14 px ja hi és sencera.
+function marcaPati(x, y, mida){
+  const a = clamp((30 - mida)/16, 0, 1);
+  if(a <= 0 || !Number.isFinite(x) || !Number.isFinite(y)) return;
+  cx2d.save();
+  cx2d.strokeStyle = `rgba(242,193,78,${(0.85*a).toFixed(3)})`;
+  cx2d.lineWidth = 2;
+  cx2d.beginPath(); cx2d.arc(x, y, 13, 0, TAU); cx2d.stroke();
+  cx2d.strokeStyle = `rgba(4,24,36,${(0.45*a).toFixed(3)})`;
+  cx2d.lineWidth = 1;
+  cx2d.beginPath(); cx2d.arc(x, y, 15, 0, TAU); cx2d.stroke();
   cx2d.restore();
 }
 
 /* ------------------- ENTRADA TÀCTIL (Controls) ------------------- */
 let dragBoat = null;   // pointerId actiu sobre el patí
 let dragKind = null;   // 'pes' (navegant) | 'moure' | 'orientar' (platja)
+// ── PESSIC (v26): dos dits damunt del mar fan zoom, a les tres vistes ──
+// Només compten els dits que han tocat el llenç: un dit damunt del joystick, de
+// l'escota o d'un lliscant el captura aquell control i aquí no arriba mai. El zoom
+// es fa al voltant del patí, no entre els dits: la càmera el segueix sempre i
+// qualsevol altre centre se'n tornaria al patí tot sol.
+const dits = new Map();                  // pointerId → {x, y}, només dits al llenç
+let pessic = null;                       // {d0, z0} mentre hi ha dos dits
+let abansDelDit = null;                  // estat d'abans del primer dit, per desfer-lo
+const sepDits = () => { const [a, b] = [...dits.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
 cv.addEventListener('pointerdown', e=>{
+  if(e.pointerType === 'touch'){
+    dits.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(dits.size === 1)
+      abansDelDit = {wxT:S.wxT, wfT:S.wfT, px:S.px, py:S.py, heading:S.heading, mode:S.mode};
+    if(dits.size === 2){
+      // el primer dit ja havia començat a moure el pes o el patí: es desfà
+      if(dragBoat !== null && abansDelDit && abansDelDit.mode === S.mode){
+        S.wxT = abansDelDit.wxT; S.wfT = abansDelDit.wfT;
+        if(S.mode === 'platja'){ S.px = abansDelDit.px; S.py = abansDelDit.py; S.heading = abansDelDit.heading; }
+      }
+      dragBoat = null; dragKind = null;
+      pessic = { d0: Math.max(sepDits(), 1), z0: cam.zt };
+    }
+    if(dits.size >= 2) return;
+  }
   // A la vista en perspectiva el mapatge pantalla→món no és vàlid: el pes es
   // mou amb el joystick i el patí, des de la vista zenital.
   if(cam.mode === 'persp') return;
@@ -4869,6 +4963,13 @@ cv.addEventListener('pointerdown', e=>{
   }
 });
 cv.addEventListener('pointermove', e=>{
+  if(dits.has(e.pointerId)) dits.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(pessic && dits.size === 2){
+    // la mateixa escala logarítmica que el lliscant: separar el doble, zoom el doble
+    posaZoom(pessic.z0*sepDits()/pessic.d0);
+    cam.z = cam.zt;                      // sota els dits no ha d'anar amb retard
+    return;
+  }
   if(e.pointerId!==dragBoat) return;
   const wpt = s2w({x:e.clientX, y:e.clientY});
   if(dragKind==='pes') moveWeight(wpt);
@@ -4876,7 +4977,13 @@ cv.addEventListener('pointermove', e=>{
 });
 function endDrag(e){
   if(e.pointerId===dragBoat){ dragBoat=null; dragKind=null; }
+  dits.delete(e.pointerId);
+  // en aixecar un dels dos, el que queda no es converteix en un gest de pes
+  if(dits.size < 2) pessic = null;
 }
+// Safari (també dins l'iframe d'OcataVent) no fa cas d'user-scalable=no ni de
+// touch-action amb el pessic: sense això ampliaria la pàgina sencera.
+document.addEventListener('gesturestart', e => e.preventDefault());
 cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
 
@@ -5145,6 +5252,53 @@ rakeTrack.addEventListener('pointermove', e=>{ if(e.pointerId===dragRake) setRak
 rakeTrack.addEventListener('pointerup',   e=>{ if(e.pointerId===dragRake) dragRake=null; });
 rakeTrack.addEventListener('pointercancel', e=>{ if(e.pointerId===dragRake) dragRake=null; });
 
+/* ------------------- ZOOM (lliscant vertical) ------------------- */
+// Dalt = a prop, baix = lluny, en escala logarítmica. Tocar la pista hi salta i
+// arrossegar hi va seguit; + i − fan passos de ×1,5; la roda també hi val.
+const zoomTrack = document.getElementById('zoomTrack');
+let dragZoom = null;
+function setZoomFromY(clientY){
+  const r = zoomTrack.getBoundingClientRect();
+  if(!(r.height > 26)) return;
+  posaZoom(zoomDeS(1 - (clientY - r.top - 13)/(r.height - 26)));     // com el botó a posaZoom
+}
+zoomTrack.addEventListener('pointerdown', e=>{
+  dragZoom = e.pointerId; zoomTrack.setPointerCapture(e.pointerId); setZoomFromY(e.clientY);
+  e.preventDefault();
+});
+zoomTrack.addEventListener('pointermove', e=>{ if(e.pointerId===dragZoom) setZoomFromY(e.clientY); });
+zoomTrack.addEventListener('pointerup',   e=>{ if(e.pointerId===dragZoom) dragZoom=null; });
+zoomTrack.addEventListener('pointercancel', e=>{ if(e.pointerId===dragZoom) dragZoom=null; });
+document.getElementById('zoomMes').addEventListener('click', ()=> posaZoom(cam.zt*1.5));
+document.getElementById('zoomMenys').addEventListener('click', ()=> posaZoom(cam.zt/1.5));
+// roda del ratolí, damunt del mar o del lliscant: cada osca, un 15 %
+function rodaZoom(e){
+  if(!(e.deltaY)) return;
+  e.preventDefault();
+  posaZoom(cam.zt*Math.pow(1.15, -Math.sign(e.deltaY)));
+}
+cv.addEventListener('wheel', rodaZoom, { passive:false });
+document.getElementById('zoomBox').addEventListener('wheel', rodaZoom, { passive:false });
+// Columna esquerra: entre el control del pal i el botó del joystick. Si el pal
+// desplegat no hi deixa lloc, el lliscant se li posa al costat.
+function colocaZoom(){
+  const box = $('zoomBox'), ra = $('rakeBox').getBoundingClientRect();
+  const PASSOS = 2*24 + 2*4 + 2*5 + 2;          // + i −, separacions, farciment i vora
+  let peu = innerHeight - 10 - 36 - 10;         // per sobre del botó del joystick
+  let top = ra.bottom + 10, left = 10;
+  if(peu - top - PASSOS < 110){ top = ra.top; left = ra.right + 6; }
+  // i per sobre del joystick o de la vela si són a la mateixa columna
+  for(const id of ['joy', 'diag']){
+    const e = $(id), r = e.getBoundingClientRect();
+    if(getComputedStyle(e).display === 'none' || r.width < 4) continue;
+    if(r.left < left + 40 && r.right > left && r.top > top) peu = Math.min(peu, r.top - 8);
+  }
+  const alt = clamp(peu - top - PASSOS, 80, 260);
+  box.style.top = Math.round(top) + 'px';
+  box.style.left = Math.round(left) + 'px';
+  zoomTrack.style.height = Math.round(alt) + 'px';
+}
+
 /* ------------------- ESCOTA ------------------- */
 const track = document.getElementById('escotaTrack');
 const knob  = document.getElementById('escotaKnob');
@@ -5200,7 +5354,7 @@ calcUiBot();
 
 function updateHUD(){
   S.terbolesa = clamp((S.windKn - 10)/16, 0, 1);        // mar remoguda = aigua més tèrbola
-  if((uiTick++ % 20) === 0) calcUiBot();
+  if((uiTick++ % 20) === 0){ calcUiBot(); colocaZoom(); }
   const deg = Math.round(F.absT*R2D);
   $('rumbNom').textContent = rumbName(deg);
   $('angleVal').textContent = deg + '°';
@@ -5813,7 +5967,7 @@ const GUIA = [
   { id:'rakeBox',   t:'PAL',              dir:'dreta' },
   { id:'diag',      t:'VELA',             dir:'esq'   },
   { id:'joy',       t:'EL TEU PES',       dir:'esq'   },
-  { id:'btnZoom',   t:'ZOOM',             dir:'baix'  },
+  { id:'zoomBox',   t:'ZOOM',             dir:'dreta' },
   { id:'btnCam',    t:'CÀMERES',          dir:'baix'  },
   { id:'btnMapa',   t:'MAPA',             dir:'baix'  },
   { id:'btnConfig', t:'MENÚ',             dir:'baix'  },
@@ -5993,6 +6147,7 @@ $('rakeToggle').addEventListener('click', ()=>{
   const box = $('rakeBox');
   box.classList.toggle('min');
   $('rakeToggle').textContent = box.classList.contains('min') ? '⛵▸' : '⛵▾';
+  colocaZoom();
 });
 $('btnNovaPartida').addEventListener('click', novaPartida);
 $('btnSeguir').addEventListener('click', ()=> $('ovFinal').classList.remove('on'));
@@ -6058,6 +6213,7 @@ $('sCrew').addEventListener('input', e=>{
 /* ------------------- INICI ------------------- */
 buildChannel();
 resetToBeach();
+posaZoom(cam.zt); colocaZoom(); addEventListener('resize', colocaZoom);
 // sincronitza el control de direcció del vent amb el valor inicial (90° = llevant)
 $('sWindDir').value = Math.round(rumbVer(S.windFrom)*R2D/5)*5;
 $('cWindD').textContent = Math.round(rumbVer(S.windFrom)*R2D)+'°';
