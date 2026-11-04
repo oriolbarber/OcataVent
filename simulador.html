@@ -109,6 +109,8 @@
     display:flex;flex-direction:column;gap:5px;min-width:104px}
   .diagFila{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
   .diagVal{font-family:'Barlow Condensed';font-weight:600;font-size:15px;text-align:right}
+  /* amplada del text més llarg (SOBRECAÇADA): la caixa no salta en canviar d'estat */
+  #velaVal{min-width:76px}
   #escoraBarra{width:100%;height:7px;border-radius:4px;background:rgba(255,255,255,.12);
     position:relative;overflow:hidden}
   #escoraFill{position:absolute;top:0;bottom:0;left:50%;background:var(--verd);border-radius:4px}
@@ -226,11 +228,13 @@
     text-align:center;line-height:1.15}
   #rakeVal{font-family:'Barlow Condensed';font-weight:700;font-size:14px;color:var(--groc)}
 
-  /* ---- zoom: lliscant vertical a la columna esquerra, sota el control del pal ---- */
-  /* L'alçada i el top els posa el JS: hi ha d'haver lloc entre el pal (que es
-     desplega) i el botó del joystick, i dins l'iframe d'OcataVent la pantalla és baixa. */
-  #zoomBox{left:10px;top:216px;pointer-events:auto;display:flex;flex-direction:column;
-    align-items:center;gap:4px;padding:5px 4px}
+  /* ---- zoom: lliscant vertical plegat dins el botó 🔍; en tocar-lo, es desplega a sota ---- */
+  /* La posició i l'alçada les posa el JS: penja del botó i s'atura abans de qualsevol
+     control, i dins l'iframe d'OcataVent la pantalla és baixa. */
+  #zoomBox{left:10px;top:216px;pointer-events:auto;display:none;flex-direction:column;
+    align-items:center;gap:4px;padding:5px 4px;z-index:12}
+  #zoomBox.obert{display:flex}
+  #btnZoom.on{background:rgba(232,217,184,.28)}
   .zoomPas{width:28px;height:24px;border-radius:7px;display:flex;align-items:center;
     justify-content:center;font-family:'Barlow Condensed';font-weight:700;font-size:19px;
     line-height:1;color:var(--sorra);background:rgba(232,217,184,.12);cursor:pointer;
@@ -299,41 +303,35 @@
   position:fixed; left:50%; transform:translateX(-50%);
   bottom:calc(56px + env(safe-area-inset-bottom));
   width:112px; height:112px; border-radius:50%;
-  background:rgba(10,26,38,.42); border:1.5px solid rgba(232,217,184,.30);
-  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
   display:none; z-index:7; touch-action:none; user-select:none;
-  box-shadow:0 6px 18px rgba(0,0,0,.28);
 }
+/* El fons és el PATÍ vist des de dalt (v27), girat com es veu el patí a pantalla. La
+   zona que respon al dit continua sent el cercle que la silueta escombra en girar. */
+#joy .joyPati{ position:absolute; left:4%; top:4%; width:92%; height:92%; pointer-events:none;
+  filter:drop-shadow(0 0 1.2px rgba(255,248,230,.55)) drop-shadow(0 3px 5px rgba(0,0,0,.55)); }
+#joy .joyPati svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
 #joy.visible{ display:block; }
 /* A les zenitals és opcional i va a baix a l'esquerra, damunt dels consells. La
    mateixa peça: el bottom i el left els posa el JS, que hi depenen. */
 #joy.zen{ left:52px; transform:none; width:96px; height:96px;
   bottom:calc(10px + env(safe-area-inset-bottom)); }
-#joy.zen #joyKnob{ width:36px; height:36px; margin:-18px 0 0 -18px; }
-#joy.zen .joyEt{ font-size:7px; }
+#joy.zen #joyKnob{ width:22px; height:22px; margin:-11px 0 0 -11px; }
 #btnJoy{ position:fixed; left:10px; bottom:calc(10px + env(safe-area-inset-bottom)); width:36px; height:36px; z-index:7; display:none;
   align-items:center; justify-content:center; cursor:pointer; color:var(--sorra);
   border:1px solid rgba(232,217,184,.3); touch-action:manipulation }
 #btnJoy.visible{ display:flex; }
 #btnJoy.on{ color:var(--groc); border-color:var(--groc); }
-#joy .joyCreu{ position:absolute; background:rgba(232,217,184,.18); }
-#joy .joyV{ left:50%; top:14%; width:1px; height:72%; margin-left:-0.5px; }
-#joy .joyH{ top:50%; left:14%; height:1px; width:72%; margin-top:-0.5px; }
-#joy .joyEt{
-  position:absolute; left:0; width:100%; text-align:center;
-  font:700 8px 'Barlow Condensed',sans-serif; letter-spacing:.10em;
-  color:rgba(232,217,184,.42); pointer-events:none;
-}
-#joy .joyEtN{ top:5px; } #joy .joyEtS{ bottom:4px; }
+/* El pom és el patró: seu damunt la silueta on és el pes (left/top els posa el JS, en
+   % de la silueta, i gira amb ella) */
 #joyKnob{
-  position:absolute; left:50%; top:50%; width:42px; height:42px;
-  margin:-21px 0 0 -21px; border-radius:50%;
-  background:radial-gradient(circle at 34% 30%, #fdf3dc, #e0b871 62%, #c79a4f);
-  border:1.5px solid rgba(90,60,20,.45);
-  box-shadow:0 2px 7px rgba(0,0,0,.34); pointer-events:none;
-  transition:transform .10s ease-out;
+  position:absolute; left:50%; top:57%; width:26px; height:26px;
+  margin:-13px 0 0 -13px; border-radius:50%;
+  background:radial-gradient(circle at 34% 30%, #fff6e0, #f2c14e 58%, #c98f2a);
+  border:1.5px solid rgba(60,34,8,.85);
+  box-shadow:0 2px 5px rgba(0,0,0,.45); pointer-events:none;
+  transition:left .10s ease-out, top .10s ease-out;
 }
-#joy.agafat #joyKnob{ transition:none; box-shadow:0 0 0 4px rgba(242,193,78,.22), 0 2px 7px rgba(0,0,0,.34); }
+#joy.agafat #joyKnob{ transition:none; box-shadow:0 0 0 4px rgba(242,193,78,.30), 0 2px 5px rgba(0,0,0,.45); }
 
 /* ── GUIA ANOTADA DELS CONTROLS ── */
 #ovGuia{
@@ -384,8 +382,7 @@
   #estat{ right:88px; max-width:calc(100vw - 240px); }
   #joy{ left:auto; right:76px; transform:none;
         bottom:calc(10px + env(safe-area-inset-bottom)); width:96px; height:96px; }
-  #joyKnob{ width:36px; height:36px; margin:-18px 0 0 -18px; }
-  #joy .joyEt{ font-size:7px; }
+  #joyKnob{ width:22px; height:22px; margin:-11px 0 0 -11px; }
 }
 @media (max-height:560px){
   #guiaCap{ padding:10px 12px; width:min(280px,70vw); }
@@ -436,11 +433,7 @@
   </svg>
 </div>
 <div id="joy">
-  <div class="joyCreu joyV"></div>
-  <div class="joyCreu joyH"></div>
-  <div class="joyEt joyEtN">PROA</div>
-  <div class="joyEt joyEtS">POPA</div>
-  <div id="joyKnob"></div>
+  <div class="joyPati" id="joyPati"><div id="joyKnob"></div></div>
 </div>
 
 <div id="estat" class="hud panell">
@@ -529,10 +522,10 @@
   <h2>Com funciona la partida</h2>
   <p>🏖️ Comences <b>a la sorra</b>: col·loca i orienta el patí, prem <b>ENTRAR AL MAR</b> i surt pel <b>canal de boies</b> (grogues; a la boca, verda a l'esquerra i vermella a la dreta). Després navega lliure i torna a entrar pel canal fins a la sorra per completar la partida.</p>
   <h2>Controls</h2>
-  <p>📱 <b>Mòbil:</b> arrossega el punt vermell (el teu pes) per les bancades. Barra de la dreta: avall caça, amunt amolla. 🗺️ obre el mapa de situació.<br>
-  ⌨️ <b>PC:</b> <b>W/S</b> pes proa/popa · <b>A/D</b> pes babord/estribord (el pes es queda on el deixes) · <b>Espai</b> centra el pes · <b>← amollar</b> / <b>→ caçar</b> · <b>Q/E</b> escota tot amollada/caçada · <b>R/F</b> inclina el pal a popa/proa · <b>X</b> pal a la caiguda de sèrie · <b>Maj</b> control fi · <b>Z</b> o la <b>roda</b> zoom · <b>C</b> càmera · <b>M</b> mapa · <b>Enter</b> entrar al mar.<br>
+  <p>📱 <b>Mòbil:</b> arrossega el punt vermell (el teu pes) per les bancades, o fes servir el <b>joystick</b>: és un patí petit girat com el teu, i el pom daurat ets tu; cap a la proa que hi veus, pes a proa. Barra de la dreta: avall caça, amunt amolla. 🗺️ obre el mapa de situació.<br>
+  ⌨️ <b>PC:</b> <b>W/S</b> pes proa/popa · <b>A/D</b> pes babord/estribord (el pes es queda on el deixes) · <b>Espai</b> centra el pes · <b>← amollar</b> / <b>→ caçar</b> · <b>Q/E</b> escota tot amollada/caçada · <b>R/F</b> inclina el pal a popa/proa · <b>X</b> pal a la caiguda de sèrie · <b>Maj</b> control fi · <b>roda</b> zoom (<b>Z</b> salta entre distàncies fixes) · <b>C</b> càmera · <b>M</b> mapa · <b>Enter</b> entrar al mar.<br>
   🟢 La <b>línia discontínua</b> a la coberta marca on ha d'anar el teu pes per mantenir el rumb: quan hi ets a sobre, el punt es torna verd.
-  ⚙️ Amb l'engranatge canvies el <b>vent</b> i el <b>pes del navegant</b>. El <b>zoom</b> és el lliscant de l'esquerra: amunt t'acostes fins que el patí omple la pantalla, avall t'allunyes fins a veure uns 600 m al voltant. També pots fer-ho amb dos dits damunt del mar. El botó 🔍 salta entre unes quantes distàncies fixes.</p>
+  ⚙️ Amb l'engranatge canvies el <b>vent</b> i el <b>pes del navegant</b>. Per al <b>zoom</b>, toca la lupa 🔍: es desplega un lliscant. Amunt t'acostes fins que el patí omple la pantalla, avall t'allunyes fins a veure uns 600 m al voltant. Quan el deixes anar, es torna a plegar tot sol. També pots fer zoom amb dos dits damunt del mar, sense obrir el lliscant.</p>
     <button class="btn" id="btnTancarManual">TORNAR</button>
 </div></div>
 
@@ -599,7 +592,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v26</div>
+  <div id="versio">Versió v27</div>
 </div></div>
 
 <script>
@@ -649,8 +642,9 @@ addEventListener('resize', resize); resize();
 // ZOOM continu i logarítmic (v26). cam.z és l'escala de les zenitals (1 = l'antic
 // 100 %). A 0,015 es veuen uns 600 m al mòbil (tot el camp de regates) i a 2,4 el
 // patí omple la pantalla. Les 4 posicions del botó 🔍 eren 1, 0,8, 0,6 i 0,4.
+// Des de la v27 el botó desplega el lliscant; les parades només les fa la tecla Z.
 const ZOOM = { min:0.015, max:2 };
-const ZOOMS = [2, 1.2, 0.8, 0.4, 0.12, 0.015];   // parades del botó i de la tecla Z
+const ZOOMS = [2, 1.2, 0.8, 0.4, 0.12, 0.015];   // parades de la tecla Z
 const zoomDeS = s => ZOOM.min*Math.pow(ZOOM.max/ZOOM.min, clamp(s, 0, 1));
 const sDeZoom = z => Math.log(clamp(z, ZOOM.min, ZOOM.max)/ZOOM.min)/Math.log(ZOOM.max/ZOOM.min);
 const cam = { x:0, y:0, z:0.8, zt:0.8, rot:0, mode:'popa' };
@@ -682,7 +676,7 @@ function posaZoom(z){
   const pc = cam.zt*100;
   if(b) b.textContent = '🔍 ' + (pc < 9.5 ? pc.toFixed(1).replace('.', ',') : Math.round(pc)) + '%';
 }
-// El botó salta a la parada següent més llunyana, i de la més llunyana torna a prop
+// La tecla Z salta a la parada següent més llunyana, i de la més llunyana torna a prop
 function cycleZoom(){
   posaZoom(ZOOMS.find(z => z < cam.zt*0.97) ?? ZOOMS[0]);
 }
@@ -1078,6 +1072,9 @@ const VELA = {
   luff:  8*D2R,    // per sota d'aquí la vora del davant comença a flamejar
   flap:  4*D2R,    // per sota d'aquí flameja tota
   sobre: 35*D2R,   // passat d'aquí, sobrecaçada (només per al marcador)
+  // Marge per canviar d'estat: el flameig treu deriva i frena, i això torna a obrir
+  // l'angle d'atac. Sense marge es quedava clavat al llindar canviant a cada pas.
+  histeresi: 0.5*D2R,
   empenta: 0.70,   // força d'avanç → acceleració
   // Força lateral → escora, buc alçat i deriva. Escala que manté el calibratge de
   // l'Oriol (barlovent a través s'alça cap als 12 kn): amb el model anterior, a
@@ -1261,8 +1258,9 @@ function aeroVela(absT){
   // escora: moment respecte del d'una vela sense gir (centre vèlic a FRANGES_H)
   let sideEsc = momEsc/FRANGES_H*q*VELA.lateral;
   // Flameja de la vora del davant cap enrere (i de dalt cap avall, pel gir).
-  const flap = aoa < VELA.flap;
-  const stall = aoa > VELA.sobre;                          // passat de l'òptim: sobrecaçada
+  const hi = VELA.histeresi;
+  const flap = aoa < VELA.flap + (F.flap ? hi : -hi);
+  const stall = aoa > VELA.sobre + (F.stall ? -hi : hi);   // passat de l'òptim: sobrecaçada
   F.cl = cl; F.luff = luff;
   if(absT < 34*D2R){ drive *= noGo; side *= noGo; sideEsc *= noGo; }   // transició suau
   return {maxSail, sailAng, noGo, drive, side, sideEsc, aoa, flap, stall};
@@ -3085,6 +3083,9 @@ function render3D(dt){
   }
 
   { const pb = pjB(0, 0, HULLH); if(pb) marcaPati(pb.x, pb.y, L*FL/pb.d); }
+  // cap on apunta la proa a pantalla, per girar la silueta del joystick (angJoy)
+  { const pp = pjB(0, -L*0.4, HULLH), ps = pjB(0, L*0.4, HULLH);
+    if(pp && ps && Math.hypot(pp.x - ps.x, pp.y - ps.y) > 1) cam.angP3 = Math.atan2(pp.x - ps.x, ps.y - pp.y); }
 
   drawRosa();
 
@@ -5031,7 +5032,8 @@ addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 // ── JOYSTICK del pes del patró ─────────────────────────────────────────────
 // A la vista en perspectiva, arrossegar per la pantalla no serveix (el mapatge
 // pantalla→món és el de la vista zenital). Amb el joystick el pes es mou amb el
-// polze: amunt = cap a PROA, avall = cap a POPA, esquerra/dreta = bandes.
+// polze, en el marc del patí dibuixat al fons: cap a la seva PROA, pes a proa, i cap a
+// cada banda, aquella banda. Amb la proa amunt (popa, perspectiva) és com sempre.
 // El pes ES QUEDA on el deixes (com amb les tecles WASD).
 const joy = document.getElementById('joy'), joyKnob = document.getElementById('joyKnob');
 const JOY_R = 35;                       // recorregut màxim del botó, en px
@@ -5039,8 +5041,36 @@ const joySt = { id:null, x:0, y:0, cx:0, cy:0 };
 // Plegat de sortida: a les zenitals el gest principal és tocar el patró i així el
 // mar queda lliure. Sense localStorage, l'estat dura fins que es recarrega.
 let joyZen = false;
-function joyKnobTo(nx, ny){             // nx,ny ∈ [-1,1]
-  joyKnob.style.transform = `translate(${(nx*JOY_R).toFixed(1)}px, ${(-ny*JOY_R).toFixed(1)}px)`;
+// FONS: el patí vist des de dalt (v27), amb el contorn de buc, les bancades, el pal i
+// la barra de les tres vistes. Unitats d'eslora, el centre del patí al mig i la proa
+// a dalt (y negativa), com al llenç.
+const joyPati = document.getElementById('joyPati');
+joyPati.insertAdjacentHTML?.('afterbegin', (() => {       // (?.: les proves de Node no tenen DOM)
+  const HB = 0.150, f = v => v.toFixed(4);
+  const buc = sx => 'M' + CONTORN_BUC.map(([x,y]) => f(sx + x) + ' ' + f(y)).join('L') + 'Z';
+  const bancs = RIG.bancF.map((b,i) => {
+    const y = RIG.bancA + (RIG.bancB - RIG.bancA)*b, th = Math.max(RIG.bancTh[i], 0.05);
+    return `<rect x="${f(-HB)}" y="${f(y - th/2)}" width="${f(2*HB)}" height="${f(th)}" rx="0.008"/>`; }).join('');
+  return `<svg viewBox="-0.5 -0.5 1 1" aria-hidden="true">
+    <g fill="#8a5a2b" stroke="#2d1606" stroke-width="0.014">${bancs}</g>
+    <g fill="#e7c58e" stroke="#2d1606" stroke-width="0.016"><path d="${buc(-HB)}"/><path d="${buc(HB)}"/></g>
+    <path d="M${f(-RIG.barraAmp)} ${f(RIG.barra)}Q0 ${f(RIG.barra + 2*RIG.barraRec)} ${f(RIG.barraAmp)} ${f(RIG.barra)}"
+      fill="none" stroke="#17171b" stroke-width="0.022" stroke-linecap="round"/>
+    <path d="M0 ${f(RIG.peu)}L0 ${f(RIG.cadenots[0])}" stroke="#2d1606" stroke-width="0.010"/>
+    <circle cx="0" cy="${f(RIG.peu)}" r="0.028" fill="#f4ead2" stroke="#2d1606" stroke-width="0.012"/>
+  </svg>`;
+})());
+// Angle (en sentit horari, des de dalt de la pantalla) cap on apunta la proa del
+// patí A PANTALLA. A les zenitals, el gir de la càmera més el rumb; en perspectiva el
+// calcula render3D projectant la proa i la popa (cam.angP3).
+function angJoy(){
+  return cam.mode === 'persp' ? (cam.angP3 || 0) : normA(S.heading + cam.rot);
+}
+// El pom és on seu el patró: les mateixes posicions que fa servir el dibuix del patí
+// (crewY, CREW_X), en % de la silueta. Així no surt mai de les bancades.
+function joyKnobTo(nx, ny){             // nx = banda, ny = proa(+)/popa(−), ∈ [-1,1]
+  joyKnob.style.left = (50 + nx*CREW_X()/L*100).toFixed(2) + '%';
+  joyKnob.style.top  = (50 + crewY(ny)/L*100).toFixed(2) + '%';
 }
 function joyFrom(e){
   // El centre es fixa en tocar: llegir-lo a cada moviment convertia qualsevol canvi
@@ -5048,8 +5078,12 @@ function joyFrom(e){
   let dx = (e.clientX - joySt.cx)/JOY_R, dy = (joySt.cy - e.clientY)/JOY_R;   // dy>0 = amunt
   const m = Math.hypot(dx, dy);
   if(m > 1){ dx /= m; dy /= m; }                                   // dins del cercle
-  joySt.x = dx; joySt.y = dy;
-  joyKnobTo(dx, dy);
+  // el gest es llegeix en el marc del patí que es veu: cap a la proa dibuixada, pes a proa
+  const a = angJoy(), ca = Math.cos(a), sa = Math.sin(a);
+  const bx = dx*ca - dy*sa, by = dx*sa + dy*ca;
+  joySt.x = bx; joySt.y = by;
+  joyKnobTo(bx, by);
+  dx = bx; dy = by;
   if(S.mode === 'mar'){                  // navegant: el joystick MOU EL PES
     S.wxT = clamp(dx, -1, 1);
     S.wfT = clamp(dy, -1, 1);
@@ -5279,25 +5313,61 @@ function rodaZoom(e){
 }
 cv.addEventListener('wheel', rodaZoom, { passive:false });
 document.getElementById('zoomBox').addEventListener('wheel', rodaZoom, { passive:false });
-// Columna esquerra: entre el control del pal i el botó del joystick. Si el pal
-// desplegat no hi deixa lloc, el lliscant se li posa al costat.
+// Penja del botó 🔍, a la seva vertical, fins abans del primer control que trobi a
+// sota (joystick, vela, escota, ENTRAR AL MAR…). Pot tapar un moment el rumb i la
+// velocitat: es plega tot sol. Si a sota no hi cap, va a la columna esquerra.
+const ZOOM_AMPLE = 28 + 2*4 + 2;                // pista, farciment i vora
 function colocaZoom(){
-  const box = $('zoomBox'), ra = $('rakeBox').getBoundingClientRect();
+  const box = $('zoomBox'), bt = $('btnZoom').getBoundingClientRect();
   const PASSOS = 2*24 + 2*4 + 2*5 + 2;          // + i −, separacions, farciment i vora
-  let peu = innerHeight - 10 - 36 - 10;         // per sobre del botó del joystick
-  let top = ra.bottom + 10, left = 10;
-  if(peu - top - PASSOS < 110){ top = ra.top; left = ra.right + 6; }
-  // i per sobre del joystick o de la vela si són a la mateixa columna
-  for(const id of ['joy', 'diag']){
-    const e = $(id), r = e.getBoundingClientRect();
-    if(getComputedStyle(e).display === 'none' || r.width < 4) continue;
-    if(r.left < left + 40 && r.right > left && r.top > top) peu = Math.min(peu, r.top - 8);
+  const peuDe = (top, left) => {
+    let peu = innerHeight - 10;
+    for(const id of ['joy', 'btnJoy', 'diag', 'escotaBox', 'btnEntrar', 'rakeBox', 'btnMapa']){
+      const e = $(id); if(!e) continue;
+      const r = e.getBoundingClientRect();
+      if(getComputedStyle(e).display === 'none' || r.width < 4) continue;
+      if(r.left < left + ZOOM_AMPLE + 4 && r.right > left - 4 && r.bottom > top) peu = Math.min(peu, r.top - 8);
+    }
+    return peu;
+  };
+  let left = clamp(Math.round(bt.left + bt.width/2 - ZOOM_AMPLE/2), 10, innerWidth - ZOOM_AMPLE - 10);
+  let top = bt.bottom + 6;
+  let peu = peuDe(top, left);
+  if(peu - top - PASSOS < 80){                  // sota el pal, a l'esquerra
+    const ra = $('rakeBox').getBoundingClientRect();
+    left = 10; top = ra.bottom + 10; peu = peuDe(top, left);
+    if(peu - top - PASSOS < 80){ left = ra.right + 6; top = ra.top; peu = peuDe(top, left); }
   }
-  const alt = clamp(peu - top - PASSOS, 80, 260);
+  const alt = clamp(peu - top - PASSOS, 80, 240);
   box.style.top = Math.round(top) + 'px';
   box.style.left = Math.round(left) + 'px';
   zoomTrack.style.height = Math.round(alt) + 'px';
 }
+// Plegat de sortida. El botó 🔍 el desplega; es torna a plegar 1,5 s després de deixar
+// anar el lliscant (o de tocar + o −), als 4 s si no s'ha tocat, o en tocar a fora.
+const ZOOM_PLEC = { despres:1500, sensetocar:4000 };
+let plecZoom = null;
+const zoomObert = () => $('zoomBox').classList.contains('obert');
+function plegaZoomEn(ms){ clearTimeout(plecZoom); plecZoom = setTimeout(plegaZoom, ms); }
+function obreZoom(){
+  $('zoomBox').classList.add('obert'); $('btnZoom').classList.add('on');
+  posaZoom(cam.zt); colocaZoom(); plegaZoomEn(ZOOM_PLEC.sensetocar);
+}
+function plegaZoom(){
+  clearTimeout(plecZoom);
+  if(dragZoom !== null) return;                 // mai de sota el dit
+  $('zoomBox').classList.remove('obert'); $('btnZoom').classList.remove('on');
+}
+zoomTrack.addEventListener('pointerdown', ()=> clearTimeout(plecZoom));
+zoomTrack.addEventListener('pointerup',     ()=> plegaZoomEn(ZOOM_PLEC.despres));
+zoomTrack.addEventListener('pointercancel', ()=> plegaZoomEn(ZOOM_PLEC.despres));
+for(const id of ['zoomMes', 'zoomMenys'])
+  document.getElementById(id).addEventListener('click', ()=> plegaZoomEn(ZOOM_PLEC.despres));
+document.getElementById('zoomBox').addEventListener('wheel', ()=> plegaZoomEn(ZOOM_PLEC.despres));
+// tocar a fora el plega, i el toc fa igualment el que havia de fer
+document.addEventListener('pointerdown', e=>{
+  if(zoomObert() && !e.target.closest?.('#zoomBox, #btnZoom')) plegaZoom();
+}, true);
 
 /* ------------------- ESCOTA ------------------- */
 const track = document.getElementById('escotaTrack');
@@ -5352,9 +5422,11 @@ function calcUiBot(){
 addEventListener('resize', calcUiBot);
 calcUiBot();
 
+const RETOL_MS = 1200;                       // el rètol VELA no canvia més d'un cop cada 1,2 s
+const retol = { txt:'', t:-1e9 };
 function updateHUD(){
   S.terbolesa = clamp((S.windKn - 10)/16, 0, 1);        // mar remoguda = aigua més tèrbola
-  if((uiTick++ % 20) === 0){ calcUiBot(); colocaZoom(); }
+  if((uiTick++ % 20) === 0) calcUiBot();       // el zoom es col·loca en obrir-se: mai es mou sota el dit
   const deg = Math.round(F.absT*R2D);
   $('rumbNom').textContent = rumbName(deg);
   $('angleVal').textContent = deg + '°';
@@ -5388,13 +5460,23 @@ function updateHUD(){
   if(joySt.id === null && joyOn){
     joyKnobTo(clamp(S.wx,-1,1), clamp(S.wf,-1,1));
   }
+  // la silueta gira cada fotograma i sense transició: amb una transició CSS, en passar
+  // de +180° a −180° faria una volta sencera enrere
+  if(joyOn) joyPati.style.transform = `rotate(${angJoy().toFixed(4)}rad)`;
 
-  const v = $('velaVal');
-  if(S.capsized>0){ v.textContent='—'; }
-  else if(F.neutral){ v.textContent='NEUTRA'; v.style.color='#8ce8ae'; }
-  else if(F.flap){ v.textContent='FLAMEJA'; v.style.color='#f2c14e'; }
-  else if(F.stall){ v.textContent='SOBRECAÇADA'; v.style.color='#ff9b8f'; }
-  else { v.textContent='EN POTÈNCIA'; v.style.color='#8ce8ae'; }
+  // Al límit del flameig el patí hi entra i en surt de debò (orsa, perd velocitat,
+  // arriba): els catavents ho mostren, però el rètol aguanta cada estat RETOL_MS.
+  const [txt, col] = S.capsized>0 ? ['—', null]
+                   : F.neutral ? ['NEUTRA', '#8ce8ae']
+                   : F.flap    ? ['FLAMEJA', '#f2c14e']
+                   : F.stall   ? ['SOBRECAÇADA', '#ff9b8f']
+                   :             ['EN POTÈNCIA', '#8ce8ae'];
+  const ara = performance.now();
+  if(txt !== retol.txt && (ara - retol.t >= RETOL_MS || txt === '—')){
+    const v = $('velaVal');
+    v.textContent = txt; if(col) v.style.color = col;
+    retol.txt = txt; retol.t = ara;
+  }
 
   knob.style.top = S.sheet*100 + '%';
   // control del pal
@@ -5967,7 +6049,7 @@ const GUIA = [
   { id:'rakeBox',   t:'PAL',              dir:'dreta' },
   { id:'diag',      t:'VELA',             dir:'esq'   },
   { id:'joy',       t:'EL TEU PES',       dir:'esq'   },
-  { id:'zoomBox',   t:'ZOOM',             dir:'dreta' },
+  { id:'btnZoom',   t:'ZOOM',             dir:'baix'  },
   { id:'btnCam',    t:'CÀMERES',          dir:'baix'  },
   { id:'btnMapa',   t:'MAPA',             dir:'baix'  },
   { id:'btnConfig', t:'MENÚ',             dir:'baix'  },
@@ -6119,7 +6201,7 @@ $('btnALinia').addEventListener('click', ()=>{
 $('repteBar').addEventListener('click', ()=>{ if(REG.fase!=='off') mostraCircuit(); });
 $('btnTancarReptes').addEventListener('click', ()=> $('ovReptes').classList.remove('on'));
 $('btnTornarMenu').addEventListener('click', ()=> obreNomes('ovConfig'));
-$('btnZoom').addEventListener('click', cycleZoom);
+$('btnZoom').addEventListener('click', ()=> zoomObert() ? plegaZoom() : obreZoom());
 $('btnCam').addEventListener('click', toggleCamMode);
 
 /* ------------------- REINICI I RESUM ------------------- */
@@ -6147,7 +6229,7 @@ $('rakeToggle').addEventListener('click', ()=>{
   const box = $('rakeBox');
   box.classList.toggle('min');
   $('rakeToggle').textContent = box.classList.contains('min') ? '⛵▸' : '⛵▾';
-  colocaZoom();
+  if(zoomObert()) colocaZoom();
 });
 $('btnNovaPartida').addEventListener('click', novaPartida);
 $('btnSeguir').addEventListener('click', ()=> $('ovFinal').classList.remove('on'));
@@ -6213,7 +6295,7 @@ $('sCrew').addEventListener('input', e=>{
 /* ------------------- INICI ------------------- */
 buildChannel();
 resetToBeach();
-posaZoom(cam.zt); colocaZoom(); addEventListener('resize', colocaZoom);
+posaZoom(cam.zt); addEventListener('resize', ()=>{ if(zoomObert()) colocaZoom(); });
 // sincronitza el control de direcció del vent amb el valor inicial (90° = llevant)
 $('sWindDir').value = Math.round(rumbVer(S.windFrom)*R2D/5)*5;
 $('cWindD').textContent = Math.round(rumbVer(S.windFrom)*R2D)+'°';
