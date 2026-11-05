@@ -184,6 +184,63 @@
   .repteItem .desc{font-size:11.5px;opacity:.75;margin-top:2px;line-height:1.35}
   .repteItem .check{font-size:18px;flex:none}
 
+  /* ---- ITINERARI DE REPTES: camí de nivells (mapa de progrés) ---- */
+  #btnItin{width:38px;height:38px;font-size:17px}
+  .itinCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  #itinComptador{font-family:'Barlow Condensed';font-weight:700;font-size:17px;color:var(--verd);white-space:nowrap}
+  .itinSub{font-size:12px;line-height:1.4;color:#e8eef2;opacity:.8;margin:0 0 10px}
+  #itinBarra{height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:6px}
+  #itinBarraFill{height:100%;width:0%;background:linear-gradient(90deg,var(--verd),#8ce8ae);transition:width .4s}
+  .nivell{position:relative;margin:14px 0 4px}
+  .nivellCap{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    background:rgba(242,193,78,.12);border:1px solid rgba(242,193,78,.35);border-radius:12px;padding:8px 12px}
+  .nivell.bloq .nivellCap{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}
+  .nivellCap .t{font-family:'Barlow Condensed';font-weight:700;font-size:16px;letter-spacing:.05em;color:var(--groc)}
+  .nivell.bloq .nivellCap .t{color:rgba(232,217,184,.6)}
+  .nivellCap .n{font-size:12px;color:var(--sorra);opacity:.85;white-space:nowrap}
+  .cami{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0 4px}
+  .cami::before{content:'';position:absolute;left:50%;top:6px;bottom:6px;border-left:3px dashed rgba(232,217,184,.22);transform:translateX(-1.5px)}
+  .node{position:relative;display:flex;flex-direction:column;align-items:center;width:132px;
+    background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0}
+  .node .bola{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:27px;background:#1a5672;border:3px solid rgba(232,217,184,.45);box-shadow:0 5px 0 rgba(0,0,0,.35)}
+  .node:active .bola{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+  .node .et{margin-top:6px;font-size:12px;font-weight:600;line-height:1.2;text-align:center;
+    color:#e8eef2;background:rgba(13,51,71,.92);border-radius:6px;padding:1px 5px}
+  .node.fet .bola{background:#2e9e5b;border-color:#8ce8ae}
+  .node.actual .bola{background:var(--vermell);border-color:#ffb3a8;animation:polsa 1.6s ease-in-out infinite}
+  .node.bloq .bola{background:#22404f;border-color:rgba(255,255,255,.15);filter:grayscale(1);opacity:.6}
+  .node.bloq .et{opacity:.55}
+  .node .marca{position:absolute;top:-4px;left:calc(50% + 18px);font-size:15px;line-height:1;
+    background:#0d3347;border-radius:50%;padding:2px}
+  .node .comenca{position:absolute;top:-22px;font-family:'Barlow Condensed';font-weight:700;font-size:12px;
+    letter-spacing:.08em;color:#0d2230;background:var(--groc);border-radius:6px;padding:1px 7px}
+  @keyframes polsa{0%,100%{box-shadow:0 5px 0 rgba(0,0,0,.35),0 0 0 0 rgba(212,58,47,.55)}
+    50%{box-shadow:0 5px 0 rgba(0,0,0,.35),0 0 0 9px rgba(212,58,47,0)}}
+  .codiFila{display:flex;gap:8px;align-items:stretch}
+  #itinCodi{flex:1;min-width:0;padding:10px;border-radius:10px;border:1px solid rgba(232,217,184,.3);
+    background:rgba(255,255,255,.07);color:var(--sorra);font-family:'Barlow Condensed';font-size:18px;
+    letter-spacing:.12em;text-transform:uppercase}
+  #btnCodi{width:auto;margin-top:0;padding:10px 14px;font-size:15px}
+  /* fitxa del repte i pantalla de repte superat */
+  .fitxaIc{font-size:44px;text-align:center;line-height:1.1}
+  .fitxaNiv{font-family:'Barlow Condensed';font-weight:700;font-size:14px;letter-spacing:.1em;
+    color:var(--groc);text-align:center;margin-top:4px}
+  #fitxaNom,#supNom{text-align:center}
+  .fitxaDesc{font-size:13.5px;line-height:1.45;color:#e8eef2;margin:6px 0 10px}
+  .xips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+  .xip{font-size:12px;background:rgba(255,255,255,.08);border:1px solid rgba(232,217,184,.2);
+    border-radius:999px;padding:4px 9px;color:var(--sorra)}
+  .fitxaCrit{font-size:12.5px;line-height:1.4;background:rgba(95,208,138,.1);border-left:3px solid var(--verd);
+    border-radius:8px;padding:7px 10px;color:#e8eef2}
+  .fitxaAvis{font-size:12.5px;line-height:1.4;background:rgba(242,193,78,.12);border-left:3px solid var(--groc);
+    border-radius:8px;padding:7px 10px;color:#e8eef2;margin-top:8px}
+  #supResum{font-size:14px;line-height:1.45;color:#e8eef2;margin:6px 0 2px}
+  #supResum > div{margin:5px 0}
+  #supResum .fila{display:flex;justify-content:space-between}
+  .duo{display:flex;gap:8px}
+  .duo .btn{flex:1}
+
   /* Cartell: un avís de cabina, de la família dels panells del HUD, no una
      bafarada al mig de l'escena. width:max-content és la clau: amb left:50%,
      un element fixat només pot ocupar el 50% que queda a la dreta i el text
@@ -286,10 +343,13 @@
 
   /* Mòbil estret (320 px): la fila de botons de dalt arribava a x=81 i la rosa
      dels vents acaba a x=89, o sigui que es trepitjaven. Ve de lluny, no del
-     botó de tornada. Escurçant càmera i zoom la fila comença a x=107. */
+     botó de tornada. Escurçant càmera i zoom la fila comença a x=107.
+     Amb el 🏆 dels reptes tornava a començar a x=74: amb botons de 34 px, càmera i
+     zoom de 44 i 4 px entre botons comença a x=96 (a 360 px, a x=136). */
   @media (max-width:360px){
-    #btnZoom, #btnCam{min-width:50px;padding:8px 6px;font-size:13px}
-    #btnConfig, #btnRestart{width:34px;height:34px}
+    #botons{gap:4px}
+    #btnZoom, #btnCam{min-width:44px;padding:8px 4px;font-size:13px}
+    #btnConfig, #btnRestart, #btnItin{width:34px;height:34px}
   }
 
   @media (max-width:480px){
@@ -421,6 +481,7 @@
       <path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.6 4.2v4.6h-4.6"/>
     </svg>
   </div>
+  <div id="btnItin" class="panell" title="Reptes per nivells" aria-label="Reptes">🏆</div>
   <div id="btnConfig" class="panell">⚙️</div>
 </div>
 
@@ -505,6 +566,7 @@
     <p class="guiaLema">Sense timó: es governa amb el <b>pes del cos</b> i l'<b>escota</b>.</p>
     <div id="guiaBotons">
       <button class="btn" id="btnComencar">COMENÇAR</button>
+      <button class="btn btn2" id="btnGuiaReptes">🏆 REPTES PER NIVELLS</button>
       <button class="btn btn2" id="btnManual">📖 COM ES NAVEGA</button>
     </div>
   </div>
@@ -540,11 +602,17 @@
 </div>
 
 <div id="ovReptes" class="overlay"><div class="caixa">
-  <h1>Regates</h1>
-  <div class="sub" style="margin:-4px 0 8px">El recorregut es marca <b>respecte del vent</b>. Creua la línia per començar; a partir de la segona volta et perseguirà el <b>fantasma</b> de la teva volta més ràpida.</div>
-  <div id="llistaCurses"></div>
-  <h2>Exercicis de tècnica</h2>
-  <div id="llistaReptes"></div>
+  <div class="itinCap"><h1>Reptes</h1><span id="itinComptador">0/11</span></div>
+  <div id="itinBarra"><div id="itinBarraFill"></div></div>
+  <div class="itinSub">Toca un repte i surts a navegar: el patí, el vent i les boies ja hi són. Supera'n un per obrir el nivell següent.</div>
+  <div id="itinMapa"></div>
+  <button class="btn sec" id="btnLliure">🌊 NAVEGACIÓ LLIURE</button>
+  <h2>Codi de progrés</h2>
+  <div class="itinSub">El progrés es perd si tanques l'app. Apunta't el codi i torna'l a escriure per recuperar-lo.</div>
+  <div class="codiFila">
+    <input id="itinCodi" type="text" autocomplete="off" spellcheck="false" maxlength="12" aria-label="Codi de progrés">
+    <button class="btn" id="btnCodi">CARREGA</button>
+  </div>
   <h2>Xuleta del patró</h2>
   <div class="regla"><span class="ic">⬆️</span><span><b>Orsar:</b> pes a proa · escora a sotavent · caçar.</span></div>
   <div class="regla"><span class="ic">⬇️</span><span><b>Arribar:</b> pes a popa · patí pla · amollar.</span></div>
@@ -553,6 +621,33 @@
     <button class="btn sec" id="btnTornarMenu" style="flex:1">‹ MENÚ</button>
     <button class="btn sec" id="btnTancarReptes" style="flex:1">TANCAR</button>
   </div>
+</div></div>
+
+<!-- Fitxa d'un repte de l'itinerari -->
+<div id="ovFitxa" class="overlay"><div class="caixa">
+  <div class="fitxaIc" id="fitxaIc">⛵</div>
+  <div class="fitxaNiv" id="fitxaNiv">NIVELL 1</div>
+  <h1 id="fitxaNom">Repte</h1>
+  <div class="fitxaDesc" id="fitxaDesc"></div>
+  <div class="xips" id="fitxaXips"></div>
+  <div class="fitxaCrit" id="fitxaCrit"></div>
+  <div class="fitxaAvis" id="fitxaAvis" style="display:none"></div>
+  <button class="btn" id="btnNavega">⛵ NAVEGA</button>
+  <button class="btn sec" id="btnFitxaMapa">‹ TORNAR ALS REPTES</button>
+</div></div>
+
+<!-- Repte superat -->
+<div id="ovSuperat" class="overlay"><div class="caixa">
+  <div class="fitxaIc">🏆</div>
+  <div class="fitxaNiv" id="supNiv">REPTE SUPERAT</div>
+  <h1 id="supNom">Repte</h1>
+  <div id="supResum"></div>
+  <button class="btn" id="btnSeguent">SEGÜENT ▶</button>
+  <div class="duo">
+    <button class="btn sec" id="btnRepetir">↺ REPETIR</button>
+    <button class="btn sec" id="btnSupMapa">🏆 REPTES</button>
+  </div>
+  <button class="btn sec" id="btnSupSeguir" style="opacity:.8">CONTINUAR NAVEGANT</button>
 </div></div>
 
 <!-- Configuració -->
@@ -570,7 +665,7 @@
   <h1>Menú</h1>
   <div class="ctrl">
     <div style="display:flex;gap:8px">
-      <button class="btn sec" id="btnReptes" style="margin-top:0;flex:1">⛵ REPTES</button>
+      <button class="btn sec" id="btnReptes" style="margin-top:0;flex:1">🏆 REPTES</button>
       <button class="btn sec" id="btnGuia" style="margin-top:0;flex:1">❔ GUIA</button>
     </div>
     <div class="sub">Reptes per practicar i guia dels controls de la pantalla.</div>
@@ -592,7 +687,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v28</div>
+  <div id="versio">Versió v30</div>
 </div></div>
 
 <script>
@@ -1422,7 +1517,9 @@ function physics(dt){
     } else if(nearRun && S.wx*S.sailSide > 0.28 && (S.jibeCd||0) <= 0){
       // trabutjada: cal un gest CLAR de pes a sotavent, i amb temps refractari
       // perquè la vela no vagi canviant de banda a cada oscil·lació
-      crew = -Math.sign(S.pulley || 1) * clamp(S.wx*S.sailSide, 0, 1) * 2.2;
+      // (v29) cap a l'altra banda de la vela (sailSide), no segons el signe de la politja:
+      // passat el centre el signe es girava i el patró la tornava enrere (creuava 45° tard)
+      crew = -S.sailSide * clamp(S.wx*S.sailSide, 0, 1) * 2.2;
       F.tackTo = 0;
     } else F.tackTo = 0;
     if(S.jibeCd > 0) S.jibeCd -= dt;
@@ -1599,7 +1696,15 @@ function physics(dt){
     if(parat > 0.02){
       const penell = windN * parat * ((flap || S.postVir > 0) ? 0.30 : 1) *
                      ((S.sheet - 0.42)*1.35 + wfEff*0.42);
-      torque += penell * (-tack);
+      // ACABADA DE VIRAR (postVir), el penell porta la proa CAP AL VENT, no cap a la banda
+      // de la vela (v29). Amb -tack, aturat a 2-5° de la nova amura amb la vela ja passada,
+      // empenyia la proa a través del vent i, a l'altra banda, la continuava fent caure per
+      // l'amura VELLA: la vela tornava (l'Oriol, si anava a popa uns graus massa tard). Ara
+      // la deixa proa al vent; el pes a popa la fa caure a la nova. Abans de passar la vela,
+      // i lluny del vent, és el mateix que abans (les virades calibrades no canvien).
+      // (Només quan el penell porta la proa al vent; amollada, la proa cau cap a la vela.)
+      const cara = (S.postVir > 0 && penell > 0 && absT < 90*D2R) ? clamp(t/(3*D2R), -1, 1) : tack;
+      torque += penell * (-cara);
       F.penell = penell;
     } else F.penell = 0;
   }
@@ -1678,9 +1783,9 @@ function physics(dt){
     const clavat = senseForca ? 1 : (1 - clamp(absT/(32*D2R), 0, 1));
     // acabada de virar, la vela nova flameja a sotavent i el vent de proa la fa caure
     const fall  = windN * still * clavat * (S.postVir > 0 ? 1 : 0.45 + 0.55*(1 - S.sheet)) * 0.85;
-    // cau cap al costat on ja és la proa; si és exactament al vent, cap on va la vela
-    const side0 = Math.abs(t) > 1*D2R ? Math.sign(t) : tack;
-    torque += side0 * fall;
+    // (v29) cau cap a la banda on penja la vela: amb la vela a la contra, per l'amura
+    // nova (abans sign(t) la feia caure sempre per l'amura vella i la vela tornava)
+    torque += tack * fall;
   }
 
   F.torque = orsaF*spdF;
@@ -5741,6 +5846,10 @@ function updateRegata(dt){
   // ¿hem virat la fita que toca?
   const m = REG.marques[REG.fita];
   if(m){
+    // La línia també es vigila mentre es va a les boies: si no, a la 2a volta REG.sPrev
+    // es quedava amb el costat de l'arribada anterior i, en passar l'última boia,
+    // la volta es donava per acabada sense haver creuat la línia.
+    creuaLinia();
     const d = Math.hypot(S.px - m.p[0], S.py - m.p[1]);
     if(d < MARCA_R()){
       REG.fita++;
@@ -5796,6 +5905,9 @@ const REPTES = [
   {id:'traves', nom:'Rumb de través', desc:'Mantén-te entre 80° i 100° del vent durant 5 s. El rumb més ràpid del patí.', dur:5},
   {id:'virada', nom:'Virada per avant', desc:'Creua la proa pel vent i surt navegant per l\u2019altra amura. Orsa amb decisió i no perdis inèrcia!'},
   {id:'empopada', nom:'Empopada controlada', desc:'Navega a més de 150° del vent, amb la vela ben amollada, durant 5 s.', dur:5},
+  // Els dos objectius de la partida (sortir i tornar pel canal), ara també com a reptes
+  {id:'canal', nom:'Surt pel canal', desc:'Des de la sorra, prem ENTRAR AL MAR i surt pel canal de boies fins a passar entre la verda i la vermella.'},
+  {id:'tornar', nom:'Torna pel canal', desc:'Arriba fins a la boca del canal, entra-hi i acaba a la sorra sense tocar fora del canal.'},
 ];
 const fets = new Set();
 let repte = REPTES[0], prog = 0, viradaFase = 0, viradaTack = 0, aturat = 0;
@@ -5811,6 +5923,15 @@ function setRepte(r){
   }
 }
 function updateRepte(dt){
+  // tornar pel canal: el mateix criteri que handleLanding() per a «Partida completada»
+  if(repte.id==='tornar'){
+    if(S.mode==='final' && S.beyondMouth && Math.abs(S.px) < chHalfW(0)*0.95) completa();
+    return;
+  }
+  if(repte.id==='canal'){
+    if(S.mode==='mar' && S.beyondMouth) completa();
+    return;
+  }
   if(repte.id==='lliure' || S.capsized>0 || S.mode!=='mar') return;
   const deg = F.absT*R2D;
   let p = prog;
@@ -5846,14 +5967,17 @@ function updateRepte(dt){
   if(frac >= 1) completa();
 }
 function completa(){
-  fets.add(repte.id);
-  banner('Repte superat', repte.nom, 'ok');
+  const r = repte;
+  fets.add(r.id);
+  banner('Repte superat', r.nom, 'ok');
   renderReptes();
   setRepte(REPTES[0]);
+  itinSuperat(r.id);
 }
 
+// La llista antiga ja no és al menú (ara hi ha el camí de nivells): si no hi és, no fa res.
 function renderReptes(){
-  const ll = $('llistaReptes'); ll.innerHTML='';
+  const ll = $('llistaReptes'); if(!ll) return; ll.innerHTML='';
   for(const r of REPTES){
     const div = document.createElement('div');
     div.className = 'repteItem' + (fets.has(r.id)?' fet':'');
@@ -6021,6 +6145,259 @@ function mostraResumRegata(){
 }
 renderCurses();
 
+/* ------------------- ITINERARI DE REPTES PER NIVELLS -------------------
+   Un camí de nivells (com un mapa de progrés) amb els reptes que ja existien:
+   els exercicis de REPTES i les regates de CURSES. Aquí no es defineix cap repte
+   nou ni cap criteri: només QUIN ordre seguir i QUINA SITUACIÓ es carrega
+   (posició, rumb, vent, escota i pes), perquè es pugui navegar a l'instant.
+   El pes i l'escota de cada rumb són els de l'equilibri: amb aquests valors el
+   patí aguanta el rumb sol (calibrat amb la física, sense tocar-la).
+   th = angle del rumb respecte del vent, en graus, amura babord (vela a estribord). */
+const ITIN = {
+  nivells: [
+    { t:'Primeres passes', reptes:[
+      { id:'canal',    tipus:'exercici', ic:'🏖️', kn:8,  sit:'platja',
+        crit:'Passa la boca del canal, entre la boia verda i la vermella.' },
+      { id:'traves',   tipus:'exercici', ic:'⛵', kn:8,  sit:'boca', th:90,  sheet:0.50, wf:0, wx:-0.9, v:0.75,
+        crit:'Entre 80° i 100° del vent, a més de 2,1 kn, durant 5 s seguits.' },
+    ]},
+    { t:'Rumbs', reptes:[
+      { id:'cenyida',  tipus:'exercici', ic:'🌬️', kn:10, sit:'boca', th:50,  sheet:0.80, wf:0, wx:-0.9, v:0.45,
+        crit:'Entre 38° i 58° del vent, a més d’1,7 kn, durant 5 s seguits.' },
+      { id:'empopada', tipus:'exercici', ic:'🪁', kn:10, sit:'boca', th:160, sheet:0.30, wf:0, wx:-0.3, v:0.85,
+        crit:'A més de 150° del vent, a més d’1,2 kn i amb l’escota amollada (menys del 35 %), durant 5 s.' },
+    ]},
+    { t:'Maniobres', reptes:[
+      { id:'virada',   tipus:'exercici', ic:'↩️', kn:10, sit:'boca', th:55,  sheet:0.80, wf:0, wx:-0.7, v:0.55,
+        crit:'Cenyint a més d’1,8 kn, creua el vent i surt per l’altra amura a més de 35° del vent i 0,7 kn.' },
+      { id:'tornar',   tipus:'exercici', ic:'🏠', kn:10, sit:'tornada', th:120, sheet:0.40, wf:0, wx:-0.3, v:0.80,
+        crit:'Toca la sorra dins del canal de boies. Si toques fora del canal, tornes a començar.' },
+    ]},
+    { t:'Regates a prop de costa', reptes:[
+      { id:'costaner',  tipus:'regata', ic:'🏁', kn:12 },
+      { id:'basto',     tipus:'regata', ic:'🎯', kn:12 },
+      { id:'triangle',  tipus:'regata', ic:'🔺', kn:12 },
+    ]},
+    { t:'Mar obert', reptes:[
+      { id:'equilater', tipus:'regata', ic:'🔷', kn:12 },
+      { id:'rectangle', tipus:'regata', ic:'📐', kn:12 },
+    ]},
+  ],
+  fets: new Set(),     // ids superats (en memòria: sense localStorage; vegeu el codi de progrés)
+  actiu: null,         // node que s'està fent
+  ultim: null,         // últim node superat (per a REPETIR i SEGÜENT)
+  obert: null,         // node de la fitxa oberta
+};
+ITIN.tots = ITIN.nivells.flatMap((nv, k) => nv.reptes.map(n => (n.niv = k, n)));
+const itinNode   = id => ITIN.tots.find(n => n.id === id) || null;
+const itinDef    = n => n.tipus === 'regata' ? CURSES.find(c => c.id === n.id) : REPTES.find(r => r.id === n.id);
+const nivellObert = k => k === 0 || ITIN.nivells[k-1].reptes.some(n => ITIN.fets.has(n.id));
+function itinEstat(n){
+  if(ITIN.fets.has(n.id)) return 'fet';
+  if(!nivellObert(n.niv)) return 'bloq';
+  const primer = ITIN.tots.find(m => !ITIN.fets.has(m.id) && nivellObert(m.niv));
+  return primer === n ? 'actual' : 'lliure';
+}
+function itinCriteri(n){
+  if(n.crit) return n.crit;
+  const c = itinDef(n);
+  return `Acaba ${c.voltes === 1 ? 'la volta' : 'les ' + c.voltes + ' voltes'}: creua la línia, passa totes les boies en ordre i torna a creuar-la.`;
+}
+const nomRumb = th => th < 65 ? 'cenyida' : th < 110 ? 'través' : th < 145 ? 'llarg' : 'empopada';
+function itinXips(n){
+  const x = ['💨 ' + n.kn + ' kn'];
+  if(n.tipus === 'regata'){
+    const c = itinDef(n);
+    x.push(c.mar !== undefined ? '📍 a la línia, a 1 km de la costa' : '📍 a la línia de sortida');
+    x.push('🔁 ' + c.voltes + (c.voltes === 1 ? ' volta' : ' voltes'));
+  } else if(n.sit === 'platja'){
+    x.push('📍 a la sorra'); x.push('🧭 vent de través al canal');
+  } else {
+    x.push(n.sit === 'tornada' ? '📍 fora del canal, de tornada' : '📍 a la boca del canal');
+    x.push('🧭 ' + nomRumb(n.th) + ' (' + n.th + '°)');
+  }
+  return x;
+}
+
+// ── codi de progrés: una marca per repte, en base 36, amb una lletra de control ──
+function codiProgres(){
+  let bits = 0;
+  ITIN.tots.forEach((n, i) => { if(ITIN.fets.has(n.id)) bits |= 1 << i; });
+  return 'PATI-' + bits.toString(36).toUpperCase().padStart(3, '0') + ((bits*7 + 3) % 36).toString(36).toUpperCase();
+}
+function llegeixCodi(txt){
+  let s = String(txt || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if(s.startsWith('PATI')) s = s.slice(4);
+  if(s.length < 2) return null;
+  const cos = s.slice(0, -1), chk = s.slice(-1);
+  if(!/^[0-9A-Z]+$/.test(cos)) return null;
+  const bits = parseInt(cos, 36);
+  if(!isFinite(bits) || bits < 0 || bits >= (1 << ITIN.tots.length)) return null;
+  if(((bits*7 + 3) % 36).toString(36).toUpperCase() !== chk) return null;
+  return ITIN.tots.filter((n, i) => bits & (1 << i)).map(n => n.id);
+}
+
+// ── el mapa: un camí vertical de nodes en ziga-zaga, per nivells ──
+function renderItin(){
+  const mapa = $('itinMapa');
+  const fets = ITIN.tots.filter(n => ITIN.fets.has(n.id)).length, tot = ITIN.tots.length;
+  if($('itinComptador')) $('itinComptador').textContent = fets + '/' + tot + ' ✅';
+  if($('itinBarraFill')) $('itinBarraFill').style.width = (100*fets/tot) + '%';
+  if($('itinCodi')) $('itinCodi').value = codiProgres();
+  if(!mapa) return;
+  const ZIG = [0, 46, 0, -46];
+  let h = '';
+  ITIN.nivells.forEach((nv, k) => {
+    const obert = nivellObert(k);
+    const f = nv.reptes.filter(n => ITIN.fets.has(n.id)).length;
+    h += `<div class="nivell${obert ? '' : ' bloq'}"><div class="nivellCap">
+      <span class="t">NIVELL ${k+1} · ${nv.t.toUpperCase()}</span>
+      <span class="n">${obert ? f + '/' + nv.reptes.length + ' ✅' : '🔒'}</span></div><div class="cami">`;
+    for(const n of nv.reptes){
+      const e = itinEstat(n), i = ITIN.tots.indexOf(n), d = itinDef(n);
+      h += `<button class="node ${e}" data-id="${n.id}" style="transform:translateX(${ZIG[i % 4]}px)">
+        ${e === 'actual' ? '<span class="comenca">COMENÇA</span>' : ''}
+        <span class="bola">${n.ic}</span>
+        ${e === 'fet' ? '<span class="marca">✅</span>' : e === 'bloq' ? '<span class="marca">🔒</span>' : ''}
+        <span class="et">${d.nom}</span></button>`;
+    }
+    h += '</div></div>';
+  });
+  mapa.innerHTML = h;
+}
+function obreItin(){
+  renderItin(); obreNomes('ovReptes');
+  // el camí s'obre on toca: el repte que hi ha per fer, al mig de la caixa
+  const c = document.querySelector && document.querySelector('#ovReptes .caixa');
+  const a = c && c.querySelector('.node.actual');
+  if(a && ITIN.fets.size) c.scrollTop += a.getBoundingClientRect().top - c.getBoundingClientRect().top - c.clientHeight/2 + 40;
+}
+
+function obreFitxa(id){
+  const n = itinNode(id); if(!n) return;
+  const d = itinDef(n), e = itinEstat(n);
+  ITIN.obert = n;
+  $('fitxaIc').textContent = n.ic;
+  $('fitxaNiv').textContent = 'NIVELL ' + (n.niv+1) + ' · ' + ITIN.nivells[n.niv].t.toUpperCase();
+  $('fitxaNom').textContent = d.nom;
+  $('fitxaDesc').textContent = d.desc;
+  $('fitxaXips').innerHTML = itinXips(n).concat(e === 'fet' ? ['✅ superat'] : [])
+    .map(t => `<span class="xip">${t}</span>`).join('');
+  $('fitxaCrit').innerHTML = '<b>Superat quan:</b> ' + itinCriteri(n);
+  const av = $('fitxaAvis');
+  if(e === 'bloq'){
+    av.style.display = 'block';
+    av.innerHTML = '🔒 Encara no has superat cap repte del nivell ' + n.niv + '. Pots provar-lo igualment.';
+    $('btnNavega').textContent = 'PROVA-HO IGUALMENT';
+  } else {
+    av.style.display = 'none';
+    $('btnNavega').textContent = e === 'fet' ? '↺ TORNA-HI' : '⛵ NAVEGA';
+  }
+  obreNomes('ovFitxa');
+}
+
+// el lliscant del menú ha de dir el mateix vent que es carrega
+function itinVent(kn, windFrom){
+  S.windKn = kn; S.windFrom = normA(windFrom);
+  const sw = $('sWind'), sd = $('sWindDir');
+  if(sw) sw.value = kn;
+  if($('cWindV')) $('cWindV').textContent = kn + ' kn';
+  const r = ((Math.round(rumbVer(S.windFrom)*R2D) % 360) + 360) % 360;
+  if(sd) sd.value = Math.round(r/5)*5 % 360;
+  if($('cWindD')) $('cWindD').textContent = r + '°';
+}
+// Patí a l'aigua, ja navegant al rumb del repte (com colocaALinia, però per a qualsevol rumb)
+function posaAlRepte(n){
+  resetToBeach();
+  let x = 0, y = -CH.len - 3*L, h = 0;                 // a la boca del canal, proa a mar obert
+  if(n.sit === 'tornada'){ x = 10*L; y = -CH.len - 6*L; h = Math.PI; }   // de tornada, desplaçat del canal
+  itinVent(n.kn, h - n.th*D2R);                         // th > 0: amura babord
+  S.mode = 'mar'; S.everInWater = true; S.beyondMouth = true; S.board = 1;
+  S.px = x; S.py = y; S.heading = normA(h); S.speed = n.v; S.vLat = 0; S.angVel = 0;
+  S.heel = 0; S.roll = 0; S.rollV = 0; S.capsized = 0; S.heelTime = 0;
+  S.sailSide = 1; S.pulley = 1; S.pulleyV = 0; S.boomDir = 0.6;
+  S.tacking = 0; S.tackDir = 0; S.postVir = 0; S.jibeCd = 0;
+  S.sheet = n.sheet; S.wx = S.wxT = n.wx; S.wf = S.wfT = n.wf;
+  landingLock = false; trail.length = 0;
+  cam.x = S.px; cam.y = S.py;
+  const b = $('btnEntrar'); if(b) b.style.display = 'none';
+}
+// Carrega TOTA la situació del repte i comença a comptar
+function carregaRepte(id){
+  const n = itinNode(id); if(!n) return;
+  tancaTot();
+  aturaRegata(); setRepte(REPTES[0]);
+  S.capsized = 0; landingLock = false;
+  const d = itinDef(n);
+  if(n.tipus === 'regata'){
+    resetToBeach();
+    itinVent(n.kn, 0);                                  // vent de mar: la boia de barlovent queda mar endins
+    muntaRegata(d);
+    colocaALinia();
+    banner(d.nom, 'Creua la línia per començar', 'ok');
+  } else if(n.sit === 'platja'){
+    resetToBeach();
+    itinVent(n.kn, 90*D2R);                             // de llevant: travessia sortint pel canal
+    setRepte(d);
+    banner(d.nom, 'Prem ENTRAR AL MAR', 'ok');
+  } else {
+    posaAlRepte(n);
+    setRepte(d);
+    banner(d.nom, n.sit === 'tornada' ? 'Entra pel canal fins a la sorra' : 'Ja navegues: ' + nomRumb(n.th), 'ok');
+  }
+  ITIN.actiu = n;
+  actualitzaBarraRegata();
+  if(n.tipus !== 'regata') $('repteTitol').textContent = '🎯 N' + (n.niv+1) + ' · ' + d.nom;
+}
+function itinSeguent(n){
+  const i = ITIN.tots.indexOf(n);
+  return ITIN.tots.slice(i+1).find(m => !ITIN.fets.has(m.id)) || ITIN.tots[i+1] || null;
+}
+// Un repte de l'itinerari s'ha superat: es marca i surt la pantalla de felicitació
+function itinSuperat(id){
+  const n = (ITIN.actiu && ITIN.actiu.id === id) ? ITIN.actiu : null;
+  if(!n) return;                                        // fora de l'itinerari no compta
+  const nouNivell = !nivellObert(n.niv + 1);
+  ITIN.fets.add(id); ITIN.ultim = n; ITIN.actiu = null;
+  const d = itinDef(n);
+  $('supNiv').textContent = 'NIVELL ' + (n.niv+1) + ' · REPTE SUPERAT';
+  $('supNom').textContent = d.nom;
+  let res = '';
+  if(n.tipus === 'regata'){
+    REG.temps.forEach((t, i) => res += `<div class="fila"><span>Volta ${i+1}</span><b>${fmtT(t)}</b></div>`);
+    res += `<div class="fila"><span>Millor volta</span><b style="color:#96dcff">${fmtT(REG.millor)}</b></div>`;
+    const ovF = $('ovFinal'); if(ovF) ovF.classList.remove('on');      // el resum ja és aquí
+  } else res = `<div>✅ ${itinCriteri(n)}</div>`;
+  const k = n.niv + 1;
+  if(nouNivell && k < ITIN.nivells.length && nivellObert(k))
+    res += `<div>🔓 Nivell ${k+1} obert: <b>${ITIN.nivells[k].t}</b></div>`;
+  const seg = itinSeguent(n);
+  const bs = $('btnSeguent');
+  if(seg && !ITIN.fets.has(seg.id)){ bs.style.display = 'block'; bs.textContent = 'SEGÜENT: ' + itinDef(seg).nom.toUpperCase() + ' ▶'; }
+  else if(ITIN.fets.size === ITIN.tots.length){ bs.style.display = 'none'; res += '<div>🏆 Has acabat tot l’itinerari!</div>'; }
+  else bs.style.display = 'none';
+  $('supResum').innerHTML = res;
+  renderItin();
+  obreNomes('ovSuperat');
+}
+// Cada fotograma: regates acabades, bolcades i errors tornen a la sortida del repte
+function itinTick(){
+  const n = ITIN.actiu; if(!n) return;
+  if(n.tipus === 'regata'){
+    if(REG.fase === 'off'){ ITIN.actiu = null; return; }
+    if(REG.fase === 'acabada' && REG.curs && REG.curs.id === n.id){ itinSuperat(n.id); return; }
+    if(S.mode === 'platja' && !landingLock){ colocaALinia(); banner('Tornem a la línia', 'El cronòmetre no s’atura', 'mal'); }
+    return;
+  }
+  if(repte.id !== n.id){ ITIN.actiu = null; return; }  // s'ha canviat de repte
+  if(n.sit !== 'platja' && S.mode === 'platja' && !landingLock){
+    posaAlRepte(n); setRepte(itinDef(n));
+    $('repteTitol').textContent = '🎯 N' + (n.niv+1) + ' · ' + itinDef(n).nom;
+    banner('Tornem-hi', 'Des de la sortida del repte', 'mal');
+  }
+}
+renderItin();
+
 let bannerT = null;
 // Quant dura cada to: un canvi de vista només confirma; un error s'ha de poder llegir.
 const BANNER_MS = { info:1800, ok:2400, mal:3400 };
@@ -6071,6 +6448,7 @@ const GUIA = [
   { id:'btnZoom',   t:'ZOOM',             dir:'baix'  },
   { id:'btnCam',    t:'CÀMERES',          dir:'baix'  },
   { id:'btnMapa',   t:'MAPA',             dir:'baix'  },
+  { id:'btnItin',   t:'REPTES',           dir:'baix'  },
   { id:'btnConfig', t:'MENÚ',             dir:'baix'  },
   { id:'btnTornar', t:"TORNAR A L'APP",  dir:'baix'   },
   { virtual:'rosa', t:'ROSA DELS VENTS',  dir:'dreta' },
@@ -6196,7 +6574,7 @@ function obreGuia(){ $('ovGuia').classList.add('on'); requestAnimationFrame(munt
 function tancaGuia(){ $('ovGuia').classList.remove('on'); }
 $('btnComencar').addEventListener('click', tancaGuia);
 // ── NAVEGACIÓ DELS MENÚS: només un pop-up obert alhora ─────────────────────
-const OVERLAYS = ['ovConfig','ovReptes','ovManual','ovMapa','ovFinal','ovCircuit'];
+const OVERLAYS = ['ovConfig','ovReptes','ovManual','ovMapa','ovFinal','ovCircuit','ovFitxa','ovSuperat'];
 function tancaTot(){
   for(const id of OVERLAYS){ const e = $(id); if(e) e.classList.remove('on'); }
   const g = $('ovGuia'); if(g) g.classList.remove('on');
@@ -6208,7 +6586,30 @@ $('btnManual').addEventListener('click', ()=>{ obreNomes('ovManual'); });
 $('btnTancarManual').addEventListener('click', ()=>{ $('ovManual').classList.remove('on'); obreGuia(); });
 addEventListener('resize', ()=>{ if($('ovGuia').classList.contains('on')) muntaGuia(); });
 requestAnimationFrame(()=> requestAnimationFrame(muntaGuia));   // primera pintada
-$('btnReptes').addEventListener('click', ()=> obreNomes('ovReptes'));
+$('btnReptes').addEventListener('click', obreItin);
+// ── itinerari de reptes ──
+$('btnItin').addEventListener('click', obreItin);
+$('btnGuiaReptes').addEventListener('click', obreItin);
+$('itinMapa').addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('.node');
+  if(b) obreFitxa(b.dataset.id);
+});
+$('btnNavega').addEventListener('click', ()=>{ if(ITIN.obert) carregaRepte(ITIN.obert.id); });
+$('btnFitxaMapa').addEventListener('click', obreItin);
+$('btnSeguent').addEventListener('click', ()=>{ const s = ITIN.ultim && itinSeguent(ITIN.ultim); if(s) carregaRepte(s.id); });
+$('btnRepetir').addEventListener('click', ()=>{ if(ITIN.ultim) carregaRepte(ITIN.ultim.id); });
+$('btnSupMapa').addEventListener('click', obreItin);
+$('btnSupSeguir').addEventListener('click', ()=> $('ovSuperat').classList.remove('on'));
+$('btnLliure').addEventListener('click', ()=>{
+  ITIN.actiu = null; aturaRegata(); setRepte(REPTES[0]); actualitzaBarraRegata(); tancaTot();
+  banner('Navegació lliure', 'Sense objectiu: experimenta amb el pes i l\u2019escota');
+});
+$('btnCodi').addEventListener('click', ()=>{
+  const ids = llegeixCodi($('itinCodi').value);
+  if(!ids){ banner('Codi no vàlid', 'Ha de ser com PATI-00A3', 'mal'); renderItin(); return; }
+  ITIN.fets = new Set(ids); renderItin();
+  banner('Progrés recuperat', ids.length + ' reptes superats', 'ok');
+});
 $('btnALinia').addEventListener('click', ()=>{
   $('ovCircuit').classList.remove('on');
   if(REG.fase==='preparats' && REG.curs.mar !== undefined){
@@ -6239,6 +6640,7 @@ function novaPartida(){
   S.stats = {t:0, sumV:0, maxV:0, virades:0, trasluixades:0, pend:null, prevSide:0};
   fets.clear(); renderReptes(); setRepte(REPTES[0]);
   aturaRegata(); actualitzaBarraRegata(); renderCurses();
+  ITIN.actiu = null;                                   // el progrés de l'itinerari es manté
   novaBatimetria(); S._fase = null;                     // el fons canvia cada partida
   resetToBeach();
   $('ovFinal').classList.remove('on');
@@ -6334,6 +6736,7 @@ function loop(now){
   updateHints(dt);
   updateRepte(dt);
   updateRegata(dt);
+  itinTick();
   if(REG.fase!=='off') actualitzaBarraRegata();
   requestAnimationFrame(loop);
 }
