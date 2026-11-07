@@ -239,6 +239,26 @@
   #supResum > div{margin:5px 0}
   #supResum .fila{display:flex;justify-content:space-between}
   .duo{display:flex;gap:8px}
+  /* purpurina, so, colors del buc i rècord */
+  #confeti{position:fixed;inset:0;width:100%;height:100%;z-index:30;pointer-events:none;display:none}
+  .capDreta{display:flex;align-items:center;gap:8px}
+  .btnSo{background:rgba(255,255,255,.08);border:1px solid rgba(232,217,184,.3);border-radius:50%;
+    width:36px;height:36px;font-size:16px;line-height:1;cursor:pointer;flex:none;color:inherit;padding:0}
+  #ovSuperat .caixa{position:relative}
+  #btnSoSup{position:absolute;top:12px;right:12px}
+  #itinColors{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:8px;margin-bottom:6px}
+  .mostra{width:38px;height:38px;border-radius:50%;border:2px solid rgba(232,217,184,.4);cursor:pointer;
+    font-size:13px;display:flex;align-items:center;justify-content:center;padding:0;justify-self:center}
+  .mostra.bloq{filter:saturate(.55) brightness(.5)}
+  .mostra.triat{outline:3px solid var(--groc);outline-offset:2px}
+  .mostra.gran{width:30px;height:30px;flex:none;cursor:default}
+  .supColor{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:rgba(242,193,78,.1);
+    border-radius:10px;padding:8px 10px;margin-top:6px}
+  .supColor .txt{flex:1;min-width:150px;font-size:13px;line-height:1.35;color:#e8eef2}
+  .supColor .btn{width:auto;margin-top:0;padding:8px 14px;font-size:15px}
+  .record{font-family:'Barlow Condensed';font-weight:700;font-size:22px;color:var(--groc);animation:polsaRec 1s ease-in-out 3}
+  .record span{font-family:inherit;font-size:13px;opacity:.75;font-weight:400}
+  @keyframes polsaRec{50%{transform:scale(1.06)}}
   .duo .btn{flex:1}
 
   /* Cartell: un avís de cabina, de la família dels panells del HUD, no una
@@ -602,13 +622,16 @@
 </div>
 
 <div id="ovReptes" class="overlay"><div class="caixa">
-  <div class="itinCap"><h1>Reptes</h1><span id="itinComptador">0/11</span></div>
+  <div class="itinCap"><h1>Reptes</h1><span class="capDreta"><span id="itinComptador">0/11</span><button class="btnSo" id="btnSoMapa" aria-label="So de la celebració">🔊</button></span></div>
   <div id="itinBarra"><div id="itinBarraFill"></div></div>
   <div class="itinSub">Toca un repte i surts a navegar: el patí, el vent i les boies ja hi són. Supera'n un per obrir el nivell següent.</div>
   <div id="itinMapa"></div>
+  <h2>Colors del buc</h2>
+  <div class="itinSub" id="itinColorTriat"></div>
+  <div id="itinColors"></div>
   <button class="btn sec" id="btnLliure">🌊 NAVEGACIÓ LLIURE</button>
   <h2>Codi de progrés</h2>
-  <div class="itinSub">El progrés es perd si tanques l'app. Apunta't el codi i torna'l a escriure per recuperar-lo.</div>
+  <div class="itinSub">El progrés es desa en aquest mòbil. Amb el codi el pots passar a un altre aparell o recuperar-lo si s'esborra.</div>
   <div class="codiFila">
     <input id="itinCodi" type="text" autocomplete="off" spellcheck="false" maxlength="12" aria-label="Codi de progrés">
     <button class="btn" id="btnCodi">CARREGA</button>
@@ -638,10 +661,12 @@
 
 <!-- Repte superat -->
 <div id="ovSuperat" class="overlay"><div class="caixa">
+  <button class="btnSo" id="btnSoSup" aria-label="So de la celebració">🔊</button>
   <div class="fitxaIc">🏆</div>
   <div class="fitxaNiv" id="supNiv">REPTE SUPERAT</div>
   <h1 id="supNom">Repte</h1>
   <div id="supResum"></div>
+  <div id="supColor" class="supColor" style="display:none"></div>
   <button class="btn" id="btnSeguent">SEGÜENT ▶</button>
   <div class="duo">
     <button class="btn sec" id="btnRepetir">↺ REPETIR</button>
@@ -649,6 +674,9 @@
   </div>
   <button class="btn sec" id="btnSupSeguir" style="opacity:.8">CONTINUAR NAVEGANT</button>
 </div></div>
+
+<!-- purpurina en superar un repte (no captura cap toc) -->
+<canvas id="confeti"></canvas>
 
 <!-- Configuració -->
 <div id="ovCircuit" class="overlay"><div class="caixa">
@@ -687,7 +715,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v30</div>
+  <div id="versio">Versió v31</div>
 </div></div>
 
 <script>
@@ -2697,11 +2725,19 @@ function render3D(dt){
       cx2d.moveTo(b0.x,b0.y); cx2d.lineTo(b1.x,b1.y);
       cx2d.lineTo(t1.x,t1.y); cx2d.lineTo(t0.x,t0.y);
       cx2d.closePath();
-      cx2d.fillStyle = mixc('#4a2c10', '#c98a4c', lit);
+      cx2d.fillStyle = mixc(PINTA_BUC.fosc, PINTA_BUC.clar, lit);       // color del buc (fusta per defecte)
       cx2d.fill();
       // la junta, del mateix color: amb el contorn mostrejat, una vora fosca a cada
       // segment feia ratlles verticals al costat
       cx2d.strokeStyle = cx2d.fillStyle; cx2d.lineWidth=0.8; cx2d.stroke();
+      if(PINTA_BUC.franja){                                       // franja: una banda a mitja alçada
+        const m = (a, b, u) => ({ x:a.x + (b.x - a.x)*u, y:a.y + (b.y - a.y)*u });
+        const p0 = m(b0, t0, 0.45), p1 = m(b1, t1, 0.45), q1 = m(b1, t1, 0.72), q0 = m(b0, t0, 0.72);
+        cx2d.beginPath(); cx2d.moveTo(p0.x, p0.y); cx2d.lineTo(p1.x, p1.y);
+        cx2d.lineTo(q1.x, q1.y); cx2d.lineTo(q0.x, q0.y); cx2d.closePath();
+        cx2d.fillStyle = mixc(PINTA_BUC.franja.fosc, PINTA_BUC.franja.clar, lit); cx2d.fill();
+        cx2d.strokeStyle = cx2d.fillStyle; cx2d.stroke();
+      }
     }
     // 2) línia de flotació (ancora el casc a l'aigua)
     {
@@ -2714,7 +2750,7 @@ function render3D(dt){
       }
     }
     // 3) coberta (tapa superior): cobreix l'interior i les parets llunyanes
-    poly(hullPts(cxh,HULLH), '#d99f5e', 'rgba(90,45,14,.9)', 1.6);
+    poly(hullPts(cxh,HULLH), PINTA_BUC.coberta, PINTA_BUC.vora, 1.6);   // fusta: '#d99f5e', 'rgba(90,45,14,.9)'
   }
   if(S.mode==='mar' && S.speed>0.32){
     for(const side of [-1,1]){
@@ -4103,7 +4139,8 @@ function drawBoat(){
   // puntes i hi tanca arrodonit. Còpies senceres desplaçades feien un mirall a popa.
   for(let k=12;k>=1;k--){
     const u = k/12, p = L*0.075*u;
-    cx2d.fillStyle = `rgb(${132-90*u|0},${82-58*u|0},${38-26*u|0})`;
+    const zc = (PINTA_BUC.franja && u > 0.3 && u < 0.55) ? PINTA_BUC.franja : PINTA_BUC;   // color del buc (fusta: 132,82,38 → 42,24,12)
+    cx2d.fillStyle = `rgb(${zc.zt[0]+(zc.zb[0]-zc.zt[0])*u|0},${zc.zt[1]+(zc.zb[1]-zc.zt[1])*u|0},${zc.zt[2]+(zc.zb[2]-zc.zt[2])*u|0})`;
     hullPath(-hb, hl, hw, dwx*p, dwy*p); cx2d.fill();
     hullPath( hb, hl, hw, dwx*p, dwy*p); cx2d.fill();
   }
@@ -4117,18 +4154,24 @@ function drawBoat(){
     // el costat que mira al sol s'aclareix; l'oposat s'enfosqueix
     const litL = litness(-1, 0), litR = litness(1, 0);
     const g = cx2d.createLinearGradient(cxh-hw,0,cxh+hw,0);
-    g.addColorStop(0,   shadeWood(litL*0.9));
-    g.addColorStop(.5,  shadeWood((litL+litR)*0.5 + 0.26));   // llom del buc: dona el volum
-    g.addColorStop(1,   shadeWood(litR*0.9));
+    g.addColorStop(0,   shadeBuc(litL*0.9));                  // fusta: shadeWood
+    g.addColorStop(.5,  shadeBuc((litL+litR)*0.5 + 0.26));   // llom del buc: dona el volum
+    g.addColorStop(1,   shadeBuc(litR*0.9));
     cx2d.fillStyle = g;
     hullPath(cxh, hl, hw); cx2d.fill();
     // vetes de fusta (suaus, per no competir amb els reblons)
     cx2d.strokeStyle='rgba(70,40,14,.10)'; cx2d.lineWidth=0.8;
-    for(const f of [-0.35,0.35]){
+    if(!PINTA_BUC.pintat) for(const f of [-0.35,0.35]){           // pintat no hi ha veta
       cx2d.beginPath();
       cx2d.moveTo(cxh+hw*f, -hl*0.7);
       cx2d.quadraticCurveTo(cxh+hw*f*0.4, 0, cxh+hw*f, hl*0.7);
       cx2d.stroke();
+    }
+    if(PINTA_BUC.franja){                                          // la franja, al llarg del llom
+      cx2d.strokeStyle = shadeBucDe(PINTA_BUC.franja.pintat, (litL+litR)*0.5 + 0.2);
+      cx2d.lineWidth = hw*0.55; cx2d.lineCap = 'round';
+      cx2d.beginPath(); cx2d.moveTo(cxh, -hl*0.78); cx2d.lineTo(cxh, hl*0.8); cx2d.stroke();
+      cx2d.lineCap = 'butt';
     }
     // reflex al costat del sol, seguint la corba del buc
     cx2d.strokeStyle=`rgba(255,248,228,${0.22+0.30*Math.max(0,-sunLocal*sideX+0.5)})`;
@@ -4145,7 +4188,7 @@ function drawBoat(){
     pc.addColorStop(1,   'rgba(40,20,6,.34)');
     cx2d.fillStyle = pc; hullPath(cxh, hl, hw); cx2d.fill();
     // la regala: és la vora que dibuixa la forma del buc damunt del mar
-    cx2d.strokeStyle='#8a5a2b'; cx2d.lineWidth=L*0.008; hullPath(cxh, hl, hw); cx2d.stroke();
+    cx2d.strokeStyle=PINTA_BUC.regala; cx2d.lineWidth=L*0.008; hullPath(cxh, hl, hw); cx2d.stroke();   // fusta: '#8a5a2b'
     cx2d.strokeStyle='rgba(45,22,6,.65)'; cx2d.lineWidth=1.2; hullPath(cxh, hl, hw); cx2d.stroke();
 
     if(submerged>0.05){
@@ -5761,7 +5804,10 @@ function muntaRegata(curs){
   const trav  = [-amunt[1], amunt[0]];              // perpendicular (línia de sortida)
   const y0 = shoreFn(0) - 100*(L/5.6);              // línia de sortida a ~100 m de la costa
   let P0 = [0, y0];
-  const semi = 2.6*L;                                // mitja línia de sortida (~29 m)
+  // v31: els circuits de prop són 4 vegades més grans; la línia, el doble (de 29 a 58 m
+  // de mitja línia): es creua, no s'hi ha d'arribar, i 4 vegades faria 230 m de línia.
+  const PROP = 4;
+  const semi = curs.mar === undefined ? 2*2.6*L : 2.6*L;   // mitja línia de sortida
   const puja = (p, d) => [p[0] + amunt[0]*d, p[1] + amunt[1]*d];
   const mou  = (p, d) => [p[0] + trav[0]*d,  p[1] + trav[1]*d];
   const marques = [];
@@ -5778,15 +5824,28 @@ function muntaRegata(curs){
     marques.push({n:'B3', p:b3,                                      c:'groc',    txt:'sotavent'});
     P0 = puja(b3, -1.0*L);
   } else if(curs.id === 'basto'){
-    marques.push({n:'B1', p:puja(P0, 9.0*L), c:'taronja', txt:'barlovent'});
-    marques.push({n:'P',  p:puja(P0, 1.0*L), c:'groc',    txt:'porta de sotavent'});
+    // v31: els circuits de prop, ×4 (B1 a 36 eslores ≈ 200 m de la línia)
+    marques.push({n:'B1', p:puja(P0, PROP*9.0*L), c:'taronja', txt:'barlovent'});
+    marques.push({n:'P',  p:puja(P0, PROP*1.0*L), c:'groc',    txt:'porta de sotavent'});
   } else if(curs.id === 'triangle'){
-    marques.push({n:'B1', p:puja(P0, 9.0*L),               c:'taronja', txt:'barlovent'});
-    marques.push({n:'B2', p:mou(puja(P0, 4.6*L), 6.4*L),   c:'verd',    txt:'de través'});
-    marques.push({n:'B3', p:puja(P0, 1.0*L),               c:'groc',    txt:'sotavent'});
+    marques.push({n:'B1', p:puja(P0, PROP*9.0*L),                    c:'taronja', txt:'barlovent'});
+    marques.push({n:'B2', p:mou(puja(P0, PROP*4.6*L), PROP*6.4*L),   c:'verd',    txt:'de través'});
+    marques.push({n:'B3', p:puja(P0, PROP*1.0*L),                    c:'groc',    txt:'sotavent'});
   } else {
-    marques.push({n:'C1', p:mou(puja(P0, 2.6*L),  8.2*L),  c:'verd',    txt:'nord-est'});
-    marques.push({n:'C2', p:mou(puja(P0, 2.6*L), -8.2*L),  c:'vermell', txt:'sud-oest'});
+    marques.push({n:'C1', p:mou(puja(P0, PROP*2.6*L),  PROP*8.2*L),  c:'verd',    txt:'nord-est'});
+    marques.push({n:'C2', p:mou(puja(P0, PROP*2.6*L), -PROP*8.2*L),  c:'vermell', txt:'sud-oest'});
+  }
+  if(curs.mar === undefined){
+    // Amb el vent de terra, la boia de barlovent quedaria a la sorra: tot el recorregut
+    // (línia, boies i el patí, 3 eslores sota la línia) s'aparta mar endins fins a 40 m.
+    const M = L/5.6;
+    const pts = [...marques.map(m => m.p), mou(P0, semi), mou(P0, -semi), puja(P0, -3*L)];
+    const marge = Math.min(...pts.map(p => (shoreFn(p[0]) - p[1])/M));
+    if(marge < 40){
+      const dy = (40 - marge)*M;
+      for(const m of marques) m.p = [m.p[0], m.p[1] - dy];
+      P0 = [P0[0], P0[1] - dy];
+    }
   }
   REG.curs = curs; REG.marques = marques; REG.voltes = curs.voltes;
   REG.volta = 0; REG.fita = 0; REG.fase = 'preparats';
@@ -5901,14 +5960,18 @@ function posFantasma(){
 /* ------------------- REPTES ------------------- */
 const REPTES = [
   {id:'lliure', nom:'Navegació lliure', desc:'Sense objectiu: experimenta amb el pes i l\u2019escota.'},
-  {id:'cenyida', nom:'Aguanta la cenyida', desc:'Navega entre 38° i 58° del vent amb velocitat durant 5 s. Pes a proa i vela caçada!', dur:5},
-  {id:'traves', nom:'Rumb de través', desc:'Mantén-te entre 80° i 100° del vent durant 5 s. El rumb més ràpid del patí.', dur:5},
+  {id:'cenyida', nom:'Aguanta la cenyida', desc:'Navega entre 38° i 58° del vent amb velocitat durant 15 s. Pes a proa i vela caçada!', dur:15},
+  {id:'traves', nom:'Rumb de través', desc:'Mantén-te entre 80° i 100° del vent durant 15 s. El rumb més ràpid del patí.', dur:15},
   {id:'virada', nom:'Virada per avant', desc:'Creua la proa pel vent i surt navegant per l\u2019altra amura. Orsa amb decisió i no perdis inèrcia!'},
-  {id:'empopada', nom:'Empopada controlada', desc:'Navega a més de 150° del vent, amb la vela ben amollada, durant 5 s.', dur:5},
+  {id:'empopada', nom:'Empopada controlada', desc:'Navega a més de 150° del vent, amb la vela ben amollada, durant 15 s.', dur:15},
   // Els dos objectius de la partida (sortir i tornar pel canal), ara també com a reptes
   {id:'canal', nom:'Surt pel canal', desc:'Des de la sorra, prem ENTRAR AL MAR i surt pel canal de boies fins a passar entre la verda i la vermella.'},
   {id:'tornar', nom:'Torna pel canal', desc:'Arriba fins a la boca del canal, entra-hi i acaba a la sorra sense tocar fora del canal.'},
 ];
+// Fora de la franja la barra baixa a 1 s per segon (abans 1,5): una sortida d'un moment
+// costa el mateix temps que ha durat, i oscil·lant només s'avança si s'és dins més de la
+// meitat del temps. Amb 15 s per superar-lo, a 1,5 una ratxa de 3 s fora en feia perdre 4,5.
+const DECAU = 1.0;
 const fets = new Set();
 let repte = REPTES[0], prog = 0, viradaFase = 0, viradaTack = 0, aturat = 0;
 
@@ -5936,25 +5999,29 @@ function updateRepte(dt){
   const deg = F.absT*R2D;
   let p = prog;
   if(repte.id==='cenyida'){
-    p = (deg>=38 && deg<=58 && S.speed>0.28) ? prog+dt : Math.max(0, prog-dt*1.5);
+    p = (deg>=38 && deg<=58 && S.speed>0.28) ? prog+dt : Math.max(0, prog-dt*DECAU);
   } else if(repte.id==='traves'){
-    p = (deg>=80 && deg<=100 && S.speed>0.35) ? prog+dt : Math.max(0, prog-dt*1.5);
+    p = (deg>=80 && deg<=100 && S.speed>0.35) ? prog+dt : Math.max(0, prog-dt*DECAU);
   } else if(repte.id==='empopada'){
-    p = (deg>=150 && S.speed>0.2 && S.sheet<0.35) ? prog+dt : Math.max(0, prog-dt*1.5);
+    p = (deg>=150 && S.speed>0.2 && S.sheet<0.35) ? prog+dt : Math.max(0, prog-dt*DECAU);
   } else if(repte.id==='virada'){
     if(viradaFase===0){
       if(deg<62 && S.speed>0.3){ viradaFase=1; viradaTack=F.tack; }
       p = 0;
     } else if(viradaFase===1){
       p = 0.35;
-      if(F.tack !== viradaTack && deg>3) viradaFase = 2;
+      // el temps aturat es compta per fase: abans el de la fase 1 se sumava a la 2
+      if(F.tack !== viradaTack && deg>3){ viradaFase = 2; aturat = 0; }
       if(S.speed < 0.04){ aturat += dt; } else aturat = 0;
       if(aturat > 3){ viradaFase=0; aturat=0; banner('Aturat proa al vent', 'Agafa velocitat i torna-hi', 'mal'); }
     } else {
       p = 0.7;
-      if(deg > 35 && S.speed > 0.12){ p = 1.01; }
+      // Passada la vela, amb la física de la v29 el patí queda proa al vent fins que el
+      // pes a popa el fa caure: 8 s de marge (abans 3). I només compta per l'amura NOVA:
+      // si cau per la vella i agafa velocitat, no és una virada.
+      if(deg > 35 && S.speed > 0.12 && F.tack !== viradaTack){ p = 1.01; }
       if(S.speed < 0.04){ aturat += dt; } else aturat = 0;
-      if(aturat > 3){ viradaFase=0; aturat=0; }
+      if(aturat > 8){ viradaFase=0; aturat=0; banner('Aturat proa al vent', 'Pes a popa a la banda nova i torna-hi', 'mal'); }
     }
     prog = p;
     $('repteFill').style.width = clamp(p,0,1)*100 + '%';
@@ -5962,7 +6029,7 @@ function updateRepte(dt){
     return;
   }
   prog = p;
-  const frac = clamp(prog/(repte.dur||5), 0, 1);
+  const frac = clamp(prog/(repte.dur||15), 0, 1);
   $('repteFill').style.width = frac*100 + '%';
   if(frac >= 1) completa();
 }
@@ -6158,18 +6225,24 @@ const ITIN = {
     { t:'Primeres passes', reptes:[
       { id:'canal',    tipus:'exercici', ic:'🏖️', kn:8,  sit:'platja',
         crit:'Passa la boca del canal, entre la boia verda i la vermella.' },
-      { id:'traves',   tipus:'exercici', ic:'⛵', kn:8,  sit:'boca', th:90,  sheet:0.50, wf:0, wx:-0.9, v:0.75,
-        crit:'Entre 80° i 100° del vent, a més de 2,1 kn, durant 5 s seguits.' },
+      // dev: el repte comença desviat del rumb objectiu (graus, + = més lluny del vent)
+      { id:'traves',   tipus:'exercici', ic:'⛵', kn:8,  sit:'boca', th:90,  dev:[-20, 20], franja:[80, 100],
+        sheet:0.50, wf:0, wx:-0.9, v:0.75,
+        crit:'Entre 80° i 100° del vent, a més de 2,1 kn, durant 15 s. Si en surts, la barra baixa a poc a poc.' },
     ]},
     { t:'Rumbs', reptes:[
-      { id:'cenyida',  tipus:'exercici', ic:'🌬️', kn:10, sit:'boca', th:50,  sheet:0.80, wf:0, wx:-0.9, v:0.45,
-        crit:'Entre 38° i 58° del vent, a més d’1,7 kn, durant 5 s seguits.' },
-      { id:'empopada', tipus:'exercici', ic:'🪁', kn:10, sit:'boca', th:160, sheet:0.30, wf:0, wx:-0.3, v:0.85,
-        crit:'A més de 150° del vent, a més d’1,2 kn i amb l’escota amollada (menys del 35 %), durant 5 s.' },
+      // a 30° el patí no cenyeix: només es desvia cap a fora (70°)
+      { id:'cenyida',  tipus:'exercici', ic:'🌬️', kn:10, sit:'boca', th:50,  dev:[20], franja:[38, 58],
+        sheet:0.80, wf:0, wx:-0.9, v:0.45,
+        crit:'Entre 38° i 58° del vent, a més d’1,7 kn, durant 15 s. Si en surts, la barra baixa a poc a poc.' },
+      // a 180° es trabutjaria: només es desvia cap al llarg (140°)
+      { id:'empopada', tipus:'exercici', ic:'🪁', kn:10, sit:'boca', th:160, dev:[-20], franja:[150, 180],
+        sheet:0.30, wf:0, wx:-0.3, v:0.85,
+        crit:'A més de 150° del vent, a més d’1,2 kn i amb l’escota amollada (menys del 35 %), durant 15 s.' },
     ]},
     { t:'Maniobres', reptes:[
       { id:'virada',   tipus:'exercici', ic:'↩️', kn:10, sit:'boca', th:55,  sheet:0.80, wf:0, wx:-0.7, v:0.55,
-        crit:'Cenyint a més d’1,8 kn, creua el vent i surt per l’altra amura a més de 35° del vent i 0,7 kn.' },
+        crit:'Cenyint a més d’1,8 kn, creua el vent i surt per l’amura NOVA a més de 35° del vent i 0,7 kn. Pots quedar fins a 8 s aturat proa al vent.' },
       { id:'tornar',   tipus:'exercici', ic:'🏠', kn:10, sit:'tornada', th:120, sheet:0.40, wf:0, wx:-0.3, v:0.80,
         crit:'Toca la sorra dins del canal de boies. Si toques fora del canal, tornes a començar.' },
     ]},
@@ -6183,15 +6256,21 @@ const ITIN = {
       { id:'rectangle', tipus:'regata', ic:'📐', kn:12 },
     ]},
   ],
-  fets: new Set(),     // ids superats (en memòria: sense localStorage; vegeu el codi de progrés)
+  fets: new Set(),     // ids superats
+  recs: {},            // millor volta de cada regata (s)
+  color: 'fusta',      // color dels laterals del buc
+  so: true,            // so de la celebració
   actiu: null,         // node que s'està fent
   ultim: null,         // últim node superat (per a REPETIR i SEGÜENT)
   obert: null,         // node de la fitxa oberta
+  atzar: Math.random,  // les proves el poden fixar
+  nous: [],            // colors que s'acaben de desbloquejar
 };
 ITIN.tots = ITIN.nivells.flatMap((nv, k) => nv.reptes.map(n => (n.niv = k, n)));
 const itinNode   = id => ITIN.tots.find(n => n.id === id) || null;
 const itinDef    = n => n.tipus === 'regata' ? CURSES.find(c => c.id === n.id) : REPTES.find(r => r.id === n.id);
 const nivellObert = k => k === 0 || ITIN.nivells[k-1].reptes.some(n => ITIN.fets.has(n.id));
+const nivellComplet = k => ITIN.nivells[k].reptes.every(n => ITIN.fets.has(n.id));
 function itinEstat(n){
   if(ITIN.fets.has(n.id)) return 'fet';
   if(!nivellObert(n.niv)) return 'bloq';
@@ -6210,13 +6289,120 @@ function itinXips(n){
     const c = itinDef(n);
     x.push(c.mar !== undefined ? '📍 a la línia, a 1 km de la costa' : '📍 a la línia de sortida');
     x.push('🔁 ' + c.voltes + (c.voltes === 1 ? ' volta' : ' voltes'));
+    if(ITIN.recs[n.id]) x.push('⏱️ rècord ' + fmtT(ITIN.recs[n.id]));
   } else if(n.sit === 'platja'){
     x.push('📍 a la sorra'); x.push('🧭 vent de través al canal');
   } else {
     x.push(n.sit === 'tornada' ? '📍 fora del canal, de tornada' : '📍 a la boca del canal');
-    x.push('🧭 ' + nomRumb(n.th) + ' (' + n.th + '°)');
+    x.push(n.dev ? '🧭 comences desviat 20°: porta\'l a ' + n.franja[0] + '–' + n.franja[1] + '°'
+                 : '🧭 ' + nomRumb(n.th) + ' (' + n.th + '°)');
   }
+  const col = COLORS_BUC.find(c => c.premi && c.premi.repte === n.id);
+  if(col) x.push('🎨 premi: ' + col.nom.toLowerCase());
   return x;
+}
+
+/* ── COLORS DELS LATERALS DEL PINTA_BUC: un premi per cada fita ──
+   11 reptes (el primer cop que se superen) + els nivells 1-4 complets + el mapa sencer
+   (la franja). La fusta és la de sempre i no cal guanyar-la. Només canvia el color
+   dels costats a les tres vistes: ni la coberta, ni la geometria, ni la física. */
+const COLORS_BUC = [
+  { id:'fusta',    nom:'Fusta',            c:null },
+  { id:'vermell',  nom:'Vermell',          c:'#c8302a', premi:{repte:'canal'} },
+  { id:'mari',     nom:'Blau marí',        c:'#1f3a68', premi:{repte:'traves'} },
+  { id:'groc',     nom:'Groc',             c:'#e8b923', premi:{repte:'cenyida'} },
+  { id:'verd',     nom:'Verd',             c:'#2e8b4e', premi:{repte:'empopada'} },
+  { id:'negre',    nom:'Negre',            c:'#34343a', premi:{repte:'virada'} },
+  { id:'taronja',  nom:'Taronja',          c:'#e8702a', premi:{repte:'tornar'} },
+  { id:'blanc',    nom:'Blanc',            c:'#ecebe4', premi:{repte:'costaner'} },
+  { id:'turquesa', nom:'Turquesa',         c:'#1fa5a0', premi:{repte:'basto'} },
+  { id:'lila',     nom:'Lila',             c:'#8a63c4', premi:{repte:'triangle'} },
+  { id:'rosa',     nom:'Rosa',             c:'#e47aa8', premi:{repte:'equilater'} },
+  { id:'plata',    nom:'Gris plata',       c:'#a9b0b6', premi:{repte:'rectangle'} },
+  { id:'poma',     nom:'Verd poma',        c:'#8cc63f', premi:{nivell:0} },
+  { id:'granat',   nom:'Granat',           c:'#7a1f2b', premi:{nivell:1} },
+  { id:'cel',      nom:'Blau cel',         c:'#6cb8e6', premi:{nivell:2} },
+  { id:'or',       nom:'Or',               c:'#d4a72c', premi:{nivell:3} },
+  { id:'franja',   nom:'Franja de regata', c:'#1f3a68', franja:'#e8b923', premi:{tot:true} },
+];
+function colorObert(col){
+  const p = col.premi; if(!p) return true;
+  if(p.repte) return ITIN.fets.has(p.repte);
+  if(p.nivell !== undefined) return nivellComplet(p.nivell);
+  return ITIN.tots.every(n => ITIN.fets.has(n.id));
+}
+function comGuanyar(col){
+  const p = col.premi; if(!p) return '';
+  if(p.repte) return 'supera «' + itinDef(itinNode(p.repte)).nom + '»';
+  if(p.nivell !== undefined) return 'completa el nivell ' + (p.nivell+1) + ' (' + ITIN.nivells[p.nivell].t + ')';
+  return 'completa tot el mapa';
+}
+const colorsOberts = () => COLORS_BUC.filter(colorObert).map(c => c.id);
+// pintura que fan servir drawBoat() (zenital) i render3D() (perspectiva); fusta per defecte
+const FUSTA_BUC = { fosc:'#4a2c10', clar:'#c98a4c', zt:[132,82,38], zb:[42,24,12], franja:null,
+                    coberta:'#d99f5e', vora:'rgba(90,45,14,.9)', regala:'#8a5a2b', pintat:null };
+const PINTA_BUC = Object.assign({}, FUSTA_BUC);
+// el llom del flotador a la zenital: la fusta de sempre, o el color amb la mateixa llum
+function shadeBucDe(p, t){
+  if(!p) return shadeWood(t);
+  t = clamp(t, 0, 1);
+  return `rgb(${p.map(v => Math.round(Math.min(255, v*lerp(0.5, 1.12, t)))).join(',')})`;
+}
+const shadeBuc = t => shadeBucDe(PINTA_BUC.pintat, t);
+function tonsBuc(hex){
+  const c = [1,3,5].map(i => parseInt(hex.slice(i, i+2), 16));
+  const esc = k => c.map(v => Math.round(v*k));
+  const hx = a => '#' + a.map(v => v.toString(16).padStart(2, '0')).join('');
+  return { fosc:hx(esc(0.34)), clar:hex, zt:esc(0.68), zb:esc(0.22), coberta:hx(c.map(v => Math.min(255, Math.round(v*1.08)))),
+           vora:hx(esc(0.45)), regala:hx(esc(0.6)), pintat:c };
+}
+function aplicaColorBuc(id){
+  const col = COLORS_BUC.find(c => c.id === id) || COLORS_BUC[0];
+  ITIN.color = col.id;
+  if(!col.c) Object.assign(PINTA_BUC, FUSTA_BUC);
+  else Object.assign(PINTA_BUC, tonsBuc(col.c), { franja: col.franja ? tonsBuc(col.franja) : null });
+}
+const fonsMostra = col => !col.c ? 'linear-gradient(180deg,#d99f5e,#8a5a2b)'
+  : col.franja ? `linear-gradient(180deg,${col.c} 0 38%,${col.franja} 38% 62%,${col.c} 62%)` : col.c;
+function renderColors(){
+  const g = $('itinColors'); if(!g) return;
+  const oberts = colorsOberts();
+  g.innerHTML = COLORS_BUC.map(col => {
+    const ob = oberts.includes(col.id);
+    return `<button class="mostra${ob ? '' : ' bloq'}${col.id === ITIN.color ? ' triat' : ''}" data-col="${col.id}"
+      title="${col.nom}" aria-label="${col.nom}${ob ? '' : ' (bloquejat)'}" style="background:${fonsMostra(col)}">${ob ? '' : '🔒'}</button>`;
+  }).join('');
+  const t = $('itinColorTriat');
+  if(t) t.textContent = `${oberts.length - 1}/${COLORS_BUC.length - 1} guanyats · ara: ${COLORS_BUC.find(c => c.id === ITIN.color).nom}`;
+}
+function triaColor(id){
+  const col = COLORS_BUC.find(c => c.id === id); if(!col) return;
+  if(!colorObert(col)){ $('itinColorTriat').textContent = '🔒 ' + col.nom + ': ' + comGuanyar(col); return; }
+  aplicaColorBuc(id); desaProgres(); renderColors();
+}
+
+/* ── PROGRÉS DESAT: UNA sola clau pròpia (l'origen és compartit amb l'OcataVent) ──
+   Mai es llegeix ni s'esborra cap altra clau. Si el navegador no ho deixa (iframe,
+   mode privat), tot funciona igual en memòria i queda el codi de progrés. */
+const DESA_CLAU = 'paticatala.reptes';
+function desaProgres(){
+  try {
+    localStorage.setItem(DESA_CLAU, JSON.stringify({ v:1, fets:[...ITIN.fets], recs:ITIN.recs, color:ITIN.color, so:ITIN.so }));
+    return true;
+  } catch(e){ return false; }
+}
+function carregaProgres(){
+  let d = null;
+  try { const t = localStorage.getItem(DESA_CLAU); if(t) d = JSON.parse(t); } catch(e){ return false; }
+  if(!d || typeof d !== 'object') return false;
+  if(Array.isArray(d.fets)) ITIN.fets = new Set(d.fets.filter(id => itinNode(id)));
+  ITIN.recs = {};
+  if(d.recs && typeof d.recs === 'object')
+    for(const [k, v] of Object.entries(d.recs)) if(itinNode(k) && typeof v === 'number' && v > 0) ITIN.recs[k] = v;
+  if(typeof d.so === 'boolean') ITIN.so = d.so;
+  const col = COLORS_BUC.find(c => c.id === d.color);
+  aplicaColorBuc(col && colorObert(col) ? col.id : 'fusta');
+  return true;
 }
 
 // ── codi de progrés: una marca per repte, en base 36, amb una lletra de control ──
@@ -6244,6 +6430,8 @@ function renderItin(){
   if($('itinComptador')) $('itinComptador').textContent = fets + '/' + tot + ' ✅';
   if($('itinBarraFill')) $('itinBarraFill').style.width = (100*fets/tot) + '%';
   if($('itinCodi')) $('itinCodi').value = codiProgres();
+  for(const id of ['btnSoMapa', 'btnSoSup']) if($(id)) $(id).textContent = ITIN.so ? '🔊' : '🔇';
+  renderColors();
   if(!mapa) return;
   const ZIG = [0, 46, 0, -46];
   let h = '';
@@ -6306,21 +6494,30 @@ function itinVent(kn, windFrom){
   if(sd) sd.value = Math.round(r/5)*5 % 360;
   if($('cWindD')) $('cWindD').textContent = r + '°';
 }
-// Patí a l'aigua, ja navegant al rumb del repte (com colocaALinia, però per a qualsevol rumb)
+// Patí a l'aigua, ja navegant (com colocaALinia, però per a qualsevol rumb). Els reptes
+// de rumb comencen 20° desviats de l'objectiu i per una amura a l'atzar: cal corregir-lo.
 function posaAlRepte(n){
   resetToBeach();
   let x = 0, y = -CH.len - 3*L, h = 0;                 // a la boca del canal, proa a mar obert
   if(n.sit === 'tornada'){ x = 10*L; y = -CH.len - 6*L; h = Math.PI; }   // de tornada, desplaçat del canal
-  itinVent(n.kn, h - n.th*D2R);                         // th > 0: amura babord
+  const amura = n.dev ? (ITIN.atzar() < 0.5 ? 1 : -1) : 1;              // 1: amura babord
+  const desv  = n.dev ? n.dev[Math.min(n.dev.length - 1, Math.floor(ITIN.atzar()*n.dev.length))] : 0;
+  ITIN.desv = desv; ITIN.amura = amura;
+  itinVent(n.kn, h - amura*(n.th + desv)*D2R);
   S.mode = 'mar'; S.everInWater = true; S.beyondMouth = true; S.board = 1;
   S.px = x; S.py = y; S.heading = normA(h); S.speed = n.v; S.vLat = 0; S.angVel = 0;
   S.heel = 0; S.roll = 0; S.rollV = 0; S.capsized = 0; S.heelTime = 0;
-  S.sailSide = 1; S.pulley = 1; S.pulleyV = 0; S.boomDir = 0.6;
+  S.sailSide = amura; S.pulley = amura; S.pulleyV = 0; S.boomDir = 0.6*amura;
   S.tacking = 0; S.tackDir = 0; S.postVir = 0; S.jibeCd = 0;
-  S.sheet = n.sheet; S.wx = S.wxT = n.wx; S.wf = S.wfT = n.wf;
+  S.sheet = n.sheet; S.wx = S.wxT = n.wx*amura; S.wf = S.wfT = n.wf;
   landingLock = false; trail.length = 0;
   cam.x = S.px; cam.y = S.py;
   const b = $('btnEntrar'); if(b) b.style.display = 'none';
+}
+function consellInici(n){
+  if(n.sit === 'tornada') return 'Entra pel canal fins a la sorra';
+  if(!n.dev) return 'Ja navegues: ' + nomRumb(n.th);
+  return (ITIN.desv > 0 ? 'Orsa' : 'Arriba') + ' fins a ' + n.franja[0] + '–' + n.franja[1] + '° i aguanta 15 s';
 }
 // Carrega TOTA la situació del repte i comença a comptar
 function carregaRepte(id){
@@ -6343,7 +6540,7 @@ function carregaRepte(id){
   } else {
     posaAlRepte(n);
     setRepte(d);
-    banner(d.nom, n.sit === 'tornada' ? 'Entra pel canal fins a la sorra' : 'Ja navegues: ' + nomRumb(n.th), 'ok');
+    banner(d.nom, consellInici(n), 'ok');
   }
   ITIN.actiu = n;
   actualitzaBarraRegata();
@@ -6353,19 +6550,28 @@ function itinSeguent(n){
   const i = ITIN.tots.indexOf(n);
   return ITIN.tots.slice(i+1).find(m => !ITIN.fets.has(m.id)) || ITIN.tots[i+1] || null;
 }
-// Un repte de l'itinerari s'ha superat: es marca i surt la pantalla de felicitació
+// Un repte de l'itinerari s'ha superat: es marca, es desa i surt la pantalla de felicitació
 function itinSuperat(id){
   const n = (ITIN.actiu && ITIN.actiu.id === id) ? ITIN.actiu : null;
   if(!n) return;                                        // fora de l'itinerari no compta
   const nouNivell = !nivellObert(n.niv + 1);
+  const abans = colorsOberts();
   ITIN.fets.add(id); ITIN.ultim = n; ITIN.actiu = null;
+  ITIN.nous = colorsOberts().filter(c => !abans.includes(c));
   const d = itinDef(n);
   $('supNiv').textContent = 'NIVELL ' + (n.niv+1) + ' · REPTE SUPERAT';
   $('supNom').textContent = d.nom;
-  let res = '';
+  let res = '', record = false;
   if(n.tipus === 'regata'){
     REG.temps.forEach((t, i) => res += `<div class="fila"><span>Volta ${i+1}</span><b>${fmtT(t)}</b></div>`);
     res += `<div class="fila"><span>Millor volta</span><b style="color:#96dcff">${fmtT(REG.millor)}</b></div>`;
+    const ant = ITIN.recs[id];
+    if(REG.millor !== null && (ant === undefined || REG.millor < ant)){
+      ITIN.recs[id] = REG.millor;
+      record = ant !== undefined;
+      res += record ? `<div class="record">🎉 Nou rècord! ${fmtT(REG.millor)} <span>(abans ${fmtT(ant)})</span></div>`
+                    : `<div>⏱️ Primer rècord: <b>${fmtT(REG.millor)}</b></div>`;
+    } else if(ant !== undefined) res += `<div>⏱️ Rècord: <b>${fmtT(ant)}</b></div>`;
     const ovF = $('ovFinal'); if(ovF) ovF.classList.remove('on');      // el resum ja és aquí
   } else res = `<div>✅ ${itinCriteri(n)}</div>`;
   const k = n.niv + 1;
@@ -6377,8 +6583,20 @@ function itinSuperat(id){
   else if(ITIN.fets.size === ITIN.tots.length){ bs.style.display = 'none'; res += '<div>🏆 Has acabat tot l’itinerari!</div>'; }
   else bs.style.display = 'none';
   $('supResum').innerHTML = res;
+  // colors nous: es mostren i es poden estrenar d'un toc
+  const sc = $('supColor');
+  if(ITIN.nous.length){
+    const cols = ITIN.nous.map(c => COLORS_BUC.find(x => x.id === c));
+    sc.style.display = 'flex';
+    sc.innerHTML = cols.map(c => `<span class="mostra gran" style="background:${fonsMostra(c)}"></span>`).join('') +
+      `<span class="txt">🎨 Color nou per al buc: <b>${cols.map(c => c.nom).join(', ')}</b></span>` +
+      `<button class="btn" id="btnEstrena">ESTRENA'L</button>`;
+  } else { sc.style.display = 'none'; sc.innerHTML = ''; }
+  $('supNiv').textContent = record ? 'NOU RÈCORD!' : 'NIVELL ' + (n.niv+1) + ' · REPTE SUPERAT';
+  desaProgres();
   renderItin();
   obreNomes('ovSuperat');
+  celebra(record || ITIN.nous.length > 0);
 }
 // Cada fotograma: regates acabades, bolcades i errors tornen a la sortida del repte
 function itinTick(){
@@ -6396,6 +6614,72 @@ function itinTick(){
     banner('Tornem-hi', 'Des de la sortida del repte', 'mal');
   }
 }
+
+/* ── CELEBRACIÓ: purpurina, vibració i un so curt, tot generat aquí ──
+   Confeti i estrelles en un llenç a sobre de tot (sense tocar els clics), una vibració
+   curta si el mòbil en té i un arpegi de WebAudio. Si alguna cosa no hi és, no passa res. */
+const CONF = { part:[], t:0, on:false };
+function celebra(gran){
+  ITIN.celebracions = (ITIN.celebracions || 0) + 1;
+  try { if(navigator.vibrate) navigator.vibrate(gran ? [70, 50, 70, 50, 140] : [60, 40, 110]); } catch(e){}
+  soVictoria(gran);
+  const cv = $('confeti'); if(!cv || !cv.getContext) return;
+  let poc = false;
+  try { poc = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+  const W2 = innerWidth, H2 = innerHeight, dp = Math.min(devicePixelRatio || 1, 2);
+  cv.width = W2*dp; cv.height = H2*dp; cv.style.display = 'block';
+  const cols = ['#f2c14e', '#5fd08a', '#d43a2f', '#96dcff', '#e47aa8', '#ffffff', '#8a63c4'];
+  const n = poc ? 30 : (gran ? 150 : 100);
+  CONF.part = [];
+  for(let i = 0; i < n; i++){
+    const a = -Math.PI/2 + (ITIN.atzar() - 0.5)*1.9, v = (gran ? 9 : 7.5) + ITIN.atzar()*7;
+    CONF.part.push({ x:W2*(0.2 + 0.6*ITIN.atzar()), y:H2*0.72, vx:Math.cos(a)*v, vy:Math.sin(a)*v,
+      r:4 + ITIN.atzar()*5, rot:ITIN.atzar()*TAU, vr:(ITIN.atzar() - 0.5)*0.4,
+      c:cols[i % cols.length], estel:i % 4 === 0 });
+  }
+  CONF.t = 0;
+  if(!CONF.on){ CONF.on = true; requestAnimationFrame(confetiPas); }
+}
+function estrella(g, r){
+  g.beginPath();
+  for(let i = 0; i < 10; i++){ const a = i*Math.PI/5, rr = i % 2 ? r*0.45 : r; g.lineTo(Math.sin(a)*rr, -Math.cos(a)*rr); }
+  g.closePath(); g.fill();
+}
+function confetiPas(){
+  const cv = $('confeti'), g = cv.getContext('2d'), dp = cv.width/innerWidth;
+  CONF.t += 1/60;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
+  g.setTransform(dp, 0, 0, dp, 0, 0);
+  const fade = clamp((2.8 - CONF.t)/0.8, 0, 1);
+  for(const p of CONF.part){
+    p.vy += 0.32; p.vx *= 0.985; p.vy *= 0.985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+    g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.globalAlpha = fade; g.fillStyle = p.c;
+    if(p.estel) estrella(g, p.r*1.5); else g.fillRect(-p.r, -p.r*0.45, p.r*2, p.r*0.9);
+    g.restore();
+  }
+  if(CONF.t < 2.8) requestAnimationFrame(confetiPas);
+  else { CONF.on = false; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; }
+}
+function soVictoria(gran){
+  if(!ITIN.so) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    const ac = ITIN._ac || (ITIN._ac = new AC());
+    if(ac.state === 'suspended') ac.resume();
+    const notes = gran ? [523.25, 659.25, 783.99, 1046.5, 1318.5] : [523.25, 659.25, 783.99, 1046.5];
+    const t0 = ac.currentTime + 0.02;
+    notes.forEach((f, i) => {
+      const o = ac.createOscillator(), gn = ac.createGain(), t = t0 + i*0.09;
+      o.type = 'triangle'; o.frequency.value = f;
+      gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(0.16, t + 0.015);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t + (i === notes.length - 1 ? 0.55 : 0.2));
+      o.connect(gn); gn.connect(ac.destination); o.start(t); o.stop(t + 0.6);
+    });
+  } catch(e){}
+}
+function canviaSo(){ ITIN.so = !ITIN.so; desaProgres(); renderItin(); }
+
+carregaProgres();
 renderItin();
 
 let bannerT = null;
@@ -6600,6 +6884,17 @@ $('btnSeguent').addEventListener('click', ()=>{ const s = ITIN.ultim && itinSegu
 $('btnRepetir').addEventListener('click', ()=>{ if(ITIN.ultim) carregaRepte(ITIN.ultim.id); });
 $('btnSupMapa').addEventListener('click', obreItin);
 $('btnSupSeguir').addEventListener('click', ()=> $('ovSuperat').classList.remove('on'));
+$('itinColors').addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('.mostra');
+  if(b) triaColor(b.dataset.col);
+});
+$('btnSoMapa').addEventListener('click', canviaSo);
+$('btnSoSup').addEventListener('click', canviaSo);
+$('supColor').addEventListener('click', e=>{
+  if(e.target.id !== 'btnEstrena' || !ITIN.nous.length) return;
+  aplicaColorBuc(ITIN.nous[ITIN.nous.length - 1]); desaProgres(); renderItin();
+  e.target.textContent = '✔ POSAT';
+});
 $('btnLliure').addEventListener('click', ()=>{
   ITIN.actiu = null; aturaRegata(); setRepte(REPTES[0]); actualitzaBarraRegata(); tancaTot();
   banner('Navegació lliure', 'Sense objectiu: experimenta amb el pes i l\u2019escota');
@@ -6607,7 +6902,9 @@ $('btnLliure').addEventListener('click', ()=>{
 $('btnCodi').addEventListener('click', ()=>{
   const ids = llegeixCodi($('itinCodi').value);
   if(!ids){ banner('Codi no vàlid', 'Ha de ser com PATI-00A3', 'mal'); renderItin(); return; }
-  ITIN.fets = new Set(ids); renderItin();
+  ITIN.fets = new Set(ids);
+  if(!colorObert(COLORS_BUC.find(c => c.id === ITIN.color))) aplicaColorBuc('fusta');
+  desaProgres(); renderItin();
   banner('Progrés recuperat', ids.length + ' reptes superats', 'ok');
 });
 $('btnALinia').addEventListener('click', ()=>{
