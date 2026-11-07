@@ -715,7 +715,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v31</div>
+  <div id="versio">Versió v32</div>
 </div></div>
 
 <script>
@@ -2700,6 +2700,24 @@ function render3D(dt){
   // FLOTADORS AMB VOLUM: casc extrudit de la línia de flotació a la coberta.
   // Cada segment lateral s'il·lumina segons la seva normal (sol del capvespre
   // per estribord de pantalla): costat lluminós càlid, costat d'ombra fosc.
+  // REFLEX dels laterals: el costat es veu capgirat sota la flotació, tènue i amb el
+  // color del buc. Abans de les parets, i dels dos flotadors, perquè cap no tapi l'altre.
+  // A la sorra mullada també s'hi veu, més fluix.
+  {
+    const aR = S.mode === 'mar' ? 0.24 : S.mode === 'platja' ? 0.10 : 0;
+    if(aR > 0){
+      cx2d.globalAlpha = aR;
+      cx2d.fillStyle = mixc(PINTA_BUC.fosc, PINTA_BUC.clar, 0.55);
+      for(const cxh of [-hb3, hb3]){
+        const ref = hullRaw(cxh, 1, 1).map(([bx,by]) => pjB(bx, by, -HULLH*0.8*(1 - calatRel((by/hl3 + 1)/2))));
+        const v = ref.filter(Boolean); if(v.length < 3) continue;
+        cx2d.beginPath(); cx2d.moveTo(v[0].x, v[0].y);
+        for(let i = 1; i < v.length; i++) cx2d.lineTo(v[i].x, v[i].y);
+        cx2d.closePath(); cx2d.fill();
+      }
+      cx2d.globalAlpha = 1;
+    }
+  }
   for(const cxh of [-hb3, hb3]){
     const rawT = hullRaw(cxh, 1, 1);                 // coberta: contorn complet
     const rawB = hullRaw(cxh, 0.36, 1);              // flotació: quilla estreta
@@ -2750,7 +2768,8 @@ function render3D(dt){
       }
     }
     // 3) coberta (tapa superior): cobreix l'interior i les parets llunyanes
-    poly(hullPts(cxh,HULLH), PINTA_BUC.coberta, PINTA_BUC.vora, 1.6);   // fusta: '#d99f5e', 'rgba(90,45,14,.9)'
+    poly(hullPts(cxh,HULLH), '#d99f5e', 'rgba(90,45,14,.9)', 1.6);
+    antilliscantPersp(hullPts(cxh,HULLH));                 // gra de la coberta (sempre fusta)
   }
   if(S.mode==='mar' && S.speed>0.32){
     for(const side of [-1,1]){
@@ -4068,6 +4087,49 @@ function drawWakeWorld(sp){
 }
 
 /* ------------------- DIBUIX DEL PATÍ ------------------- */
+// GRA ANTILLISCANT de la coberta dels flotadors (és on camina el patró): un patró de
+// punts clars i foscos de 64×64 px generat un sol cop. Es pinta amb un fill() per buc.
+let GRA = null;
+function patroGra(){
+  if(GRA !== null) return GRA;
+  GRA = false;
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'); if(!g || !g.fillRect) return GRA;
+    let r = 12345; const rnd = () => (r = (r*16807) % 2147483647) / 2147483647;
+    for(let i = 0; i < 420; i++){
+      const clar = rnd() < 0.45;
+      g.fillStyle = clar ? `rgba(255,240,205,${(0.10 + rnd()*0.14).toFixed(3)})` : `rgba(60,34,12,${(0.10 + rnd()*0.16).toFixed(3)})`;
+      const d = 0.8 + rnd()*1.2; g.fillRect(rnd()*64, rnd()*64, d, d);
+    }
+    GRA = { cv:c, pats:new WeakMap() };
+  } catch(e){ GRA = false; }
+  return GRA;
+}
+function graPattern(ctx){
+  const G = patroGra(); if(!G || !ctx.createPattern) return null;
+  let p = G.pats.get(ctx);
+  if(!p){ p = ctx.createPattern(G.cv, 'repeat'); if(!p) return null; G.pats.set(ctx, p); }
+  return p;
+}
+// zenital: el context ja va girat amb el patí, el gra hi queda enganxat
+function antilliscantZen(cxh, hl, hw){
+  const p = graPattern(cx2d); if(!p || !p.setTransform || typeof DOMMatrix === 'undefined') return;
+  p.setTransform(new DOMMatrix().scaleSelf(L*0.0012));       // un punt ≈ 1 cm
+  cx2d.globalAlpha = 0.6; cx2d.fillStyle = p; hullPath(cxh, hl, hw); cx2d.fill(); cx2d.globalAlpha = 1;
+}
+// perspectiva: el gra s'ancora al centre de la coberta (es mou amb el patí) i s'escala amb la distància
+function antilliscantPersp(pts){
+  const p = graPattern(cx2d); if(!p || !p.setTransform || typeof DOMMatrix === 'undefined') return;
+  const v = pts.filter(Boolean); if(v.length < 3) return;
+  let x0 = 1e9, x1 = -1e9, cx = 0, cy = 0;
+  for(const q of v){ x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); cx += q.x; cy += q.y; }
+  const k = clamp((x1 - x0)/90, 0.12, 0.8);
+  p.setTransform(new DOMMatrix().translateSelf(cx/v.length, cy/v.length).scaleSelf(k));
+  cx2d.beginPath(); cx2d.moveTo(v[0].x, v[0].y);
+  for(let i = 1; i < v.length; i++) cx2d.lineTo(v[i].x, v[i].y);
+  cx2d.closePath(); cx2d.globalAlpha = 0.5; cx2d.fillStyle = p; cx2d.fill(); cx2d.globalAlpha = 1;
+}
 // Color de fusta segons la il·luminació rebuda (0 fosc … 1 clar)
 function shadeWood(t){
   t = clamp(t, 0, 1);
@@ -4126,7 +4188,7 @@ function drawBoat(){
     if(S.roll*sideX >= 0) continue;
     const fons = Math.min(0.5, Math.abs(Math.sin(S.roll)))*L*0.13;
     cx2d.save(); cx2d.translate(sideX*fons, 0);
-    cx2d.fillStyle = '#4a2c18'; hullPath(sideX*hb, hl, hw); cx2d.fill();
+    cx2d.fillStyle = PINTA_BUC.fons; hullPath(sideX*hb, hl, hw); cx2d.fill();   // fusta: '#4a2c18'
     cx2d.strokeStyle = 'rgba(190,225,240,.45)'; cx2d.lineWidth = 1.5;
     hullPath(sideX*hb, hl, hw); cx2d.stroke();
     cx2d.restore();
@@ -4154,25 +4216,20 @@ function drawBoat(){
     // el costat que mira al sol s'aclareix; l'oposat s'enfosqueix
     const litL = litness(-1, 0), litR = litness(1, 0);
     const g = cx2d.createLinearGradient(cxh-hw,0,cxh+hw,0);
-    g.addColorStop(0,   shadeBuc(litL*0.9));                  // fusta: shadeWood
-    g.addColorStop(.5,  shadeBuc((litL+litR)*0.5 + 0.26));   // llom del buc: dona el volum
-    g.addColorStop(1,   shadeBuc(litR*0.9));
+    g.addColorStop(0,   shadeWood(litL*0.9));
+    g.addColorStop(.5,  shadeWood((litL+litR)*0.5 + 0.26));   // llom del buc: dona el volum
+    g.addColorStop(1,   shadeWood(litR*0.9));
     cx2d.fillStyle = g;
     hullPath(cxh, hl, hw); cx2d.fill();
     // vetes de fusta (suaus, per no competir amb els reblons)
     cx2d.strokeStyle='rgba(70,40,14,.10)'; cx2d.lineWidth=0.8;
-    if(!PINTA_BUC.pintat) for(const f of [-0.35,0.35]){           // pintat no hi ha veta
+    for(const f of [-0.35,0.35]){
       cx2d.beginPath();
       cx2d.moveTo(cxh+hw*f, -hl*0.7);
       cx2d.quadraticCurveTo(cxh+hw*f*0.4, 0, cxh+hw*f, hl*0.7);
       cx2d.stroke();
     }
-    if(PINTA_BUC.franja){                                          // la franja, al llarg del llom
-      cx2d.strokeStyle = shadeBucDe(PINTA_BUC.franja.pintat, (litL+litR)*0.5 + 0.2);
-      cx2d.lineWidth = hw*0.55; cx2d.lineCap = 'round';
-      cx2d.beginPath(); cx2d.moveTo(cxh, -hl*0.78); cx2d.lineTo(cxh, hl*0.8); cx2d.stroke();
-      cx2d.lineCap = 'butt';
-    }
+    antilliscantZen(cxh, hl, hw);                                  // gra de la coberta (sempre fusta)
     // reflex al costat del sol, seguint la corba del buc
     cx2d.strokeStyle=`rgba(255,248,228,${0.22+0.30*Math.max(0,-sunLocal*sideX+0.5)})`;
     cx2d.lineWidth=L*0.009;
@@ -4188,7 +4245,7 @@ function drawBoat(){
     pc.addColorStop(1,   'rgba(40,20,6,.34)');
     cx2d.fillStyle = pc; hullPath(cxh, hl, hw); cx2d.fill();
     // la regala: és la vora que dibuixa la forma del buc damunt del mar
-    cx2d.strokeStyle=PINTA_BUC.regala; cx2d.lineWidth=L*0.008; hullPath(cxh, hl, hw); cx2d.stroke();   // fusta: '#8a5a2b'
+    cx2d.strokeStyle='#8a5a2b'; cx2d.lineWidth=L*0.008; hullPath(cxh, hl, hw); cx2d.stroke();
     cx2d.strokeStyle='rgba(45,22,6,.65)'; cx2d.lineWidth=1.2; hullPath(cxh, hl, hw); cx2d.stroke();
 
     if(submerged>0.05){
@@ -6302,10 +6359,11 @@ function itinXips(n){
   return x;
 }
 
-/* ── COLORS DELS LATERALS DEL PINTA_BUC: un premi per cada fita ──
+/* ── COLORS DELS LATERALS DEL BUC: un premi per cada fita ──
    11 reptes (el primer cop que se superen) + els nivells 1-4 complets + el mapa sencer
    (la franja). La fusta és la de sempre i no cal guanyar-la. Només canvia el color
-   dels costats a les tres vistes: ni la coberta, ni la geometria, ni la física. */
+   dels costats (i el seu reflex) a les tres vistes: ni la coberta, ni la regala, ni la
+   geometria, ni la física. */
 const COLORS_BUC = [
   { id:'fusta',    nom:'Fusta',            c:null },
   { id:'vermell',  nom:'Vermell',          c:'#c8302a', premi:{repte:'canal'} },
@@ -6339,22 +6397,15 @@ function comGuanyar(col){
 }
 const colorsOberts = () => COLORS_BUC.filter(colorObert).map(c => c.id);
 // pintura que fan servir drawBoat() (zenital) i render3D() (perspectiva); fusta per defecte
-const FUSTA_BUC = { fosc:'#4a2c10', clar:'#c98a4c', zt:[132,82,38], zb:[42,24,12], franja:null,
-                    coberta:'#d99f5e', vora:'rgba(90,45,14,.9)', regala:'#8a5a2b', pintat:null };
+// Només els LATERALS (i el fons que ensenya el buc alçat): la coberta i la regala són
+// sempre fusta clara, perquè és on camina el patró.
+const FUSTA_BUC = { fosc:'#4a2c10', clar:'#c98a4c', zt:[132,82,38], zb:[42,24,12], fons:'#4a2c18', franja:null };
 const PINTA_BUC = Object.assign({}, FUSTA_BUC);
-// el llom del flotador a la zenital: la fusta de sempre, o el color amb la mateixa llum
-function shadeBucDe(p, t){
-  if(!p) return shadeWood(t);
-  t = clamp(t, 0, 1);
-  return `rgb(${p.map(v => Math.round(Math.min(255, v*lerp(0.5, 1.12, t)))).join(',')})`;
-}
-const shadeBuc = t => shadeBucDe(PINTA_BUC.pintat, t);
 function tonsBuc(hex){
   const c = [1,3,5].map(i => parseInt(hex.slice(i, i+2), 16));
   const esc = k => c.map(v => Math.round(v*k));
   const hx = a => '#' + a.map(v => v.toString(16).padStart(2, '0')).join('');
-  return { fosc:hx(esc(0.34)), clar:hex, zt:esc(0.68), zb:esc(0.22), coberta:hx(c.map(v => Math.min(255, Math.round(v*1.08)))),
-           vora:hx(esc(0.45)), regala:hx(esc(0.6)), pintat:c };
+  return { fosc:hx(esc(0.34)), clar:hex, zt:esc(0.68), zb:esc(0.22), fons:hx(esc(0.3)) };
 }
 function aplicaColorBuc(id){
   const col = COLORS_BUC.find(c => c.id === id) || COLORS_BUC[0];
