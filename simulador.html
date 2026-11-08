@@ -715,7 +715,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v33</div>
+  <div id="versio">Versió v34</div>
 </div></div>
 
 <script>
@@ -994,21 +994,68 @@ const MANS = {
   obencP: 0,      // si és a un obenc, a quina fracció del cadenot al cap del pal
 };
 const ABAST = L*0.29*0.56;     // llargada màxima d'un braç real
-// On s'agafa la mà lliure, segons la postura i on és el cos.
+// D'ASSEGUT A DRET, sense salts (v34): 0 = assegut (mig i popa) … 1 = d'empeus a proa.
+// L'Oriol: a proa, i sobretot agafat al pal (posició neutra), el navegant va DRET. Només
+// el dibuix: la física continua fent servir F.posture. Penjat a la banda, assegut.
+function dretPatro(){
+  if(F.posture === 'fora') return 0;
+  const k = clamp((S.wf - 0.35)/0.25, 0, 1) * (1 - clamp(((F.hike||0) - 0.30)/0.05, 0, 1));
+  return k*k*(3 - 2*k);
+}
+// ESQUELET DEL PATRÓ a la perspectiva (coordenades del patí: x través, y cap a popa,
+// z alçada). Entre assegut i dret és continu (k); la CADERA és un segment propi entre
+// el tors i les cames (hipC, hipW). Escala real: 1,70 m = 0,29 eslores.
+function esqueletPatro(bx, by, ground, post, k){
+  const U = L*0.29, LEG = U*0.46, TOR = U*0.40, HR = U*0.082;
+  if(post==='fora'){
+    // penjat: peus a les CINTES, cos alineat cap enfora, cap sobre l'aigua
+    const sgn = Math.sign(S.wx||1), hb3 = L*0.15, hw3 = L*0.042;
+    const strapX = sgn*L*0.045, hipX = sgn*(hb3 - hw3*0.1 + penjat()*L*0.055);
+    return { hipC:[hipX, by, ground+U*0.14], shC:[hipX + sgn*TOR*0.92, by, ground+U*0.26],
+      headC:[hipX + sgn*(TOR*0.92 + HR*1.7), by, ground+U*0.30],
+      feet:[[strapX, by-U*0.10, ground+U*0.04],[strapX, by+U*0.10, ground+U*0.04]],
+      knees:[[(strapX+hipX)/2, by-U*0.08, ground+U*0.20],[(strapX+hipX)/2, by+U*0.08, ground+U*0.20]],
+      hipW:U*0.095, shW:U*0.135, wAxis:'y', capOut:sgn };
+  }
+  // assegut compacte (genolls amunt, peus cap a proa) ↔ dret (cames gairebé rectes, a sota,
+  // un peu una mica endavant; tors vertical amb una lleu inclinació cap al pal)
+  const A = { hip:[bx, by, ground+U*0.10], sh:[bx, by+U*0.06, ground+U*0.10+TOR*0.8],
+              head:[bx, by+U*0.04, ground+U*0.10+TOR*0.8+HR*1.6],
+              feet:[[bx-U*0.08, by-U*0.26, ground+U*0.02],[bx+U*0.08, by-U*0.26, ground+U*0.02]],
+              knees:[[bx-U*0.08, by-U*0.14, ground+U*0.24],[bx+U*0.08, by-U*0.14, ground+U*0.24]] };
+  const D = { hip:[bx, by, ground+LEG], sh:[bx, by-U*0.03, ground+LEG+TOR],
+              head:[bx, by-U*0.05, ground+LEG+TOR+HR*1.6],
+              feet:[[bx-U*0.07, by-U*0.06, ground],[bx+U*0.07, by+U*0.04, ground]],
+              knees:[[bx-U*0.065, by-U*0.045, ground+LEG*0.52],[bx+U*0.065, by+U*0.01, ground+LEG*0.52]] };
+  const m = (a,b) => [a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k, a[2]+(b[2]-a[2])*k];
+  return { hipC:m(A.hip,D.hip), shC:m(A.sh,D.sh), headC:m(A.head,D.head),
+    feet:[m(A.feet[0],D.feet[0]), m(A.feet[1],D.feet[1])],
+    knees:[m(A.knees[0],D.knees[0]), m(A.knees[1],D.knees[1])],
+    hipW:U*0.095, shW:U*0.135, wAxis:'x', capOut:0 };
+}
+// On s'agafa la mà lliure, segons la postura i on és el cos. Cada agafada porta, a més,
+// la base de l'aparell que la sosté ([4],[5]: peu de l'obenc o del pal; a coberta, el
+// mateix punt): la zenital hi fa córrer la mà quan l'alçada real no hi arriba.
 function agafada(){
   const ap = aparell(), post = F.posture || 'assegut', g = -MANS.costat;
   const x0 = S.wx*CREW_X(), y0 = crewY(S.wf);
-  const regala = (s, dins) => [s*(0.150 + 0.042*(dins ? -0.9 : 0.95))*L, y0 - L*0.03, ap.HULLH];
+  const aCoberta = p => [p[0], p[1], p[2], 0, p[0], p[1]];
+  const regala = (s, dins) => aCoberta([s*(0.150 + 0.042*(dins ? -0.9 : 0.95))*L, y0 - L*0.03, ap.HULLH]);
   // acompanyant la vela, el braç no s'agafa: l'aguanta
-  if(F.accompanying) return [x0 + g*L*0.12, y0 + L*0.03, ap.HULLH];
+  if(F.accompanying) return aCoberta([x0 + g*L*0.12, y0 + L*0.03, ap.HULLH]);
   if(post==='fora') return regala(Math.sign(S.wx||1), false);     // cara exterior del buc
-  if(post==='dret' || post==='peus'){
-    // obenc del seu costat, a l'altura de l'espatlla (assegut, més avall)
-    const c = RIG.cadenots, est = (Math.abs(y0 - c[1]*L) < Math.abs(y0 - c[2]*L) ? c[1] : c[2])*L;
-    const tp = (post==='dret' ? 0.21 : 0.11)*L / (ap.capPal[2] - ap.HULLH);
+  if(dretPatro() > 0.5){
+    // D'EMPEUS: AL PAL si l'abasta (a proa i al mig), si no a l'obenc del seu costat,
+    // a l'altura del pit
+    const tp = 0.21*L / (ap.capPal[2] - ap.HULLH);
     MANS.obencP = tp;
+    const pal = [ap.peuPal[0] + (ap.capPal[0] - ap.peuPal[0])*tp, ap.peuPal[1] + (ap.capPal[1] - ap.peuPal[1])*tp];
+    if(Math.hypot(pal[0] - x0, pal[1] - y0) < ABAST*0.95)
+      return [pal[0] + g*L*0.010, pal[1], ap.HULLH + (ap.capPal[2] - ap.HULLH)*tp, ap.capPal[1],
+              ap.peuPal[0] + g*L*0.010, ap.peuPal[1]];
+    const c = RIG.cadenots, est = (Math.abs(y0 - c[1]*L) < Math.abs(y0 - c[2]*L) ? c[1] : c[2])*L;
     return [g*0.150*L*(1 - tp), est + (ap.capPal[1] - est)*tp,
-            ap.HULLH + (ap.capPal[2] - ap.HULLH)*tp, ap.capPal[1]];
+            ap.HULLH + (ap.capPal[2] - ap.HULLH)*tp, ap.capPal[1], g*0.150*L, est];
   }
   if(Math.abs(S.wx) > 0.5) return regala(g, true);                // cara interior del buc
   // Assegut al mig: la cinta negra més propera. Si queda massa a popa, la regala.
@@ -1017,7 +1064,7 @@ function agafada(){
     const m = (a + b)/2, h = (b - a)*0.36;
     return clamp(y0 + L*0.03, m - h, m + h);
   }).sort((p,q) => Math.abs(p - y0) - Math.abs(q - y0))[0];
-  return Math.abs(y - y0) < L*0.11 ? [g*L*0.045, y, ap.HULLH] : regala(g, true);
+  return Math.abs(y - y0) < L*0.11 ? aCoberta([g*L*0.045, y, ap.HULLH]) : regala(g, true);
 }
 // Una sola vegada per fotograma: canviar de mà i d'agafada ha de ser un gest.
 function actualitzaMans(dt){
@@ -1027,7 +1074,7 @@ function actualitzaMans(dt){
   MANS.k += (MANS.costat - MANS.k)*a;
   const obj = agafada();
   if(!MANS.suport) MANS.suport = obj.slice();
-  for(let i=0;i<3;i++) MANS.suport[i] += (obj[i] - MANS.suport[i])*a;
+  for(const i of [0,1,2,4,5]) MANS.suport[i] += (obj[i] - MANS.suport[i])*a;   // [4],[5]: la base, també suau
   MANS.suport[3] = obj[3];        // on acaba l'obenc: el necessita la zenital
 }
 // La mà de l'escota, sobre la recta espatlla → politja central: caçar és recollir
@@ -1042,11 +1089,11 @@ function maEscota(esp){
 // del patí. drawPatro() hi dibuixa i rigPoints() hi lliga l'escota.
 function patroZen(){
   const P = L*0.306, shHalf = P*0.1225, torso = P*0.32, post = F.posture || 'assegut';
-  const fora = post==='fora', dret = post==='dret', sgn = Math.sign(S.wx||1);
+  const fora = post==='fora', kd = dretPatro(), sgn = Math.sign(S.wx||1);
   const duck = F.accompanying ? 0.80 : 1.0;
   const cx = S.wx*CREW_X(), cy = crewY(S.wf);
   const out = fora ? sgn*(penjat()*L*0.036 - P*0.009) : (F.hike||0)*P*0.30*sgn;
-  const shY = (dret ? torso*0.30 : torso*0.62 - P*0.03) - shHalf*0.20;
+  const shY = lerp(torso*0.62 - P*0.03, torso*0.30, kd) - shHalf*0.20;
   return {
     shY, shX: shHalf*0.80,
     aPati: (a,b) => fora ? [cx + duck*(out + b*sgn), cy - duck*a*sgn]
@@ -1500,8 +1547,13 @@ function physics(dt){
   {
     // força lateral de la vela: empeny la politja cap a sotavent
     const push = Math.sin(t) * (S.windKn/12) * (F.flap ? 0.62 : 1) * 2.4;
-    // pendent de l'arc: sempre empeny la politja cap enfora del centre
-    const arch = 0.68 * S.pulley * (1 - 0.35*S.pulley*S.pulley);
+    // pendent de l'arc: sempre empeny la politja cap enfora del centre. La barra fa corba
+    // CAP A FORA (cap a popa): l'escota tiba la politja cap a la vela i, per passar pel centre,
+    // l'ha de fer «pujar». Aquesta retenció creix amb la tibada de l'escota, és a dir, amb el
+    // vent, com l'empenta de la vela (v34): abans era fixa, i el vent per l'aleta de l'altra
+    // banda treia la vela a 7-8° de passada la popa redona amb vent fort i a 26° amb 5 kn. Ara
+    // cal ~11° a qualsevol vent (a 12 kn, igual que abans).
+    const arch = 0.68 * (S.windKn/12) * S.pulley * (1 - 0.35*S.pulley*S.pulley);
 
     // EL PATRÓ ACOMPANYA LA VELA. Sense botavara, el navegant empeny el puny
     // d'escota amb el cos (l'esquena i el cul) i l'ajuda a passar de banda; al
@@ -1542,7 +1594,11 @@ function physics(dt){
     if(tackGest || S.tacking){
       crew = -3.4 * (0.4 + 0.6*(creuat ? 1 : wAft)) * S.tackDir;   // empeny cap a l'altra banda
       F.tackTo = -1;
-    } else if(nearRun && S.wx*S.sailSide > 0.28 && (S.jibeCd||0) <= 0){
+    } else if(nearRun && (absT > 168*D2R || S.sailSide*t < 0) && S.wx*S.sailSide > 0.45 && (S.jibeCd||0) <= 0){
+      // (v34) Només a prop de la popa redona o ja passat (vent per l'aleta de la vela). Abans
+      // n'hi havia prou amb 138°: assegut una mica a sotavent en una empopada a 150-170°, el
+      // patró passava la vela a l'altra banda, el vent (encara per l'aleta vella) la tornava i,
+      // amb el pes altra vegada a sotavent, la tornava a passar: 4-9 canvis per minut.
       // trabutjada: cal un gest CLAR de pes a sotavent, i amb temps refractari
       // perquè la vela no vagi canviant de banda a cada oscil·lació
       // (v29) cap a l'altra banda de la vela (sailSide), no segons el signe de la politja:
@@ -1601,9 +1657,17 @@ function physics(dt){
   // --- POSICIÓ NEUTRA: pes ben a proa + escota amollada a tope.
   // El patró treu els peus per la proa i els posa a l'aigua: fre molt gran.
   // Serveix per aturar el patí del tot (prevenció, cedir el pas). ---
-  const feetIn = (S.wf > 0.55 && S.sheet < 0.15);
-  F.neutral = feetIn;
-  if(feetIn){ drive *= 0.2; side *= 0.3; sideEsc *= 0.3; }      // el cos i els peus desventen la vela
+  // (v34) CONTINU i NOMÉS ON LA VELA ES POT DESVENTAR. L'Oriol: amb vent fort en empopada,
+  // en anar a proa el patí frenava de cop (de córrer a 1 kn) i en tornar a popa corria. A
+  // l'empopada, amollar no desventa la vela: el vent ve de popa i la vela ja és al topall, i
+  // per això la neutra (que atura el patí perquè la vela flameja) no hi actua. De cenyida a
+  // través (fins a 110°) és com abans; s'esvaeix fins als 150°. I entra de mica en mica (pes
+  // de 0,45 a 0,65, escota de 0,20 a 0,10), no de cop en passar un llindar.
+  const desventa = clamp((150*D2R - absT)/(40*D2R), 0, 1);
+  const nK = clamp((S.wf - 0.45)/0.20, 0, 1) * clamp((0.20 - S.sheet)/0.10, 0, 1) * desventa;
+  const feetIn = nK > 0.5;
+  F.neutral = feetIn; F.neutreK = nK;
+  drive *= 1 - 0.8*nK; side *= 1 - 0.7*nK; sideEsc *= 1 - 0.7*nK;   // el cos desventa la vela
   F.easedOnly = (!feetIn && S.sheet < 0.15);     // només amollada: frena, no atura
 
   // --- Sorra: en sortir, el patró empeny el patí caminant fins que sura.
@@ -1631,7 +1695,7 @@ function physics(dt){
             *(1 - ESC.fregament*Math.max(bucFora(1), bucFora(-1)))
           - (flap?0.03:0) - sandDrag;
   if(absT < 34*D2R) acc -= 0.09*(1-noGo)*clamp(S.speed/0.25, 0, 1);   // vora morta: frena progressivament
-  if(feetIn) acc -= S.speed*3.4 + 0.22;         // peus a l'aigua: fre potent
+  acc -= (S.speed*3.4 + 0.22)*nK;               // posició neutra: fre potent
   if(edge>0) acc -= S.speed*edge*0.6;
   S.speed = Math.max(0, S.speed + acc*dt);
   // El llindar d'aturada només actua quan el patí FRENA. Si la vela empeny
@@ -1711,7 +1775,7 @@ function physics(dt){
   const flow = clamp(S.speed/0.10, 0, 1);
   const spdF   = flow * (0.55 + 0.30*clamp(S.speed/0.55,0,1));
   let torque = orsaF * (-tack) * spdF * 1.05;
-  if(feetIn) torque *= 0.15;                   // peus a l'aigua: quasi no governa
+  torque *= 1 - 0.85*nK;                       // posició neutra: quasi no governa
 
   // --- GOVERN SENSE ARRANCADA (penell) ---
   // Aturat no hi ha flux als bucs, però la vela SÍ que continua rebent vent:
@@ -1856,7 +1920,7 @@ function physics(dt){
   const yawDamp = 1.60*grip
                 + 4.4*clamp(S.speed/BUC.vGir, 0, 1)
                 + 0.6*Math.abs(S.vLat)*8
-                + (feetIn ? 3.5 : 0);           // els peus a l'aigua frenen el gir
+                + 3.5*nK;                       // posició neutra: frena el gir
   // ESMORTEÏMENT QUADRÀTIC: fer girar el patí obliga els dos bucs, llargs i
   // separats, a travessar l'aigua de costat, i aquesta resistència creix amb
   // el quadrat de la velocitat de gir. És la que evita que el patí, gairebé
@@ -3023,38 +3087,9 @@ function render3D(dt){
         post = F.posture || 'assegut';
       }
     }
-    const sgn = Math.sign(S.wx||1);
-    let hipC, shC, headC, feet, knees, hipW, shW, wAxis, capOut=0;
-    if(post==='dret'){
-      hipC=[bx, by, ground+LEG]; shC=[bx, by+U*0.04, ground+LEG+TOR];
-      headC=[bx, by+U*0.02, ground+LEG+TOR+HR*1.6];
-      feet=[[bx-U*0.08,by-U*0.04,ground],[bx+U*0.08,by+U*0.04,ground]];
-      knees=[[bx-U*0.06,by-U*0.02,ground+LEG*0.5],[bx+U*0.06,by+U*0.02,ground+LEG*0.5]];
-      hipW=U*0.095; shW=U*0.135; wAxis='x';
-    } else if(post==='fora'){
-      // penjat: peus a les CINTES, cos alineat cap enfora, cap sobre l'aigua
-      const strapX = sgn*L*0.045, hipX = sgn*(hb3 - hw3*0.1 + penjat()*L*0.055);
-      hipC=[hipX, by, ground+U*0.14];
-      shC=[hipX + sgn*TOR*0.92, by, ground+U*0.26];
-      headC=[hipX + sgn*(TOR*0.92 + HR*1.7), by, ground+U*0.30];
-      feet=[[strapX, by-U*0.10, ground+U*0.04],[strapX, by+U*0.10, ground+U*0.04]];
-      knees=[[(strapX+hipX)/2, by-U*0.08, ground+U*0.20],[(strapX+hipX)/2, by+U*0.08, ground+U*0.20]];
-      hipW=U*0.095; shW=U*0.135; wAxis='y'; capOut=sgn;
-    } else if(post==='peus'){
-      // neutra: assegut a popa amb els peus DINS L'AIGUA
-      hipC=[bx, by, ground+U*0.12]; shC=[bx, by-U*0.04, ground+U*0.12+TOR*0.9];
-      headC=[bx, by-U*0.06, ground+U*0.12+TOR*0.9+HR*1.6];
-      feet=[[bx-U*0.08, by+U*0.28, ground-U*0.34],[bx+U*0.08, by+U*0.28, ground-U*0.34]];
-      knees=[[bx-U*0.08, by+U*0.18, ground+U*0.04],[bx+U*0.08, by+U*0.18, ground+U*0.04]];
-      hipW=U*0.095; shW=U*0.135; wAxis='x';
-    } else {
-      // assegut compacte: genolls amunt, peus cap a proa
-      hipC=[bx, by, ground+U*0.10]; shC=[bx, by+U*0.06, ground+U*0.10+TOR*0.8];
-      headC=[bx, by+U*0.04, ground+U*0.10+TOR*0.8+HR*1.6];
-      feet=[[bx-U*0.08, by-U*0.26, ground+U*0.02],[bx+U*0.08, by-U*0.26, ground+U*0.02]];
-      knees=[[bx-U*0.08, by-U*0.14, ground+U*0.24],[bx+U*0.08, by-U*0.14, ground+U*0.24]];
-      hipW=U*0.095; shW=U*0.135; wAxis='x';
-    }
+    // Esquelet continu d'assegut a dret (v34): a proa, i agafat al pal, d'empeus.
+    const kDret = (S.mode==='mar' && !(S.board>0 && S.board<1)) ? dretPatro() : (post==='dret' ? 1 : 0);
+    const {hipC, shC, headC, feet, knees, hipW, shW, wAxis, capOut} = esqueletPatro(bx, by, ground, post, kDret);
     const P3 = pt => pjB(pt[0], pt[1], pt[2]);
     const pHip=P3(hipC), pSh=P3(shC), pHead=P3(headC);
     if(pHip && pSh && pHead){
@@ -3093,32 +3128,49 @@ function render3D(dt){
       const C = SIL
         ? { leg:'rgba(74,52,40,.38)', shoe:'rgba(64,44,34,.38)', vest:'rgba(74,52,40,.38)',
             vestS:'rgba(0,0,0,0)', skin:'rgba(74,52,40,.38)', face:'rgba(74,52,40,.38)',
-            cap:'rgba(64,46,36,.38)' }
+            cap:'rgba(64,46,36,.38)', hip:'rgba(70,50,40,.38)' }
         : { leg:'#26344a', shoe:'#161f2e', vest:'#e2452f', vestS:'rgba(90,20,10,.55)',
-            skin:'#e8c9a8', face:'#f0d9b5', cap:'#2f5d8a' };
+            skin:'#e8c9a8', face:'#f0d9b5', cap:'#2f5d8a', hip:'#33445e' };
       // ombra a la coberta
       if(!SIL && ground >= HULLH-1){
         const sh0 = pjB(bx, by, HULLH);
         if(sh0){ cx2d.beginPath(); cx2d.ellipse(sh0.x, sh0.y+1, U*0.30*scl, U*0.09*scl, 0, 0, TAU);
           cx2d.fillStyle='rgba(30,15,5,.25)'; cx2d.fill(); }
       }
+      // CADERA (v34): les cames neixen de les dues articulacions del maluc, no d'un punt;
+      // els malucs (pantaló) uneixen les cames amb el tors, que comença a la cintura.
+      const off = (pt,w) => wAxis==='x'
+        ? [[pt[0]-w,pt[1],pt[2]],[pt[0]+w,pt[1],pt[2]]]
+        : [[pt[0],pt[1]-w,pt[2]],[pt[0],pt[1]+w,pt[2]]];
+      const waistC = hipC.map((v,i) => v + (shC[i]-v)*0.20);
+      const juntes = off(hipC, hipW*0.62);
       // CAMES amb genoll + peus (neoprè fosc)
       cx2d.strokeStyle=C.leg; cx2d.lineCap='round'; cx2d.lineJoin='round';
       cx2d.lineWidth = Math.max(1.8, U*0.115*scl);
       for(let i=0;i<2;i++){
-        const pF=P3(feet[i]), pK=P3(knees[i]);
-        if(!pF||!pK) continue;
-        cx2d.beginPath(); cx2d.moveTo(pHip.x,pHip.y); cx2d.lineTo(pK.x,pK.y); cx2d.lineTo(pF.x,pF.y); cx2d.stroke();
+        const pF=P3(feet[i]), pK=P3(knees[i]), pJ=P3(juntes[i]);
+        if(!pF||!pK||!pJ) continue;
+        cx2d.beginPath(); cx2d.moveTo(pJ.x,pJ.y); cx2d.lineTo(pK.x,pK.y); cx2d.lineTo(pF.x,pF.y); cx2d.stroke();
         cx2d.fillStyle=C.shoe;
         cx2d.beginPath();
         cx2d.ellipse(pF.x, pF.y, Math.max(1.6,U*0.07*scl), Math.max(1.2,U*0.045*scl), 0, 0, TAU);
         cx2d.fill();
       }
-      // TORS: quadrilàter de l'armilla (espatlles més amples que malucs)
-      const off = (pt,w) => wAxis==='x'
-        ? [[pt[0]-w,pt[1],pt[2]],[pt[0]+w,pt[1],pt[2]]]
-        : [[pt[0],pt[1]-w,pt[2]],[pt[0],pt[1]+w,pt[2]]];
-      const [h1,h2]=off(hipC,hipW), [s1,s2]=off(shC,shW);
+      // els MALUCS: de les articulacions (una mica per sota) fins a la cintura
+      {
+        const baix = hipC.map((v,i) => v - (shC[i]-v)*0.10);
+        const [b1,b2]=off(baix,hipW*1.02), [w1,w2]=off(waistC,hipW*0.95);
+        const pq=[P3(b1),P3(w1),P3(w2),P3(b2)];
+        if(pq.every(Boolean)){
+          cx2d.beginPath(); cx2d.moveTo(pq[0].x,pq[0].y);
+          for(let i=1;i<4;i++) cx2d.lineTo(pq[i].x,pq[i].y);
+          cx2d.closePath();
+          cx2d.fillStyle=C.hip; cx2d.fill();
+          cx2d.lineJoin='round'; cx2d.lineWidth=Math.max(1, U*0.03*scl); cx2d.strokeStyle=C.hip; cx2d.stroke();
+        }
+      }
+      // TORS: quadrilàter de l'armilla (espatlles més amples que la cintura)
+      const [h1,h2]=off(waistC,hipW), [s1,s2]=off(shC,shW);
       const q=[P3(h1),P3(s1),P3(s2),P3(h2)];
       if(q.every(Boolean)){
         cx2d.beginPath(); cx2d.moveTo(q[0].x,q[0].y);
@@ -4505,13 +4557,13 @@ function drawPatro(){
   // El navegant va ASSEGUT: tors bastant vertical i compacte, els PEUS cap a
   // PROA amb les cames plegades (genolls marcats). El cap queda cap a popa però
   // la cara mira endavant. Dret prop del pal, el cos es veu escorçat.
-  const seated    = (post!=='dret');            // 'fora' també va compacte i alineat
-  const upright   = (post==='dret');
-  const torsoV    = upright ? torso*0.30 : torso*0.62;
-  const bodyShift = upright ? 0 : -P*0.03;
+  // D'assegut a dret de manera CONTÍNUA (v34): kd = 0 assegut … 1 dret a proa.
+  const kd        = (post==='fora') ? 0 : dretPatro();
+  const torsoV    = lerp(torso*0.62, torso*0.30, kd);
+  const bodyShift = lerp(-P*0.03, 0, kd);
   const hipY      = bodyShift;
   const shoulderY = hipY + torsoV;                          // tors cap a POPA
-  const headY     = shoulderY + (upright ? headR*0.55 : headR*1.25);
+  const headY     = shoulderY + lerp(headR*1.25, headR*0.55, kd);
 
   // Quan acompanya la vela, el patró s'AJUP per deixar-la passar: en vista
   // zenital el cos es veu més compacte i les espatlles s'encongeixen.
@@ -4553,40 +4605,35 @@ function drawPatro(){
       cx2d.beginPath(); cx2d.moveTo(hx,hy); cx2d.lineTo(kx,ky); cx2d.lineTo(fx,fy); cx2d.stroke();
       feet.push([fx,fy]);
     }
-  } else if(post==='dret'){
-    // d'empeus prop del pal: les cames queden A SOTA (escorçades en vista zenital)
-    for(const s of [-0.5, 0.5]){
-      const hx = s*shHalf*0.55, hy = hipY;
-      const fx = s*shHalf*0.75, fy = hipY - P*0.09;
-      cx2d.beginPath(); cx2d.moveTo(hx,hy); cx2d.lineTo(fx,fy); cx2d.stroke();
-      feet.push([fx,fy]);
-    }
   } else {
-    // ASSEGUT: cames plegades cap a PROA amb el genoll ben marcat (obert enfora),
-    // no estirades. En posició neutra s'estenen més (cap als peus a l'aigua).
-    const reach = (post==='peus') ? 0.85 : 0.52;      // curt = assegut, plegat
-    const kneeOut = shHalf*1.15;                       // genolls oberts enfora
+    // ASSEGUT (kd = 0): cames plegades cap a PROA amb el genoll ben marcat (obert
+    // enfora). DRET (kd = 1, a proa i agafat al pal): les cames, gairebé rectes, queden
+    // A SOTA seu i en vista zenital s'escorcen; un peu una mica avançat. Entremig, continu.
+    const kneeOut = lerp(shHalf*1.15, shHalf*0.66, kd);    // genolls oberts enfora
     for(const s of [-0.5, 0.5]){
-      const hx = s*shHalf*0.62, hy = hipY;
-      const kx = s*kneeOut,     ky = hy - thigh*reach; // genoll obert i endavant
-      const fx = s*shHalf*0.55, fy = ky - shin*reach;  // peu recollit cap endins
+      const hx = lerp(s*shHalf*0.62, s*shHalf*0.55, kd), hy = hipY;
+      const kx = s*kneeOut, ky = hy - lerp(thigh*0.52, P*0.045 + (s<0 ? P*0.012 : 0), kd);
+      const fx = lerp(s*shHalf*0.55, s*shHalf*0.75, kd), fy = ky - lerp(shin*0.52, P*0.045 + (s<0 ? P*0.012 : 0), kd);
       cx2d.beginPath(); cx2d.moveTo(hx,hy); cx2d.lineTo(kx,ky); cx2d.lineTo(fx,fy); cx2d.stroke();
       feet.push([fx,fy]);
     }
   }
-  // peus (a la posició neutra els dibuixem a l'aigua, més avall)
-  if(post!=='peus'){
-    cx2d.fillStyle='#161f2e';
-    for(const [fx,fy] of feet){
-      cx2d.save(); cx2d.translate(fx,fy);
-      cx2d.rotate(0);
-      cx2d.beginPath(); cx2d.ellipse(0,0, footR*1.25, footR*0.85, 0, 0, TAU); cx2d.fill();
-      cx2d.restore();
-    }
+  // peus
+  cx2d.fillStyle='#161f2e';
+  for(const [fx,fy] of feet){
+    cx2d.beginPath(); cx2d.ellipse(fx,fy, footR*1.25, footR*0.85, 0, 0, TAU); cx2d.fill();
   }
+  // ---- CADERA (v34): els malucs, entre les cames i el tors. Les cuixes hi neixen
+  // de les articulacions; el tors comença a la cintura, una mica més a popa.
+  const tiltDeg = (post==='fora') ? S.wx*0.06 : S.wx*0.16;
+  cx2d.save();
+  cx2d.rotate(tiltDeg*0.5);
+  cx2d.fillStyle = shadeLerp('#33445e', 0.9);
+  cx2d.beginPath(); cx2d.ellipse(0, hipY - P*0.03, shHalf*0.78, P*0.048, 0, 0, TAU); cx2d.fill();
+  cx2d.lineWidth = 1.2; cx2d.strokeStyle = 'rgba(10,16,28,.75)'; cx2d.stroke();
+  cx2d.restore();
 
   // ---- TORS ----
-  const tiltDeg = (post==='fora') ? S.wx*0.06 : S.wx*0.16;
   cx2d.save();
   cx2d.rotate(tiltDeg);
   const gt = cx2d.createLinearGradient(-shHalf, 0, shHalf, 0);
@@ -4594,8 +4641,9 @@ function drawPatro(){
   gt.addColorStop(0.55, shadeLerp('#e2452f', 0.85));
   gt.addColorStop(1,    shadeLerp('#ff7a5e', litness( 1,0)));
   cx2d.fillStyle = gt;
-  const torsoHalf = Math.abs(shoulderY - hipY)/2 + shHalf*0.35;
-  roundCapsule(0, (shoulderY+hipY)/2, shHalf*0.90, torsoHalf);
+  const waistY = hipY + P*0.02;                          // cintura: el tors no tapa la cadera
+  const torsoHalf = Math.abs(shoulderY - waistY)/2 + shHalf*0.35;
+  roundCapsule(0, (shoulderY+waistY)/2, shHalf*0.90, torsoHalf);
   cx2d.fill();
   cx2d.lineWidth=1.6; cx2d.strokeStyle='rgba(60,12,6,.7)'; cx2d.stroke();
   // espatlles marcades, a popa del tors
@@ -4634,9 +4682,7 @@ function drawPatro(){
     // l'espatlla quedaria el doble de lluny que un braç. S'agafa més avall del
     // mateix cap, i la mà continua sobre l'obenc que es veu.
     const ms = MANS.suport, H = aparell().HULLH;
-    const fix = F.posture==='dret' || F.posture==='peus';
-    const est = fix ? (ms[1] - MANS.obencP*ms[3])/(1 - MANS.obencP) : ms[1];
-    const base = [ms[0]/(fix ? 1 - MANS.obencP : 1), est];
+    const base = [ms[4] ?? ms[0], ms[5] ?? ms[1]];      // peu de l'obenc o del pal (a coberta, el mateix punt)
     const esp = Z.aPati(-MANS.k*Z.shX, Z.shY);
     let q = null;
     for(let s=1; s>=0; s-=0.1){
@@ -4663,27 +4709,6 @@ function drawPatro(){
   cx2d.lineWidth=1.2; cx2d.strokeStyle='rgba(15,30,50,.8)'; cx2d.stroke();
   cx2d.restore();   // fi rotació del tors
   cx2d.restore();   // fi translació del cos
-
-  // ---- POSICIÓ NEUTRA: els peus surten per la proa i esquitxen ----
-  if(post==='peus' && S.mode==='mar'){
-    const P2 = L*0.306;
-    const fy = cy0 - (P2*0.25 + P2*0.24) - P2*0.10;
-    cx2d.fillStyle='#161f2e';
-    for(const s of [-0.5,0.5]){
-      cx2d.beginPath();
-      cx2d.ellipse(cx0 + s*P2*0.075, fy, P2*0.055*1.2, P2*0.055*0.9, 0, 0, TAU);
-      cx2d.fill();
-    }
-    for(let i=0;i<9;i++){
-      const a = S.time*7 + i*1.3;
-      cx2d.fillStyle = `rgba(255,255,255,${0.30+0.25*Math.abs(Math.sin(a))})`;
-      cx2d.beginPath();
-      cx2d.arc(cx0 + (i-4)*P2*0.055 + Math.sin(a)*2,
-               fy - P2*0.05 - Math.abs(Math.cos(a))*P2*0.06,
-               P2*0.026 + Math.abs(Math.sin(a))*P2*0.016, 0, TAU);
-      cx2d.fill();
-    }
-  }
 
   cx2d.restore();
 }
