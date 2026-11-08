@@ -715,7 +715,7 @@
     <div class="sub">Un patró més pesat adreça abans el patí i el fa girar amb menys esforç.</div>
   </div>
   <button class="btn sec" id="btnTancarConfig">TANCAR</button>
-  <div id="versio">Versió v32</div>
+  <div id="versio">Versió v33</div>
 </div></div>
 
 <script>
@@ -1591,6 +1591,7 @@ function physics(dt){
   const {maxSail, sailAng, noGo, drive: drive0, side: side0v, sideEsc: sideEsc0, aoa, flap, stall} = aeroVela(absT);
   let drive = drive0, side = side0v, sideEsc = sideEsc0;
   const windN = S.windKn/12;
+  const NEUTRA_K = 0.80;                       // posició neutra: penell proa al vent (v33)
   // El patí té massa pròpia (~62 kg): el patró només desplaça una part del
   // centre de masses del conjunt. Per això el seu moment té rendiment decreixent.
   const BOAT_KG = 62;
@@ -1719,10 +1720,17 @@ function physics(dt){
   // amollada, la proa cau. El pes a proa hi ajuda perquè enfonsa les proes i
   // el patí gira sobre elles. Sense això, un patí parat no es podia orientar
   // de cap manera i era impossible iniciar una virada des de l'aturada.
+  // POSICIÓ NEUTRA (v33): agafat al pal (pes ben a proa i al centre) i amb la vela lliure,
+  // el patí pivota sobre les proes enfonsades. El drap flamejant, el pal i les popes queden
+  // DARRERE del pivot i el vent els empeny a sotavent: com un penell, la proa puja al vent i
+  // s'hi queda, quasi aturat. Abans el penell d'escota amollada feia caure la proa sense parar
+  // (1,9°/s, el patí donava voltes). Amb el pes a popa (vela a la contra) no hi actua.
+  const neutre = clamp((S.wf - 0.40)/0.30, 0, 1) * clamp((0.25 - S.sheet)/0.15, 0, 1)
+               * clamp((0.70 - Math.abs(S.wx))/0.30, 0, 1);
   {
     const parat = 1 - flow;                              // 1 = sense arrancada
     if(parat > 0.02){
-      const penell = windN * parat * ((flap || S.postVir > 0) ? 0.30 : 1) *
+      const penell = windN * parat * (1 - neutre) * ((flap || S.postVir > 0) ? 0.30 : 1) *
                      ((S.sheet - 0.42)*1.35 + wfEff*0.42);
       // ACABADA DE VIRAR (postVir), el penell porta la proa CAP AL VENT, no cap a la banda
       // de la vela (v29). Amb -tack, aturat a 2-5° de la nova amura amb la vela ja passada,
@@ -1813,8 +1821,14 @@ function physics(dt){
     const fall  = windN * still * clavat * (S.postVir > 0 ? 1 : 0.45 + 0.55*(1 - S.sheet)) * 0.85;
     // (v29) cau cap a la banda on penja la vela: amb la vela a la contra, per l'amura
     // nova (abans sign(t) la feia caure sempre per l'amura vella i la vela tornava)
-    torque += tack * fall;
+    torque += tack * fall * (1 - neutre);
   }
+  // posició neutra: la proa puja al vent per la banda on és i s'hi queda (vegeu `neutre`)
+  if(neutre > 0){
+    const parat = 1 - clamp(S.speed/0.25, 0, 1);
+    torque += -Math.sin(t) * windN * neutre * parat * NEUTRA_K;
+  }
+  F.neutre = neutre;
 
   F.torque = orsaF*spdF;
   // Punt d'equilibri: quin wf faria orsaF = 0 amb l'escora i l'escota actuals.
