@@ -15,6 +15,23 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex, nofollow">
 <script>
+  // Multiclub: icona i nom de l'app del club (c/{club}/, els genera l'acció «Icones dels clubs»).
+  // Club = el de l'enllaç d'instal·lació (?club=id, es recorda a ov2_inst_club) o, si no, el del soci (ov2_brand.club).
+  // Si el club encara no té els fitxers, es queda el manifest d'Ocata Vent.
+  (() => { try{
+    const ok = k => typeof k === "string" && /^[a-z0-9-]{1,40}$/.test(k);
+    const q = new URLSearchParams(location.search).get("club"); if(ok(q)) localStorage.setItem("ov2_inst_club", JSON.stringify(q));
+    const g = k => { try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } };
+    const c = ok(q) ? q : (g("ov2_brand") || {}).club || g("ov2_inst_club");
+    if(!ok(c) || c === "ocatavent") return;
+    const base = "c/" + c + "/";
+    fetch(base + "manifest.webmanifest", {cache:"no-cache"}).then(r => r.ok ? r.json() : null).then(m => { if(!m) return;
+      document.querySelector('link[rel="manifest"]').href = base + "manifest.webmanifest";
+      const own = (m.icons || []).some(i => !String(i.src).startsWith("../"));
+      if(own) document.querySelector('link[rel="apple-touch-icon"]').href = base + "apple-touch-icon.png?" + (m.icons[0].src.split("?")[1] || "");
+      document.querySelector('meta[name="apple-mobile-web-app-title"]').content = m.short_name || m.name;
+    }).catch(() => {});
+  }catch(e){} })();
   try{ if(JSON.parse(localStorage.getItem("ov2_size")) === "big") document.documentElement.dataset.size = "big"; }catch(e){}
   // Tema abans de pintar: auto (sistema) / dark / light
   try{ const t = localStorage.getItem("ov2_theme"); if(t === "dark" || t === "light") document.documentElement.dataset.theme = t; }catch(e){}
@@ -442,10 +459,10 @@
 <script src="limit.js?v=1"></script>
 <script src="windmap.js?v=113"></script>
 <script src="prep.js?v=106"></script>
-<script src="cloud.js?v=125"></script>
+<script src="cloud.js?v=126"></script>
 <script src="amics.js?v=116"></script>
 <script src="planol-core.js?v=6"></script>
-<script src="club.js?v=149"></script>
+<script src="club.js?v=150"></script>
 <script src="admin.js?v=115"></script>
 <script src="avisos.js?v=208"></script>
 <script src="sos.js?v=2"></script>

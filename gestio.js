@@ -242,7 +242,46 @@ function brandCard(){
     <label class="lbl" for="gClubLloc">Lloc a l'app</label>
     ${llocSel("gClubLloc", c.lloc || (club === "ocatavent" ? "masnou" : ""))}
     <label class="g-ck"><input type="checkbox" id="gClubObert"${club === "ocatavent" || c.oberta ? " checked" : ""}${club === "ocatavent" ? " disabled" : ""}> Accepta altes noves des de l'app</label>
-    <p class="note">El títol surt en majúscules a dalt de l'app de tots els socis, amb el logo; a sota hi continua el club on naveguen. Buit = «${TITOL0}». Lloc: platja, previsió, estacions i webcams que veuen els socis en entrar (després cadascú pot mirar-ne d'altres). Amb «Accepta altes», el club surt a la llista de l'alta nova de l'app. El logo es retalla en un cercle: millor quadrat, amb el motiu al centre (PNG, JPG, WebP o SVG). Es desa en sortir del camp.</p></article>`;
+    <p class="note">El títol surt en majúscules a dalt de l'app de tots els socis, amb el logo; a sota hi continua el club on naveguen. Buit = «${TITOL0}». Lloc: platja, previsió, estacions i webcams que veuen els socis en entrar (després cadascú pot mirar-ne d'altres). Amb «Accepta altes», el club surt a la llista de l'alta nova de l'app. El logo es retalla en un cercle: millor quadrat, amb el motiu al centre (PNG, JPG, WebP o SVG). Es desa en sortir del camp.</p></article>
+  ${club === "ocatavent" ? "" : iconCard()}`;
+}
+/* ---------- icona de l'app del club (clubs/{id}.icona → directori → c/{id}/ amb l'acció «Icones dels clubs») ---------- */
+const instUrl = id => new URL(id === "ocatavent" ? "./" : "./?club=" + encodeURIComponent(id), location.href).href;
+function iconCard(){
+  const c = clubs[club] || {}, ic = c.icona || c.logo || "icons/icon-192.png?v=3";
+  setTimeout(instCheck, 0);
+  return `<article class="card g-card"><span class="lbl">Icona de l'app i enllaç d'instal·lació</span>
+    <div class="g-brand"><div class="g-prev"><img class="g-ico" src="${esc(ic)}" alt="Icona de l'app" width="56" height="56">
+      <div class="t"><b>${esc(c.titol || c.nom || clubName(club))}</b><span id="gInstSt">Comprovant…</span></div></div>
+      <div class="g-row"><label class="btn" for="gIconFile">Canvia la icona</label><input id="gIconFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+        ${c.icona ? `<button class="btn" type="button" id="gIconDel">Fes servir el logo</button>` : ""}</div></div>
+    <div class="g-com"><input class="field" id="gInstUrl" type="text" readonly value="${esc(instUrl(club))}"><button class="btn" type="button" id="gInstCopy">Copia</button>${navigator.share ? `<button class="btn" type="button" id="gInstShare">Comparteix</button>` : ""}</div>
+    <p class="note">Qui instal·la l'app des d'aquest enllaç (Android: menú ▸ Instal·la l'app; iPhone: Comparteix ▸ Afegeix a la pantalla d'inici) la té amb aquesta icona i el nom del club, i a l'alta nova li surt triat el club. Icona quadrada i senzilla (es veu a 48 px); sense icona, el logo. Els canvis triguen fins a una hora a estar a punt. Qui ja tenia l'app instal·lada l'ha de tornar a instal·lar des de l'enllaç.</p></article>`;
+}
+async function instCheck(){
+  const el = $("gInstSt"); if(!el) return;
+  try{
+    const d = dirOf(club), want = await sha16(d.icona + "|" + d.nom + "|" + d.titol);
+    const r = await fetch(`c/${club}/hash.txt?t=${Date.now()}`, {cache:"no-store"}), h = r.ok ? (await r.text()).split("\n")[0].trim() : "";
+    el.textContent = h === want ? "Enllaç a punt" : h ? "Actualitzant la icona (fins a 1 h)" : "Preparant l'enllaç (fins a 1 h)";
+  }catch(e){ el.textContent = "No s'ha pogut comprovar"; }
+}
+async function sha16(t){ const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("").slice(0, 16); }
+// Icona: SVG tal qual (≤ 60 kB); la resta, retallada quadrada a 512 px
+async function iconData(f){
+  if(f.type === "image/svg+xml") return logoData(f);
+  const url = URL.createObjectURL(f);
+  try{
+    const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error("No es pot llegir la imatge.")); i.src = url; });
+    if(Math.min(img.naturalWidth, img.naturalHeight) < 192) throw new Error("La imatge és massa petita: cal com a mínim 192 × 192 px (millor 512).");
+    for(const S of [512, 384, 256]){
+      const m = Math.min(img.naturalWidth, img.naturalHeight), cv = document.createElement("canvas"); cv.width = cv.height = S;
+      cv.getContext("2d").drawImage(img, (img.naturalWidth - m) / 2, (img.naturalHeight - m) / 2, m, m, 0, 0, S, S);
+      let d = cv.toDataURL("image/webp", .9); if(!d.startsWith("data:image/webp")) d = cv.toDataURL("image/png");
+      if(d.length <= 140000) return d;
+    }
+    throw new Error("La imatge és massa complexa: simplifica-la o fes-ne un PNG amb menys detall.");
+  }finally{ URL.revokeObjectURL(url); }
 }
 // Imatge → data URL petit: SVG tal qual (≤ 60 kB); la resta, retallada quadrada i reduïda a 256 px
 async function logoData(f){
@@ -372,20 +411,20 @@ async function recalc(id){
 
 /* ---------- comissions, rols i clubs ---------- */
 async function saveClub(id, patch){
-  const cur = clubs[id] || {nom:"", comissions:COMS0}, next = {nom:cur.nom || clubName(id), titol:cur.titol || "", logo:cur.logo || "", lloc:cur.lloc || "", oberta:!!cur.oberta, comissions:cur.comissions || COMS0, rols:cur.rols || tpl, ...patch};
+  const cur = clubs[id] || {nom:"", comissions:COMS0}, next = {nom:cur.nom || clubName(id), titol:cur.titol || "", logo:cur.logo || "", icona:cur.icona || "", lloc:cur.lloc || "", oberta:!!cur.oberta, comissions:cur.comissions || COMS0, rols:cur.rols || tpl, ...patch};
   const doc = {nom:next.nom, comissions:next.comissions, rols:next.rols, oberta:!!next.oberta, actualitzat:F.serverTimestamp(), actualitzatPer:user.uid};
-  if(next.titol) doc.titol = next.titol; if(next.logo) doc.logo = next.logo; if(next.lloc) doc.lloc = next.lloc;
+  if(next.titol) doc.titol = next.titol; if(next.logo) doc.logo = next.logo; if(next.lloc) doc.lloc = next.lloc; if(next.icona) doc.icona = next.icona;
   try{ await F.setDoc(F.doc(db, "clubs", id), doc); clubs[id] = next; say(""); saveDir(id); if(patch.rols) await recalc(id); render(); return true; }
   catch(e){ say(errText(e)); return false; }
 }
 
 // Directori públic (directori/{id}): el que veu la pantalla d'alta de l'app abans d'entrar
-const dirOf = id => { const c = clubs[id] || {}; return {nom:c.nom || clubName(id), titol:c.titol || "", lloc:c.lloc || (id === "ocatavent" ? "masnou" : ""), oberta:id === "ocatavent" || !!c.oberta}; };
+const dirOf = id => { const c = clubs[id] || {}; return {nom:c.nom || clubName(id), titol:c.titol || "", lloc:c.lloc || (id === "ocatavent" ? "masnou" : ""), oberta:id === "ocatavent" || !!c.oberta, icona:c.icona || c.logo || ""}; };
 async function saveDir(id){ try{ await F.setDoc(F.doc(db, "directori", id), {...dirOf(id), actualitzat:F.serverTimestamp()}); }catch(e){} }
 async function syncDir(){   // administració: posa al dia el directori de tots els clubs
   try{ const qs = await F.getDocs(F.collection(db, "directori")), cur = {}; qs.docs.forEach(d => cur[d.id] = d.data());
     for(const id of Object.keys(clubs)){ const w = dirOf(id), h = cur[id] || {};
-      if(["nom", "titol", "lloc", "oberta"].some(k => (h[k] ?? (k === "oberta" ? false : "")) !== w[k])) await saveDir(id); } }catch(e){}
+      if(["nom", "titol", "lloc", "oberta", "icona"].some(k => (h[k] ?? (k === "oberta" ? false : "")) !== w[k])) await saveDir(id); } }catch(e){}
 }
 // Selector del lloc (clubs.js): per comarca
 function llocSel(idAttr, sel){
@@ -466,6 +505,9 @@ document.addEventListener("click", async e => {
     if(box) slideConfirm(box, "Llisca per treure l'administració", async () => { try{ await F.deleteDoc(F.doc(db, "admins", u)); await loadAdmins(); say(""); render(); }catch(err){ say(errText(err)); } }); return; }
   if(b.id === "gReload"){ b.disabled = true; if(GLOBAL){ const c = club; await loadAll(); club = c; } else await openClub(club); render(); return; }
   if(b.id === "gLogoDel"){ saveClub(club, {logo:""}); return; }
+  if(b.id === "gIconDel"){ saveClub(club, {icona:""}); return; }
+  if(b.id === "gInstCopy"){ try{ await navigator.clipboard.writeText($("gInstUrl").value); b.textContent = "Copiat"; }catch(e){ $("gInstUrl").select(); } return; }
+  if(b.id === "gInstShare"){ try{ await navigator.share({title:clubName(club), text:"Instal·la l'app del club:", url:$("gInstUrl").value}); }catch(e){} return; }
   if(b.id === "gAddCom"){ const n = ($("gNewCom")?.value || "").trim(); if(!n) return; const C = comsOf(club); let k = slug(n) || "comissio", i = 2; while(C[k]) k = (slug(n) || "comissio") + "-" + i++;
     saveClub(club, {comissions:Object.assign({}, C, {[k]: n.slice(0, 40)})}); return; }
   if(b.dataset.comdel){ const k = b.dataset.comdel, box = document.querySelector(`[data-combox="${CSS.escape(k)}"]`), C = comsOf(club);
@@ -480,6 +522,8 @@ document.addEventListener("change", e => {
   if(t.dataset && t.dataset.rname){ const sc = t.dataset.scope, R = rolesIn(sc), k = t.dataset.rname, v = t.value.trim().slice(0, 40);
     if(R[k] && v && v !== R[k].nom) saveRoles(sc, Object.assign({}, R, {[k]: Object.assign({}, R[k], {nom:v})})); else if(R[k]) t.value = R[k].nom; }
   if(t.id === "gClubTit"){ const v = t.value.trim().replace(/\s+/g, " ").slice(0, 24); if(v !== (clubs[club]?.titol || "")) saveClub(club, {titol:v}); }
+  if(t.id === "gIconFile" && t.files && t.files[0]){ const f = t.files[0]; t.value = "";
+    iconData(f).then(d => saveClub(club, {icona:d})).catch(err => say(err.message || "No s'ha pogut fer servir aquesta imatge.")); }
   if(t.id === "gLogoFile" && t.files && t.files[0]){ const f = t.files[0]; t.value = "";
     logoData(f).then(d => saveClub(club, {logo:d})).catch(err => say(err.message || "No s'ha pogut fer servir aquesta imatge.")); }
   if(t.id === "gClubLloc"){ if(t.value !== (clubs[club]?.lloc || "")) saveClub(club, {lloc:t.value}); }

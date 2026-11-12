@@ -382,7 +382,9 @@ service cloud.firestore {
     match /clubs/{club} {
       allow read: if isAdmin() || (isApproved() && club == myClub());
       allow create, update: if (isAdmin() || (hasPerm('rols') && club == myClub()))
-        && request.resource.data.keys().hasOnly(['nom', 'titol', 'logo', 'lloc', 'oberta', 'comissions', 'rols', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.keys().hasOnly(['nom', 'titol', 'logo', 'icona', 'lloc', 'oberta', 'comissions', 'rols', 'actualitzat', 'actualitzatPer'])
+        && request.resource.data.get('icona', '') is string && request.resource.data.get('icona', '').size() <= 150000
+        && (request.resource.data.get('icona', '') == '' || request.resource.data.get('icona', '').matches('^data:image/(png|jpeg|webp|svg[+]xml);base64,[A-Za-z0-9+/=]+$'))
         && request.resource.data.get('lloc', '') is string && request.resource.data.get('lloc', '').size() <= 60
         && request.resource.data.get('oberta', false) is bool
         && request.resource.data.get('titol', '') is string && request.resource.data.get('titol', '').size() <= 24
@@ -400,7 +402,8 @@ service cloud.firestore {
     match /directori/{club} {
       allow read: if true;
       allow write: if (isAdmin() || (hasPerm('rols') && club == myClub()))
-        && request.resource.data.keys().hasOnly(['nom', 'titol', 'lloc', 'oberta', 'actualitzat'])
+        && request.resource.data.keys().hasOnly(['nom', 'titol', 'lloc', 'oberta', 'icona', 'actualitzat'])
+        && request.resource.data.get('icona', '') is string && request.resource.data.get('icona', '').size() <= 150000
         && request.resource.data.get('nom', '') is string && request.resource.data.get('nom', '').size() <= 80
         && request.resource.data.get('titol', '') is string && request.resource.data.get('titol', '').size() <= 24
         && request.resource.data.get('lloc', '') is string && request.resource.data.get('lloc', '').size() <= 60

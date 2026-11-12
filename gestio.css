@@ -73,3 +73,6 @@ body.g-lock{overflow:hidden}
 /* casella en línia (multiclub: «Accepta altes noves») */
 .g-ck{display:flex;align-items:center;gap:10px;margin:12px 0 4px;font-weight:600;cursor:pointer}
 .g-ck input{width:22px;height:22px;accent-color:var(--accent,#0a7)}
+/* icona de l'app del club: quadrada arrodonida, com al mòbil */
+.g-prev img.g-ico{width:56px;height:56px;border-radius:22%;object-fit:cover}
+.g-com #gInstUrl{flex:1;min-width:0;font-family:var(--f-mono);font-size:.85rem}

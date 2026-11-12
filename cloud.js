@@ -26,7 +26,7 @@ let pendingLink = null, syncing = false, syncAgain = false, syncErr = "", lastSy
 let flash = {t:"", err:false};
 
 // Multiclub: clubs que accepten altes (directori/{id}, públic). Es llegeix per REST, sense descarregar Firebase.
-const DIR_URL = "https://firestore.googleapis.com/v1/projects/" + FB_CONFIG.projectId + "/databases/(default)/documents/directori?pageSize=200";
+const DIR_URL = "https://firestore.googleapis.com/v1/projects/" + FB_CONFIG.projectId + "/databases/(default)/documents/directori?pageSize=200&mask.fieldPaths=nom&mask.fieldPaths=lloc&mask.fieldPaths=oberta";   // sense la icona: no cal per triar
 let dir = null, dirLoading = null;
 function loadDir(){
   if(dir || dirLoading) return dirLoading;
@@ -42,6 +42,7 @@ function loadDir(){
 // Club per defecte: el triat abans, si no el del lloc que es mira, si no Ocata Vent
 function defClub(){
   const c = store.get("ov2_consent")?.club; if(c && dir && dir.some(x => x.id === c)) return c;
+  const ic = store.get("ov2_inst_club"); if(ic && dir && dir.some(x => x.id === ic)) return ic;   // enllaç d'instal·lació del club
   const lk = store.get("ov2_loc") || "masnou", m = (dir || []).find(x => x.lloc === lk);
   return m ? m.id : CLUB_ID;
 }

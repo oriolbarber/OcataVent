@@ -1,0 +1,37 @@
+# Icones de l'app per club (multiclub): genera c/{club}/ (manifest + icones) a partir del directori de Firestore.
+# Cada hora, i a mà des d'Actions ▸ «Icones dels clubs» ▸ Run workflow (per no esperar).
+name: Icones dels clubs
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: icones-clubs
+  cancel-in-progress: false
+jobs:
+  icones:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instal·la sharp
+        run: npm install --no-save --no-package-lock sharp@0.33.5
+      - name: Genera icones i manifests
+        run: node scripts/icones-clubs.mjs
+      - name: Desa els canvis al repositori
+        run: |
+          if [ -n "$(git status --porcelain c)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add c
+            git commit -m "Icones dels clubs: $(TZ=Europe/Madrid date +%F\ %H:%M)"
+            git pull --rebase --autostash
+            git push
+          else
+            echo "Sense canvis."
+          fi

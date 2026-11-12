@@ -1207,7 +1207,7 @@ function clubLloc(club, lloc){
 async function loadBrand(clear){
   if(!C){ if(clear) window.OV_BRAND?.(null, true); return; }
   try{ const d = await C.F.getDoc(ref("clubs", C.member.clubId)); const x = d.exists() ? d.data() : {};
-    window.OV_BRAND?.(x.logo || x.titol ? {logo:x.logo || "", titol:x.titol || "", nom:x.nom || ""} : null, true);
+    window.OV_BRAND?.(x.logo || x.titol ? {logo:x.logo || "", titol:x.titol || "", nom:x.nom || "", club:C.member.clubId} : (C.member.clubId !== "ocatavent" ? {club:C.member.clubId} : null), true);
     clubLloc(C.member.clubId, x.lloc); }catch(e){}
 }
 window.addEventListener("ov-cloud", async () => {
