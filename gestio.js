@@ -256,9 +256,27 @@ function iconCard(){
       <div class="g-row"><label class="btn" for="gIconFile">Canvia la icona</label><input id="gIconFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
         ${c.icona ? `<button class="btn" type="button" id="gIconDel">Fes servir el logo</button>` : ""}</div></div>
     <div class="g-com"><input class="field" id="gInstUrl" type="text" readonly value="${esc(instUrl(club))}"><button class="btn" type="button" id="gInstCopy">Copia</button>${navigator.share ? `<button class="btn" type="button" id="gInstShare">Comparteix</button>` : ""}</div>
+    <div class="g-qr"><div id="gQr" aria-label="Codi QR de l'enllaç d'instal·lació"></div>
+      <div class="g-qrt"><b>Escaneja per instal·lar</b><span class="note">Per ensenyar-lo en pantalla o imprimir-lo (cartell de la base, reunions).</span>
+        <button class="btn" type="button" id="gQrPng">Descarrega el QR</button></div></div>
     <p class="note">Qui instal·la l'app des d'aquest enllaç (Android: menú ▸ Instal·la l'app; iPhone: Comparteix ▸ Afegeix a la pantalla d'inici) la té amb aquesta icona i el nom del club, i a l'alta nova li surt triat el club. Icona quadrada i senzilla (es veu a 48 px); sense icona, el logo. Els canvis triguen fins a una hora a estar a punt. Qui ja tenia l'app instal·lada l'ha de tornar a instal·lar des de l'enllaç.</p></article>`;
 }
+// Codi QR de l'enllaç (llibreria qrcode-generator, carregada a gestio.html)
+const qrOf = () => { if(!window.qrcode) return null; const q = qrcode(0, "M"); q.addData(instUrl(club)); q.make(); return q; };
+function drawQr(){
+  const el = $("gQr"); if(!el) return; const q = qrOf();
+  el.innerHTML = q ? q.createSvgTag({cellSize:4, margin:2, scalable:true}) : `<span class="note">No s'ha pogut carregar el QR.</span>`;
+}
+function qrPng(){
+  const q = qrOf(); if(!q) return; const n = q.getModuleCount(), m = 4, px = 1024, cs = Math.floor(px / (n + 2*m)), W = cs * (n + 2*m) + 120;
+  const cv = document.createElement("canvas"); cv.width = W - 120; cv.height = W; const x = cv.getContext("2d");
+  x.fillStyle = "#fff"; x.fillRect(0, 0, cv.width, cv.height); x.fillStyle = "#000";
+  for(let r = 0; r < n; r++) for(let c = 0; c < n; c++) if(q.isDark(r, c)) x.fillRect((c + m) * cs, (r + m) * cs, cs, cs);
+  x.font = "bold 44px system-ui, sans-serif"; x.textAlign = "center"; x.fillText((clubs[club]?.titol || clubName(club)).toUpperCase(), cv.width / 2, cv.height - 56);
+  const a = document.createElement("a"); a.href = cv.toDataURL("image/png"); a.download = `qr-app-${club}.png`; a.click();
+}
 async function instCheck(){
+  drawQr();
   const el = $("gInstSt"); if(!el) return;
   try{
     const d = dirOf(club), want = await sha16(d.icona + "|" + d.nom + "|" + d.titol);
@@ -506,6 +524,7 @@ document.addEventListener("click", async e => {
   if(b.id === "gReload"){ b.disabled = true; if(GLOBAL){ const c = club; await loadAll(); club = c; } else await openClub(club); render(); return; }
   if(b.id === "gLogoDel"){ saveClub(club, {logo:""}); return; }
   if(b.id === "gIconDel"){ saveClub(club, {icona:""}); return; }
+  if(b.id === "gQrPng"){ qrPng(); return; }
   if(b.id === "gInstCopy"){ try{ await navigator.clipboard.writeText($("gInstUrl").value); b.textContent = "Copiat"; }catch(e){ $("gInstUrl").select(); } return; }
   if(b.id === "gInstShare"){ try{ await navigator.share({title:clubName(club), text:"Instal·la l'app del club:", url:$("gInstUrl").value}); }catch(e){} return; }
   if(b.id === "gAddCom"){ const n = ($("gNewCom")?.value || "").trim(); if(!n) return; const C = comsOf(club); let k = slug(n) || "comissio", i = 2; while(C[k]) k = (slug(n) || "comissio") + "-" + i++;
