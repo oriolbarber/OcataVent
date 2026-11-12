@@ -269,15 +269,17 @@ const MODELS = {
 const ALT_MODELS = ["arome","ecmwf","icon","ukmo"].map(k => [k, MODELS[k].api]);
 let modelPref = store.get("ov2_model_pref") || "best"; if(modelPref !== "best" && !MODELS[modelPref]) modelPref = "best";
 let model = "auto";
-function pickModel(){
-  if(modelPref !== "best") return modelPref;
+// El model que més encerta, triat o no: {k, why} (why = per què, per a la fila del menú)
+function bestModel(){
   const errs = modelErrors().filter(e => e.n >= 3);
   if(!errs.length){   // encara no hi ha prou hores mesurades avui: el que més ha encertat els últims 30 dies, o el millor de l'últim cop
     const h = encertsResum(30).filter(x => x.dies >= 5);
-    return h.length ? h[0].k : (store.get("ov2_model_best") || "auto");
+    return h.length ? {k:h[0].k, why:"el millor dels últims 30 dies"} : {k:store.get("ov2_model_best") || "auto", why:"el millor de l'últim cop"};
   }
-  const best = errs.sort((a, b) => a.mae - b.mae)[0].k; store.set("ov2_model_best", best); return best;
+  const b = errs.sort((a, b) => a.mae - b.mae)[0]; store.set("ov2_model_best", b.k);
+  return {k:b.k, why:`error d'avui ${r1(b.mae)} kn`};
 }
+function pickModel(){ return modelPref !== "best" ? modelPref : bestModel().k; }
 const URL_ALT = `https://api.open-meteo.com/v1/forecast?latitude=${LOC.lat}&longitude=${LOC.lon}`+
   "&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&models="+ALT_MODELS.map(m => m[1]).join(",")+
   "&wind_speed_unit=kn&timezone=Europe%2FMadrid&forecast_days=7";
@@ -1097,7 +1099,10 @@ function renderModelBox(errs, bestE){
   $("peekModel").textContent = modelPref === "best" ? "El que més encerta · " + MODELS[model].label : MODELS[modelPref].label;
   // ⋮ ▸ Model meteorològic: una fila per opció (botó de ràdio), amb l'error d'avui de cada model
   const errOf = k => { const e = errs.find(x => x.k === k); return e ? `error d'avui ${r1(e.mae)} kn${e.mae === bestE ? " (el millor)" : ""}` : ""; };
-  const OPTS = [["best", "El que més encerta avui", MODELS[model] ? "Ara: " + MODELS[model].label : ""], ["opt", "Optimista", "El model més favorable a cada hora"], ["pes", "Pessimista", "El més desfavorable a cada hora"],
+  // la fila «El que més encerta» diu sempre quin és el millor ara, encara que se n'hagi triat un altre (abans deia el triat: confonia)
+  let bm = null; try{ bm = bestModel(); }catch(e){}
+  const bestTxt = bm && MODELS[bm.k] ? `Ara és ${MODELS[bm.k].label} · ${bm.why}` : "";
+  const OPTS = [["best", "El que més encerta avui", bestTxt], ["opt", "Optimista", "El model més favorable a cada hora"], ["pes", "Pessimista", "El més desfavorable a cada hora"],
     ["arome", "AROME", "Météo-France · ≈1,3 km · 2–4 dies"], ["icon", "ICON", "Servei alemany DWD · ≈7 km · 5 dies"], ["ecmwf", "ECMWF", "Centre europeu · 9 km"], ["ukmo", "UKMO", "Met Office · 10 km"], ["auto", "Open-Meteo", "Barreja dels models que funcionen millor"]];
   $("modelBox").innerHTML = `<div class="cfg-grp" role="radiogroup" aria-label="Model meteorològic">${OPTS.map(([v, t, d]) => `<label class="cfg-row cfg-radio"><input type="radio" name="modelPick" value="${v}"${modelPref === v ? " checked" : ""}><span class="cfg-rt"><b>${esc(t)}</b><small>${esc([d, MODELS[v] ? errOf(v) : ""].filter(Boolean).join(" · "))}</small></span></label>`).join("")}</div>
     ${errs.length ? "" : `<p class="note">Encara no hi ha prou hores mesurades avui per comparar els models amb l'estació ${esc(STATIONS[stKey]?.name || "")}.</p>`}
